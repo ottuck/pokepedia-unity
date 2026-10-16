@@ -8,5 +8,24 @@
     "connecting": "Connecting to Pokepedia…",
     "connect_failed": "Could not connect.",
     "connected": "Connected! {0} Pokémon owned"
+  },
+  "species": {
+    "003": "Venusaur",
+    "006": "Charizard",
+    "009": "Blastoise",
+    "025": "Pikachu",
+    "094": "Gengar",
+    "150": "Mewtwo"
+  },
+  "move": {
+    "tackle": "Tackle",
+    "thunderbolt": "Thunderbolt",
+    "hydro_pump": "Hydro Pump",
+    "flamethrower": "Flamethrower",
+    "wing_attack": "Wing Attack",
+    "razor_leaf": "Razor Leaf",
+    "sludge_bomb": "Sludge Bomb",
+    "shadow_ball": "Shadow Ball",
+    "psychic": "Psychic"
   }
 }

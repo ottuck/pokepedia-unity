@@ -1,0 +1,31 @@
+[
+  { "id": 3, "types": ["grass", "poison"],
+    "baseStats": { "hp": 80, "attack": 82, "defense": 83, "spAttack": 100, "spDefense": 100, "speed": 80 },
+    "sprites": { "front": "front_3_sheet", "back": "back_3_sheet", "frontShiny": "front_3_shiny_sheet", "backShiny": "back_3_shiny_sheet" },
+    "animProfile": "venusaur", "nameKey": "species.003", "legendary": false },
+
+  { "id": 6, "types": ["fire", "flying"],
+    "baseStats": { "hp": 78, "attack": 84, "defense": 78, "spAttack": 109, "spDefense": 85, "speed": 100 },
+    "sprites": { "front": "front_6_sheet", "back": "back_6_sheet", "frontShiny": "front_6_shiny_sheet", "backShiny": "back_6_shiny_sheet" },
+    "animProfile": "charizard", "nameKey": "species.006", "legendary": false },
+
+  { "id": 9, "types": ["water"],
+    "baseStats": { "hp": 79, "attack": 83, "defense": 100, "spAttack": 85, "spDefense": 105, "speed": 78 },
+    "sprites": { "front": "front_9_sheet", "back": "back_9_sheet", "frontShiny": "front_9_shiny_sheet", "backShiny": "back_9_shiny_sheet" },
+    "animProfile": "blastoise", "nameKey": "species.009", "legendary": false },
+
+  { "id": 25, "types": ["electric"],
+    "baseStats": { "hp": 35, "attack": 55, "defense": 40, "spAttack": 50, "spDefense": 50, "speed": 90 },
+    "sprites": { "front": "front_25_sheet", "back": "back_25_sheet", "frontShiny": "front_25_shiny_sheet", "backShiny": "back_25_shiny_sheet" },
+    "animProfile": "pikachu", "nameKey": "species.025", "legendary": false },
+
+  { "id": 94, "types": ["ghost", "poison"],
+    "baseStats": { "hp": 60, "attack": 65, "defense": 60, "spAttack": 130, "spDefense": 75, "speed": 110 },
+    "sprites": { "front": "front_94_sheet", "back": "back_94_sheet", "frontShiny": "front_94_shiny_sheet", "backShiny": "back_94_shiny_sheet" },
+    "animProfile": "gengar", "nameKey": "species.094", "legendary": false },
+
+  { "id": 150, "types": ["psychic"],
+    "baseStats": { "hp": 106, "attack": 110, "defense": 90, "spAttack": 154, "spDefense": 90, "speed": 130 },
+    "sprites": { "front": "front_150_sheet", "back": "back_150_sheet", "frontShiny": "front_150_shiny_sheet", "backShiny": "back_150_shiny_sheet" },
+    "animProfile": "mewtwo", "nameKey": "species.150", "legendary": true }
+]

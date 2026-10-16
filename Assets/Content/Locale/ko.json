@@ -8,5 +8,24 @@
     "connecting": "포켓피디아와 연결 중…",
     "connect_failed": "연결하지 못했습니다.",
     "connected": "연결됨! 보유 포켓몬 {0}마리"
+  },
+  "species": {
+    "003": "이상해꽃",
+    "006": "리자몽",
+    "009": "거북왕",
+    "025": "피카츄",
+    "094": "팬텀",
+    "150": "뮤츠"
+  },
+  "move": {
+    "tackle": "몸통박치기",
+    "thunderbolt": "10만볼트",
+    "hydro_pump": "하이드로펌프",
+    "flamethrower": "화염방사",
+    "wing_attack": "날개치기",
+    "razor_leaf": "잎날가르기",
+    "sludge_bomb": "오물폭탄",
+    "shadow_ball": "섀도볼",
+    "psychic": "사이코키네시스"
   }
 }
