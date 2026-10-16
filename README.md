@@ -56,7 +56,9 @@ dotnet test Tests.Dotnet
 unity test . --mode EditMode
 ```
 
-`Tests.Dotnet/`은 `Assets/Scripts/{Domain,Content,Application}`과 `Assets/Tests/EditMode`의 소스를 복사 없이 링크해 `dotnet test`로 돌립니다. UnityEngine을 참조하지 않으므로 순수 C# 영역이나 테스트에서 실수로 `using UnityEngine;`을 쓰면 dotnet 빌드가 바로 깨집니다. 언어 버전도 C# 9로 고정해 Unity에서 컴파일되지 않는 최신 문법을 CI에서 먼저 잡아냅니다. CI(`.github/workflows/domain-tests.yml`)는 Unity 라이선스 없이 매 푸시·PR마다 이 테스트를 돌립니다.
+`Tests.Dotnet/`은 `Assets/Scripts/{Domain,Content,Application}`과 `Assets/Tests/EditMode`의 소스를 복사 없이 링크해 `dotnet test`로 돌립니다. UnityEngine을 참조하지 않으므로 순수 C# 영역이나 테스트에서 실수로 `using UnityEngine;`을 쓰면 dotnet 빌드가 바로 깨집니다. 언어 버전도 C# 9로 고정해 Unity에서 컴파일되지 않는 최신 문법을 CI에서 먼저 잡아냅니다. CI(`.github/workflows/domain-tests.yml`)는 Unity 라이선스 없이 이 테스트를 돌립니다. Actions 사용 시간을 아끼려고 **PR에서만**, 그것도 테스트 대상 코드가 바뀐 경우에만 돕니다(초안 PR 제외).
+
+테스트는 꼭 필요한 최소한만 둡니다(규칙·계약 위주, 대표 사례만). 기준은 [CLAUDE.md](CLAUDE.md)의 "지킬 것"을 따릅니다.
 
 ## 웹 빌드와 로컬 실행
 

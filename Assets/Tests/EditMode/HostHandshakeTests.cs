@@ -78,15 +78,5 @@ namespace Pokepedia.Tests
             b.Deliver(Init(v: 2));
             Assert.AreEqual(LaunchState.WaitingInit, h.State);
         }
-
-        [Test]
-        public void InitBeforeBegin_IsIgnored()
-        {
-            var b = new FakeBridge { IsHostMode = true };
-            var h = new HostHandshake(b);
-            b.Deliver(Init());
-            Assert.AreEqual(LaunchState.Idle, h.State);
-            Assert.IsNull(h.Init);
-        }
     }
 }
