@@ -21,6 +21,9 @@ namespace Pokepedia.Bridge
 
         public bool IsHostMode { get; private set; }
 
+        /// <summary>주소에 ?lab 이 있으면 연출 실험실(전용 연출 후보를 골라 보는 화면)로 연다</summary>
+        public bool IsLabMode { get; private set; }
+
         void Awake()
         {
             gameObject.name = "HostBridge";
@@ -28,6 +31,7 @@ namespace Pokepedia.Bridge
             // iframe 안에서 Application.absoluteURL 의 의미가 불명확하므로 location.search 를 직접 읽는다
             var search = Marshal.PtrToStringUTF8(HostBridge_GetSearch());
             IsHostMode = search.Contains("host=pokepedia");
+            IsLabMode = search.Contains("lab");
 #endif
         }
 

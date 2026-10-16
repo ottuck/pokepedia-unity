@@ -34,12 +34,14 @@ namespace Pokepedia.Presentation
         TextMeshProUGUI startLabel, retryLabel, demoLabel;
         AudioSource sfx;
         AudioClip confirmClip;
+        bool labRequested;   // ?lab 또는 타이틀에서 L: 연출 실험실
 
         void Start()
         {
             locale = LocaleTable.Parse(localeKo.text);
             handshake = new HostHandshake(bridge);
             handshake.StateChanged += OnStateChanged;
+            labRequested = bridge != null && bridge.IsLabMode;
             sfx = gameObject.AddComponent<AudioSource>();
             confirmClip = Beep(880f, 0.07f);
             BuildUi();
@@ -66,6 +68,7 @@ namespace Pokepedia.Presentation
             handshake?.Tick(Time.realtimeSinceStartupAsDouble);
             var kb = Keyboard.current;
             if (kb == null || !canvasRoot.activeSelf) return;
+            if (kb.lKey.wasPressedThisFrame && startButton.gameObject.activeSelf) { labRequested = true; OnStart(); return; }
             if ((kb.zKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame) && startButton.gameObject.activeSelf) OnStart();
         }
 
@@ -73,6 +76,12 @@ namespace Pokepedia.Presentation
         {
             // 브라우저 자동 재생 정책: 첫 소리는 사용자 입력 처리 안에서 내야 오디오가 열린다.
             sfx.PlayOneShot(confirmClip);
+            if (labRequested)
+            {
+                canvasRoot.SetActive(false);
+                battle.BeginLab(localeCode, BackToTitle);
+                return;
+            }
             handshake.Begin(Time.realtimeSinceStartupAsDouble);
         }
 

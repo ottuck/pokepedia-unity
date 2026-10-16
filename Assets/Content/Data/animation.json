@@ -1,8 +1,8 @@
 {
   "defaults": { "windupSec": 0.15, "lungePx": 10, "hitShakePx": 2, "knockbackPx": 0 },
   "profiles": {
-    "pikachu":   { "windupSec": 0.5, "lungePx": 6, "moveFx": { "thunderbolt": "lightning_strike" } },
-    "blastoise": { "windupSec": 0.35, "lungePx": 4, "hitShakePx": 3, "knockbackPx": 10, "moveFx": { "hydro_pump": "water_cannon" } },
+    "pikachu":   { "windupSec": 0.5, "lungePx": 6, "moveFx": { "thunderbolt": "thunder_arc" } },
+    "blastoise": { "windupSec": 0.35, "lungePx": 4, "hitShakePx": 3, "knockbackPx": 10, "moveFx": { "hydro_pump": "hydro_beam" } },
     "charizard": {},
     "venusaur":  { "knockbackPx": 6 },
     "gengar":    {},

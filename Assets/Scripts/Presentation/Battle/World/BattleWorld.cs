@@ -19,7 +19,7 @@ namespace Pokepedia.Presentation.Battle
     public sealed class BattleWorld
     {
         // 그리는 순서 (SpriteRenderer.sortingOrder). 숫자가 클수록 위. 배경 레이어는 BattleBackdrop 이 1~7 을 쓴다.
-        public const int SortBackground = 0;
+        public const int SortBackground = -10;
         public const int SortPlatform = 10;
         public const int SortShadow = 11;
         public const int SortSprite = 20;
@@ -32,6 +32,7 @@ namespace Pokepedia.Presentation.Battle
 
         static Sprite pixel, pixelLeft;
         static readonly Dictionary<long, Sprite> Ellipses = new Dictionary<long, Sprite>();
+        static readonly Dictionary<long, Sprite> Shadows = new Dictionary<long, Sprite>();
         /// <summary>1×1 흰 점(가운데 기준). 크기는 localScale 로 준다.</summary>
         public static Sprite Pixel => pixel != null ? pixel : (pixel = MakePixel(new Vector2(0.5f, 0.5f)));
         /// <summary>1×1 흰 점(왼쪽 가운데 기준). 선분을 그릴 때 쓴다.</summary>
@@ -156,6 +157,30 @@ namespace Pokepedia.Presentation.Battle
             tex.Apply();
             var sprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 1f);
             Ellipses[key] = sprite;
+            return sprite;
+        }
+
+        /// <summary>
+        /// 바닥 그림자: 가운데가 진하고 가장자리로 갈수록 옅어지는 타원(3단계, 경계는 Bayer 디더링). 흰색이라 SpriteRenderer.color 로 색·진하기를 준다.
+        /// </summary>
+        public static Sprite SoftShadow(int w, int h)
+        {
+            long key = ((long)w << 32) | (uint)h;
+            if (Shadows.TryGetValue(key, out var cached) && cached != null) return cached;
+            int[] bayer = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            float rx = w / 2f, ry = h / 2f;
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    float dx = (x + 0.5f - rx) / rx, dy = (y + 0.5f - ry) / ry, d = Mathf.Sqrt(dx * dx + dy * dy);
+                    float th = (bayer[(y & 3) * 4 + (x & 3)] + 0.5f) / 16f;
+                    float a = d > 1f ? 0f : d > 0.82f ? (th < 0.5f ? 0.35f : 0f) : d > 0.6f ? 0.6f : 1f;
+                    tex.SetPixel(x, y, new Color(1, 1, 1, a));
+                }
+            tex.Apply();
+            var sprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 1f);
+            Shadows[key] = sprite;
             return sprite;
         }
 

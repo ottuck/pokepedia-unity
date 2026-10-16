@@ -65,6 +65,8 @@ namespace Pokepedia.Presentation.Battle
         readonly BattleSideView[] sides = new BattleSideView[2];
         BattleWorld world;
         BattleLighting lighting;
+        BackdropTheme theme;
+        RectTransform hud;
         VfxLayer vfx;
         AnimationDirector director;
         SoundBank sound;
@@ -78,6 +80,22 @@ namespace Pokepedia.Presentation.Battle
 
         /// <summary>타이틀에서 호출. Demo 매치업(피카츄 vs 거북왕)을 시작한다. onExit 는 [처음으로].</summary>
         public void BeginDemo(string localeCode, Action onExit)
+        {
+            Prepare(localeCode, onExit);
+            StartCoroutine(NewBattle(session.Start));
+        }
+
+        /// <summary>
+        /// 연출 실험실 (주소에 ?lab, 또는 타이틀에서 L): 전용 연출 후보(10만볼트·하이드로펌프)와 승리 연출을 골라 반복 재생한다.
+        /// HP 는 바뀌지 않는다. 고른 결과는 animation.json 의 moveFx 에 적는다.
+        /// </summary>
+        public void BeginLab(string localeCode, Action onExit)
+        {
+            Prepare(localeCode, onExit);
+            StartCoroutine(LabIntro());
+        }
+
+        void Prepare(string localeCode, Action onExit)
         {
             this.onExit = onExit;
             var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -99,7 +117,6 @@ namespace Pokepedia.Presentation.Battle
             var seed = (uint)Environment.TickCount | 1u;
             session = new BattleSession(catalog, BattleRules.Default, new SeededRandom(seed), BattleMode.Demo, DemoPlayer, () => DemoNpc);
             lastMoveIndex = 0;
-            StartCoroutine(NewBattle(session.Start));
         }
 
         /// <summary>배틀 시작 단계별 누적 시간을 콘솔에 남긴다 (WebGL 시작 지연 조사용, 처음 한 번만 몇 줄)</summary>
@@ -120,7 +137,7 @@ namespace Pokepedia.Presentation.Battle
             // 월드(배경·발판·포켓몬·이펙트)는 SpriteRenderer 와 카메라로 그린다. 머티리얼은 URP 2D 언릿 스프라이트 셰이더다.
             world = new BattleWorld(transform, Camera.main, particleMaterial, litMaterial);
             // 2.5D 연출 (PROJECT.md 5.5): 배경 레이어(패럴랙스·안개·비) + 조명(분위기·타입별 glow) + 후처리(Bloom)
-            var theme = BackdropTheme.Storm;
+            theme = BackdropTheme.Storm;
             var backdrop = new BattleBackdrop(world, theme);
             world.Backdrop = backdrop;
             world.Container.AddComponent<BackdropTicker>().OnTick = backdrop.Tick;
@@ -133,11 +150,10 @@ namespace Pokepedia.Presentation.Battle
             var srt = (RectTransform)screen.transform;
             srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0.5f, 0.5f);
             srt.sizeDelta = new Vector2(PixelCanvasScaler.BaseWidth, PixelCanvasScaler.BaseHeight);
+            hud = srt;
 
-            world.Platform("NpcPlatform", new Vector2(178, 82), 104, 18);
-            world.Platform("PlayerPlatform", new Vector2(66, 150), 108, 18);
             sides[BattleState.Npc] = MakeSide(srt, "Npc", new Vector2(178, 86), 6, 6, 116, 32, false);
-            sides[BattleState.Player] = MakeSide(srt, "Player", new Vector2(66, 154), 122, 100, 112, 46, true);
+            sides[BattleState.Player] = MakeSide(srt, "Player", new Vector2(66, 148), 122, 100, 112, 46, true);
             vfx = new VfxLayer(world, srt, particleMaterial);
             director = new AnimationDirector(this, sides, vfx, sound, animation, catalog, world, lighting);
 
@@ -180,11 +196,11 @@ namespace Pokepedia.Presentation.Battle
 
         BattleSideView MakeSide(RectTransform screen, string name, Vector2 feet, float bx, float by, float bw, float bh, bool player)
         {
-            var inner = Ui.Box(screen, name + "Info", bx, by, bw, bh);
+            var inner = Ui.Panel(screen, name + "Info", bx, by, bw, bh, ledgeToRight: !player);
             var nameLabel = Ui.Label(inner, "Name", font, 4, 2, bw - 50, 14);
             Ui.Label(inner, "Level", font, bw - 42, 2, 36, 14, TextAlignmentOptions.TopRight).text = ":L50";
             var hp = new HpBar(inner, font, 6, 18, bw - 34, player);
-            var view = new BattleSideView(world, name, feet, flashMaterial, inner.parent.gameObject, nameLabel, hp);
+            var view = new BattleSideView(world, name, feet, flashMaterial, inner.parent.parent.gameObject, nameLabel, hp);
             view.Reset();
             return view;
         }
@@ -196,6 +212,8 @@ namespace Pokepedia.Presentation.Battle
         {
             foreach (var v in sides) v.Reset();
             message.Clear();
+            world.Backdrop?.SetWeather(1, 0);
+            lighting.SetAmbient(theme.Ambient);
             sound.PlayMusic(SoundBank.BattleMusicKey); // 판마다 처음부터
             yield return PlayThenPrompt(start());
         }
@@ -281,6 +299,93 @@ namespace Pokepedia.Presentation.Battle
                 return;
             }
             StartCoroutine(NewBattle(lastWin ? session.NextBattle : (Func<IReadOnlyList<BattleEvent>>)session.Retry));
+        }
+
+
+        // ------------------------------------------------------------------ 연출 실험실
+        ChoiceMenu labMenu;
+        int labIndex;
+        bool labMiss;
+
+        IEnumerator LabIntro()
+        {
+            foreach (var v in sides) v.Reset();
+            message.Clear();
+            world.Backdrop?.SetWeather(1, 0);
+            lighting.SetAmbient(theme.Ambient);
+            sound.PlayMusic(SoundBank.BattleMusicKey);
+            foreach (var e in session.Start())
+            {
+                if (!(e is PokemonSentOut s)) continue;
+                var view = sides[s.Side];
+                view.Name.text = names.Species(s.SpeciesId);
+                view.Hp.Set(s.Hp, s.MaxHp);
+                yield return director.SendOut(s.Side, catalog.GetSpecies(s.SpeciesId));
+                view.InfoBox.SetActive(true);
+            }
+            ShowLabMenu();
+        }
+
+        void ShowLabMenu()
+        {
+            var effects = AnimationDirector.LabEffects;
+            if (labMenu == null)
+            {
+                int count = effects.Length + 2;
+                var cells = new Vector3[count];
+                for (int i = 0; i < count; i++) cells[i] = new Vector3(4 + (i % 3) * 76, 4 + (i / 3) * 17, 74);
+                var inner = Ui.Box(hud, "LabMenu", 2, 156, 236, 58);
+                labMenu = new ChoiceMenu(inner.parent.gameObject, inner, font, cells, 3);
+                labMenu.Chosen += OnLab;
+                labMenu.Cancelled += ExitLab;
+                labMenu.Navigated += () => sound.Play(SfxKind.CursorMove);
+                labMenu.Chosen += _ => sound.Play(SfxKind.Confirm);
+                vfx.BringToFront();
+            }
+            var labels = effects.Select(e => e.Label).Concat(new[] { "Victory", labMiss ? "Miss ON" : "Miss off" }).ToArray();
+            SetMenu(labMenu);
+            labMenu.Show(labels, labIndex);
+        }
+
+        void OnLab(int i)
+        {
+            labIndex = i;
+            var effects = AnimationDirector.LabEffects;
+            if (i == effects.Length + 1) { labMiss = !labMiss; ShowLabMenu(); return; }
+            labMenu.Hide();
+            SetMenu(null);
+            StartCoroutine(PlayLab(i));
+        }
+
+        IEnumerator PlayLab(int i)
+        {
+            var effects = AnimationDirector.LabEffects;
+            if (i == effects.Length)
+            {
+                yield return director.Victory(BattleState.Player);
+                yield return VfxLayer.Wait(1.2f);
+                world.Backdrop?.SetWeather(1, 1.2f);
+                StartCoroutine(lighting.FadeAmbient(theme.Ambient, 1.2f));
+            }
+            else
+            {
+                var e = effects[i];
+                int attacker = SpeciesOf(e.Side), target = SpeciesOf(BattleState.Opponent(e.Side));
+                var moves = catalog.MoveSetFor(attacker);
+                yield return director.PlayLab(e.Id, e.Side, attacker, target, moves[moves.Count - 1], labMiss);
+            }
+            yield return VfxLayer.Wait(0.3f);
+            ShowLabMenu();
+        }
+
+        void ExitLab()
+        {
+            labMenu.Hide();
+            SetMenu(null);
+            sound.StopMusic();
+            root.SetActive(false);
+            world.Container.SetActive(false);
+            onExit?.Invoke();
         }
 
         // ------------------------------------------------------------------ 이벤트 재생
