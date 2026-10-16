@@ -17,9 +17,21 @@ namespace Pokepedia.Presentation.Audio
         public static string MoveKey(string typeName) => "move_" + typeName;
         public static string SfxKey(SfxKind kind) => "sfx_" + kind.ToString().ToLowerInvariant();
 
+        public const string BattleMusicKey = "bgm_battle";
+
+        /// <summary>
+        /// 음악 WAV 앞에 붙이는 무음(샘플, 22050Hz 기준). WebGL 은 소리를 AAC 로 바꾸는데 인코더가 앞 1024 샘플을 건드려
+        /// 루프 이음새가 튄다 → 무음을 붙이고 WAV smpl 청크의 루프 시작을 그 뒤로 둔다(Unity 6 매뉴얼 "Audio in Web", AudioBaker).
+        /// </summary>
+        public const int MusicPadSamples = 2048;
+        const float MusicPadSeconds = MusicPadSamples / 22050f;
+        /// <summary>음악 음량. 효과음이 위에 얹히도록 낮게 둔다(사용자 확인 후 조정).</summary>
+        const float MusicVolume = 0.7f;
+
         readonly AudioSource source;
         // 기 모으기처럼 도중에 끊어야 하는 소리는 따로 낸다(PlayOneShot 은 멈출 수 없다)
         readonly AudioSource stoppable;
+        readonly AudioSource music;
         readonly Dictionary<string, AudioClip> cache = new Dictionary<string, AudioClip>();
 
         public SoundBank(GameObject host)
@@ -28,6 +40,37 @@ namespace Pokepedia.Presentation.Audio
             source.playOnAwake = false;
             stoppable = host.AddComponent<AudioSource>();
             stoppable.playOnAwake = false;
+            music = host.AddComponent<AudioSource>();
+            music.playOnAwake = false;
+            music.loop = true;
+        }
+
+        /// <summary>음악을 처음부터 반복 재생한다(앞의 무음은 건너뛴다).</summary>
+        public void PlayMusic(string key)
+        {
+            var clip = Load(key);
+            if (clip == null) return;
+            music.Stop();
+            music.clip = clip;
+            music.volume = MusicVolume;
+            music.time = Mathf.Min(MusicPadSeconds, clip.length * 0.5f);
+            music.Play();
+        }
+
+        public void StopMusic() => music.Stop();
+
+        /// <summary>음악을 seconds 동안 줄였다가 멈춘다(승리·패배 징글 전에).</summary>
+        public System.Collections.IEnumerator FadeOutMusic(float seconds)
+        {
+            if (!music.isPlaying) yield break;
+            float from = music.volume;
+            for (float t = 0; t < seconds; t += Time.unscaledDeltaTime)
+            {
+                music.volume = from * (1 - t / seconds);
+                yield return null;
+            }
+            music.Stop();
+            music.volume = MusicVolume;
         }
 
         public void Play(SfxKind kind) => PlayKey(SfxKey(kind));
