@@ -12,6 +12,9 @@ namespace Pokepedia.Tests
 
         static readonly BattleRules NoCompression = BattleRules.Default with { CompressionK = 1.0 };
 
+        // 계산 예시는 K=0.6 으로 고정한다. 실제 기본값(BattleRules.Default)은 밸런스 조정으로 바뀔 수 있다.
+        static readonly BattleRules K06 = BattleRules.Default with { CompressionK = 0.6 };
+
         [Test]
         public void Compute_WithoutCompression_MatchesDocumentedPikachu()
         {
@@ -39,9 +42,9 @@ namespace Pokepedia.Tests
         [TestCase(78, 79)]   // 78.8 → 79
         [TestCase(80, 80)]   // 중심은 그대로
         [TestCase(154, 124)] // 80 + 74×0.6 = 124.4 → 124
-        public void Compress_DefaultK_PullsTowardCenter(int baseStat, int expected)
+        public void Compress_K06_PullsTowardCenter(int baseStat, int expected)
         {
-            Assert.AreEqual(expected, StatCalculator.Compress(baseStat, BattleRules.Default));
+            Assert.AreEqual(expected, StatCalculator.Compress(baseStat, K06));
         }
 
         [Test]
@@ -62,21 +65,31 @@ namespace Pokepedia.Tests
         }
 
         [Test]
-        public void Compute_DefaultCompression_Pikachu()
+        public void Compute_CurrentDefault_DemoPair()
+        {
+            // 현재 기본값 K=0.65 (BattleRules.Default) 로 실제 게임에 쓰이는 값. PROJECT.md 6.4 예시와 같아야 한다.
+            // 피카츄 압축 종족값 51/64/54/61/61/87, 거북왕 79/82/93/83/96/79
+            Assert.AreEqual(0.65, BattleRules.Default.CompressionK);
+            Assert.AreEqual(new StatBlock(126, 84, 74, 81, 81, 107), StatCalculator.Compute(PikachuBase, BattleRules.Default));
+            Assert.AreEqual(new StatBlock(154, 102, 113, 103, 116, 99), StatCalculator.Compute(BlastoiseBase, BattleRules.Default));
+        }
+
+        [Test]
+        public void Compute_K06_Pikachu()
         {
             // 압축 종족값 53/65/56/62/62/86
             // HP  = ⌊(106+31)×50/100⌋ + 60 = 68 + 60 = 128
             // 공격 = ⌊(130+31)/2⌋ + 5 = 85, 방어 = ⌊143/2⌋ + 5 = 76, 특공·특방 = ⌊155/2⌋ + 5 = 82, 스피드 = ⌊203/2⌋ + 5 = 106
-            Assert.AreEqual(new StatBlock(128, 85, 76, 82, 82, 106), StatCalculator.Compute(PikachuBase, BattleRules.Default));
+            Assert.AreEqual(new StatBlock(128, 85, 76, 82, 82, 106), StatCalculator.Compute(PikachuBase, K06));
         }
 
         [Test]
-        public void Compute_DefaultCompression_Blastoise()
+        public void Compute_K06_Blastoise()
         {
             // 압축 종족값 79/82/92/83/95/79
             // HP = ⌊189/2⌋ + 60 = 154, 공격 = ⌊195/2⌋ + 5 = 102, 방어 = ⌊215/2⌋ + 5 = 112,
             // 특공 = ⌊197/2⌋ + 5 = 103, 특방 = ⌊221/2⌋ + 5 = 115, 스피드 = ⌊189/2⌋ + 5 = 99
-            Assert.AreEqual(new StatBlock(154, 102, 112, 103, 115, 99), StatCalculator.Compute(BlastoiseBase, BattleRules.Default));
+            Assert.AreEqual(new StatBlock(154, 102, 112, 103, 115, 99), StatCalculator.Compute(BlastoiseBase, K06));
         }
 
         [Test]

@@ -17,8 +17,12 @@ namespace Pokepedia.Domain.Rules
         /// <summary>종족값 압축 중심: stat' = Center + (종족값 − Center) × K</summary>
         public double CompressionCenter { get; init; } = 80;
 
-        /// <summary>압축 계수. 1.0 이면 압축하지 않는다.</summary>
-        public double CompressionK { get; init; } = 0.6;
+        /// <summary>
+        /// 압축 계수. 1.0 이면 압축하지 않는다.
+        /// 0.65: 피카츄 vs 거북왕 시뮬레이션(5,000판)에서 승률 68%·평균 4.9턴, K 0.64~0.68 × 대표 기술 위력 34~36 범위에서
+        /// 승률이 60~70% 안에 머무는 안정 구간의 중심 (2026-10-16, BalanceTests.Sweep).
+        /// </summary>
+        public double CompressionK { get; init; } = 0.65;
 
         /// <summary>급소 확률 1/N</summary>
         public int CritChanceDenominator { get; init; } = 16;

@@ -1,11 +1,11 @@
 [
   { "id": "tackle",       "type": "normal",   "category": "physical", "power": 16, "accuracy": 100, "nameKey": "move.tackle",       "animKind": "contact",    "role": "basic" },
-  { "id": "thunderbolt",  "type": "electric", "category": "special",  "power": 36, "accuracy": 95,  "nameKey": "move.thunderbolt",  "animKind": "projectile", "role": "signature" },
-  { "id": "hydro_pump",   "type": "water",    "category": "special",  "power": 36, "accuracy": 95,  "nameKey": "move.hydro_pump",   "animKind": "projectile", "role": "signature" },
-  { "id": "flamethrower", "type": "fire",     "category": "special",  "power": 36, "accuracy": 95,  "nameKey": "move.flamethrower", "animKind": "projectile", "role": "signature" },
-  { "id": "wing_attack",  "type": "flying",   "category": "physical", "power": 36, "accuracy": 95,  "nameKey": "move.wing_attack",  "animKind": "contact",    "role": "signature" },
-  { "id": "razor_leaf",   "type": "grass",    "category": "physical", "power": 36, "accuracy": 95,  "nameKey": "move.razor_leaf",   "animKind": "projectile", "role": "signature" },
-  { "id": "sludge_bomb",  "type": "poison",   "category": "special",  "power": 36, "accuracy": 95,  "nameKey": "move.sludge_bomb",  "animKind": "projectile", "role": "signature" },
-  { "id": "shadow_ball",  "type": "ghost",    "category": "special",  "power": 36, "accuracy": 95,  "nameKey": "move.shadow_ball",  "animKind": "effect",     "role": "signature" },
-  { "id": "psychic",      "type": "psychic",  "category": "special",  "power": 36, "accuracy": 95,  "nameKey": "move.psychic",      "animKind": "effect",     "role": "signature" }
+  { "id": "thunderbolt",  "type": "electric", "category": "special",  "power": 35, "accuracy": 95,  "nameKey": "move.thunderbolt",  "animKind": "projectile", "role": "signature" },
+  { "id": "hydro_pump",   "type": "water",    "category": "special",  "power": 35, "accuracy": 95,  "nameKey": "move.hydro_pump",   "animKind": "projectile", "role": "signature" },
+  { "id": "flamethrower", "type": "fire",     "category": "special",  "power": 35, "accuracy": 95,  "nameKey": "move.flamethrower", "animKind": "projectile", "role": "signature" },
+  { "id": "wing_attack",  "type": "flying",   "category": "physical", "power": 35, "accuracy": 95,  "nameKey": "move.wing_attack",  "animKind": "contact",    "role": "signature" },
+  { "id": "razor_leaf",   "type": "grass",    "category": "physical", "power": 35, "accuracy": 95,  "nameKey": "move.razor_leaf",   "animKind": "projectile", "role": "signature" },
+  { "id": "sludge_bomb",  "type": "poison",   "category": "special",  "power": 35, "accuracy": 95,  "nameKey": "move.sludge_bomb",  "animKind": "projectile", "role": "signature" },
+  { "id": "shadow_ball",  "type": "ghost",    "category": "special",  "power": 35, "accuracy": 95,  "nameKey": "move.shadow_ball",  "animKind": "effect",     "role": "signature" },
+  { "id": "psychic",      "type": "psychic",  "category": "special",  "power": 35, "accuracy": 95,  "nameKey": "move.psychic",      "animKind": "effect",     "role": "signature" }
 ]
