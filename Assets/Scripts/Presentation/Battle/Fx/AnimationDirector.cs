@@ -38,7 +38,7 @@ namespace Pokepedia.Presentation.Battle.Fx
         public IEnumerator SendOut(int side, SpeciesInfo info)
         {
             var view = sides[side];
-            view.Animator.Play(SpriteSheet.Load(side == BattleState.Player ? info.Sprites.Back : info.Sprites.Front));
+            view.Play(SpriteSheet.Load(side == BattleState.Player ? info.Sprites.Back : info.Sprites.Front));
             view.SetAlpha(1);
             view.SetFlash(0);
             // NPC 는 오른쪽에서, 플레이어는 왼쪽에서 미끄러져 들어온다. 등장음의 "뿅"은 번쩍이는 순간(BattleSfx.SendOutPopAt)에 맞춰져 있다.
@@ -60,7 +60,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                 view.SetAlpha(1 - k);
                 yield return null;
             }
-            view.Image.enabled = false;
+            view.SetVisible(false);
             view.SetOffset(Vector2.zero);
             view.SetAlpha(1);
         }

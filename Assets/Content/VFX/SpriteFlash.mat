@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: UIFlash
-  m_Shader: {fileID: 4800000, guid: 9703abf3278721d42a8840441da6cee0, type: 3}
+  m_Name: SpriteFlash
+  m_Shader: {fileID: 4800000, guid: a74c9ad147620a541b48a42a0bed8492, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -28,17 +28,8 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
-    m_Floats:
-    - _ColorMask: 15
-    - _Flash: 0
-    - _Stencil: 0
-    - _StencilComp: 8
-    - _StencilOp: 0
-    - _StencilReadMask: 255
-    - _StencilWriteMask: 255
-    - _UseUIAlphaClip: 0
+    m_Floats: []
     m_Colors:
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _FlashColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

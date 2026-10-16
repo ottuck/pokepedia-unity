@@ -333,7 +333,7 @@ MonoBehaviour:
   localeKo: {fileID: 4900000, guid: e5711554cd65c624d994f61cd507369c, type: 3}
   localeEn: {fileID: 4900000, guid: b5bec185fc14cb641b72f93be5b2269f, type: 3}
   localeJa: {fileID: 4900000, guid: 08400b697519dd643a6699270884e351, type: 3}
-  flashMaterial: {fileID: 2100000, guid: c466e17b96dfec74d949c7d8bb9e58e7, type: 2}
+  flashMaterial: {fileID: 2100000, guid: 06121aa088c554e4f888236a32ef22bf, type: 2}
   particleMaterial: {fileID: 2100000, guid: 61863687beef8594b90ebbf6c9a1dc3e, type: 2}
 --- !u!4 &2041322542
 Transform:
