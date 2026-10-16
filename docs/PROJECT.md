@@ -217,48 +217,68 @@ Pokepedia가 151마리를 지원한다고 해서 Unity 배틀도 151마리를 �
 
 ### 6.2 포켓몬 데이터
 
-- 출처: Pokepedia `pokemon` 데이터 → **로스터 포켓몬만 빌드 시점 스냅샷 JSON**으로 export해 Unity에 포함한다 [권장안]. 런타임 DB 조회는 없다.
-- 사용 필드: id, 한/영/일 이름, `type_1`/`type_2`(이중 타입), 능력치 6종, `is_legendary`, `is_mythical`.
-- 이름 문자열은 엔진에 없다. `nameKey`로 로케일 파일에서 찾는다.
-- **지원 포켓몬 목록은 `roster.json`** (id와 등급 `showcase`|`standard`)으로 관리한다. 엔진은 이 파일을 모른다.
+- 위치: `Assets/Content/Data/species.json`, `moves.json`, `roster.json`. 로더는 `Pokepedia.Content.ContentLoader`(순수 C#, 엄격한 스키마: 누락·모르는 필드·잘못된 값은 항목 이름을 담은 `FormatException`).
+- 출처: 종족값·타입은 **PokeAPI**(`/pokemon/{id}`, Pokepedia DB와 같은 출처)로 확인해 손으로 적었다(2026-10-16, 로스터 6종 불일치 0). Pokepedia DB 스냅샷 export 스크립트는 필요해지면 만든다 [권장안]. 런타임 DB 조회는 없다.
+- 이름 문자열은 엔진에 없다. `nameKey`(`species.025`, `move.thunderbolt`)로 로케일 파일(`Assets/Content/Locale/{ko,en,ja}.json`)에서 찾는다. 이름은 PokeAPI의 ko / en / ja-Hrkt(가나 표기) 값이다.
+- **지원 포켓몬 목록은 `roster.json`** (id, 등급 `showcase`|`standard`, NPC 출현 가중치 `npcWeight`)으로 관리한다. 엔진은 이 파일을 모른다.
+- species 에는 기술 목록이 없다. 기술은 타입에서 자동 배정한다(6.3).
 
 ```json
-// species.json (예시)
+// species.json (실제 항목)
 { "id": 25, "types": ["electric"],
   "baseStats": { "hp": 35, "attack": 55, "defense": 40, "spAttack": 50, "spDefense": 50, "speed": 90 },
-  "moves": ["tackle", "thunder_spark"],
-  "sprites": { "front": "front_025", "back": "back_025", "frontShiny": "front_025_s", "backShiny": "back_025_s" },
+  "sprites": { "front": "front_25_sheet", "back": "back_25_sheet", "frontShiny": "front_25_shiny_sheet", "backShiny": "back_25_shiny_sheet" },
   "animProfile": "pikachu", "nameKey": "species.025", "legendary": false }
 
-// roster.json (예시)
-[ { "id": 25, "tier": "showcase" }, { "id": 9, "tier": "showcase" },
-  { "id": 6, "tier": "standard" }, { "id": 3, "tier": "standard" },
-  { "id": 94, "tier": "standard" }, { "id": 150, "tier": "standard" } ]
+// roster.json — npcWeight 는 임시값(뮤츠 2, 나머지 10). 로스터 확장(M5)에서 시뮬레이션으로 조정한다.
+[ { "id": 25, "tier": "showcase", "npcWeight": 10 }, { "id": 9, "tier": "showcase", "npcWeight": 10 }, ...
+  { "id": 150, "tier": "standard", "npcWeight": 2 } ]
 ```
 
 ### 6.3 기술 데이터 (새로 작성)
 
 - Pokepedia에는 기술 데이터가 없으므로 **직접 정의**한다. **노말 기본기 1개 + 로스터가 쓰는 타입별 대표 기술 1개씩**이며 기본 로스터(전기·물·불꽃·비행·풀·독·고스트·에스퍼)면 **약 9개**다. 새 타입을 추가할 때 해당 기술·이펙트를 추가한다.
 - 각 포켓몬은 "기본기 1 + 자신의 타입별 기술 1~2"를 받는다. 이 매핑은 타입에서 **자동 생성**한다.
-- 기술 필드: `id, type, category(physical|special), power, accuracy, nameKey, animKind`. **명중률과 급소를 포함한다** [확정].
-- 초기 수치 [권장안, 시뮬레이션으로 조정]: 기본기 위력 16·명중 100, 타입별 대표 기술 위력 36·명중 95. 전투를 4~6라운드로 맞추려고 원작의 위력 값(40/90 정도)보다 낮게 잡는다 (6.5).
+- 기술 필드: `id, type, category(physical|special), power, accuracy, nameKey, animKind, role(basic|signature)`. **명중률과 급소를 포함한다** [확정].
+  - `role`: 기본기는 정확히 1개(`basic`), 대표 기술(`signature`)은 타입마다 최대 1개. 배정 순서는 기본기 → 종의 타입 순서대로 대표 기술 (예: 리자몽 = 몸통박치기, 화염방사, 날개치기).
+- **수치 [위임 → M2 결정]:** 기본기 위력 16·명중 100, 타입별 대표 기술 위력 **35**·명중 95. 원작 위력(40/90 정도)보다 낮게 잡아 전투를 4~6턴으로 맞춘다. 근거는 6.5.
+
+| id | 이름(ko) | 타입 | 분류 | 위력 | 명중 | animKind | role |
+|---|---|---|---|---|---|---|---|
+| tackle | 몸통박치기 | 노말 | 물리 | 16 | 100 | contact | basic |
+| thunderbolt | 10만볼트 | 전기 | 특수 | 35 | 95 | projectile | signature |
+| hydro_pump | 하이드로펌프 | 물 | 특수 | 35 | 95 | projectile | signature |
+| flamethrower | 화염방사 | 불꽃 | 특수 | 35 | 95 | projectile | signature |
+| wing_attack | 날개치기 | 비행 | 물리 | 35 | 95 | contact | signature |
+| razor_leaf | 잎날가르기 | 풀 | 물리 | 35 | 95 | projectile | signature |
+| sludge_bomb | 오물폭탄 | 독 | 특수 | 35 | 95 | projectile | signature |
+| shadow_ball | 섀도볼 | 고스트 | 특수 | 35 | 95 | effect | signature |
+| psychic | 사이코키네시스 | 에스퍼 | 특수 | 35 | 95 | effect | signature |
+
+(타입·분류는 PokeAPI `/move/{name}`과 일치. 이름은 장식이고 위력·명중은 이 프로젝트 값이다.)
 - 원작 기술 이름을 쓰더라도 위력은 단순화한다 (고정 피해 기술, 2턴 기술, 후속 세대 기술은 단순 위력 계산과 맞지 않으므로 이름만 빌려 쓰지 않는다).
 - 공격 연출은 **접촉형 / 발사형 / 효과형** 세 가지 공통 타임라인 중 `animKind`로 선택한다 (몸통박치기 = 접촉, 불꽃·물대포 = 발사, 에스퍼·고스트 = 효과) [위임].
 
 ### 6.4 전투 규칙 [확정]
 
-공식은 현대 포켓몬 게임(3세대 이후) 기준이며 에이전트의 기억에 기반하므로 구현 전에 한 번 더 검증한다.
+공식은 현대 포켓몬 게임(능력치 3세대 이후, 데미지 6세대 이후) 기준이며 M2에서 검증했다. 출처: Pokémon Showdown 시뮬레이터 소스(`sim/battle.ts` statModify·modify, `sim/battle-actions.ts` getDamage·modifyDamage), 상성은 PokeAPI `type` damage_relations와 Pokémon Database 표(324칸 일치). Bulbapedia는 자동 조회가 막혀(403) 직접 대조하지 못했다. 코드 주석에 URL이 있다.
 
-- **능력치 환산:** 레벨 50 고정, 개체값 31, 노력치 0, 성격 보정 없음.
+- **능력치 환산:** 레벨 50 고정, 개체값 31, 노력치 0, 성격 보정 없음. 종족값은 먼저 압축(6.5)한다.
   - HP = ⌊(2×종족값+31)×레벨/100⌋ + 레벨 + 10
   - 그 외 = ⌊(2×종족값+31)×레벨/100⌋ + 5
-  - 예: 피카츄 L50 = HP 110 / 공격 75 / 방어 60 / 특공 70 / 특방 70 / 스피드 110, 거북왕 L50 = HP 154 / 103 / 120 / 105 / 125 / 98.
+  - 예(압축 없음): 피카츄 L50 = HP 110 / 공격 75 / 방어 60 / 특공 70 / 특방 70 / 스피드 110, 거북왕 L50 = HP 154 / 103 / 120 / 105 / 125 / 98.
+  - 예(K=0.65 압축, 실제 게임 값, `StatCalculatorTests.Compute_CurrentDefault_DemoPair`): 피카츄 = 126 / 84 / 74 / 81 / 81 / 107, 거북왕 = 154 / 102 / 113 / 103 / 116 / 99.
 - **물리/특수:** 기술별 `category`를 데이터에 지정한다. physical은 공격÷방어, special은 특공÷특방.
 - **턴 순서:** 스피드가 높은 쪽이 먼저 행동하고 동률이면 무작위.
 - **행동 처리:** 명중 판정(기술 명중률%, 회피·명중 단계 없음) → 빗나가면 `MoveMissed` → 명중하면 급소 판정 → 데미지 계산.
 - **급소:** 확률 1/16, 데미지 ×1.5 [권장안: 현대 6세대 방식, 값 조정 가능].
-- **데미지 공식:** ((2L/5+2) × 위력 × 공격/방어 ÷ 50 + 2) × 급소(×1.5) × 난수(0.85~1.0) × 자속 보정(×1.5) × 타입 상성. L은 레벨, 상성은 ×2 / ×0.5 / ×0이며 이중 타입은 곱한다.
+- **데미지 공식:** ((2L/5+2) × 위력 × 공격/방어 ÷ 50 + 2) × 급소(×1.5) × 난수(0.85~1.0) × 자속 보정(×1.5) × 타입 상성. L은 레벨, 상성은 ×2 / ×0.5 / ×0이며 이중 타입은 곱한다. 게임처럼 **단계마다 정수 처리**한다(`DamageCalculator`):
+  1. 기본 = ⌊⌊⌊⌊2L/5+2⌋ × 위력 × A⌋ / D⌋ / 50⌋ + 2
+  2. 급소 ⌊×1.5⌋ → 3. 난수 ⌊×R/100⌋ (R = 85~100) → 4. 자속 ×1.5 (4096 고정소수점, 0.5는 내림) → 5. 상성 ⌊×배수⌋
+  6. 상성 0이면 0, 그 외 최소 1. 순서가 결과에 영향을 준다(난수가 자속보다 먼저).
 - 명중·급소·데미지 난수는 모두 `IRandom`으로 주입해 테스트에서 고정한다. HP 0이면 패배.
+- **난수 소비 순서**(엔진, 테스트로 고정): 스피드 동률일 때만 `Next(2)`(0이면 플레이어 선공) → 행동마다 명중률 < 100이면 `Next(100)` → 명중하면 급소 `Next(16)` → 데미지 난수 `Next(16)`(85 + 값).
+- 상성이 0(효과가 없음)이면 급소가 떠도 급소로 표시하지 않는다. 피해량 이벤트는 실제로 깎인 HP(남은 HP 이하)다.
 - **타입 상성:** 18×18 표를 직접 작성하고 단위 테스트로 검증한다.
 - **제외:** PP, 상태이상, 우선도, 능력치 단계 변화, 날씨.
 - **NPC AI:** 하나의 수준. 예상 데미지(위력·명중률·자속·상성 반영)가 큰 기술을 고른다.
@@ -266,13 +286,25 @@ Pokepedia가 151마리를 지원한다고 해서 Unity 배틀도 151마리를 �
 ### 6.5 밸런스와 NPC 선택 [확정 방침 / 세부는 에이전트가 조정]
 
 - **전투 길이:** 쇼케이스는 약 **4~6라운드**. 별도의 HP 배율 규칙은 **두지 않고 기술 위력 값(데이터)** 으로 맞춘다 (위력 ×0.4가 HP ×2.5와 같은 결과를 냈다). 모든 모드가 같은 규칙과 기술 데이터를 쓰므로 Demo만의 값은 없다.
-- **균형:** 종족값을 중간값 쪽으로 당기는 **압축** `stat' = 80 + (종족값 − 80) × k` (k 초기 0.6 [권장안])을 쓴다.
+- **균형:** 종족값을 중간값 쪽으로 당기는 **압축** `stat' = 80 + (종족값 − 80) × k`을 쓴다. 반올림은 사사오입, 최소 1. **k = 0.65** (M2 결정, 아래 "M2 밸런스 결과").
 - **NPC 선택 (Collection):** 로스터에서 가중 추첨한다. **뮤츠 같은 전설 포켓몬은 드물게만 등장**하도록 가중치를 낮춘다 [확정]. 압축 계수, 위력·명중 값, 상성 편향, 이상치 보정 등 **밸런스 세부는 에이전트가 시뮬레이션으로 조정하고 완료 후 이 문서에 정리한다** [위임].
 - 중복 스티커(quantity)는 능력치에 영향 없음, shiny는 외형만 변경.
 - **Demo Mode:** 피카츄(플레이어) vs 거북왕(NPC) 고정. **피카츄 승률 60~70%** 를 시드 고정 시뮬레이션 테스트로 검증·조정한다 [확정].
 - 신규 사용자(스티커 없음)와 단독 실행은 Demo Mode로 처리한다. Collection에서 보유 ∩ 지원이 0마리면 자동 전환하지 않고 안내와 [데모 체험] 선택지를 보여 준다 (9.2).
 
 종족값 합은 피카츄 320 ~ 뮤츠 680(Pokepedia 현재 기준)으로 격차가 커서 압축 계수 k를 쓴다.
+
+**M2 밸런스 결과 (2026-10-16, `BalanceTests`, 5,000판 시드 고정)**
+
+| 항목 | 값 |
+|---|---|
+| 정한 수치 | k = 0.65, 대표 기술 위력 35·명중 95, 기본기 위력 16·명중 100, 급소 1/16 ×1.5, 난수 85~100% |
+| 피카츄 vs 거북왕 | 피카츄 승률 **68.5%**, 평균 **4.92턴** (최소 3, 최대 7) |
+| 시뮬레이션 가정 | 양쪽 모두 NPC AI(기대 데미지 최대 기술)로 행동. 플레이어도 "가장 센 기술을 고르는 사람"으로 본다 |
+
+- **수치가 민감하다.** 몇 번 맞으면 쓰러지는지(확정 n타)가 한 단계 바뀌면 승률이 크게 뛴다(예: k 0.6에서 위력 38 → 62%, 40 → 47%). 그래서 목표 범위 안의 한 점이 아니라 **주변까지 60~70%가 유지되는 구간의 중심**을 골랐다: k 0.64~0.68 × 위력 34~36이 모두 60~70%.
+- 다른 기술·포켓몬을 추가하거나 수치를 바꾸면 `BalanceTests`가 범위 이탈을 잡는다. 조정할 때는 `BalanceTests.Sweep_CompressionAndSignaturePower`(수동 실행)로 표를 다시 뽑는다.
+- 나머지 4마리와의 매치업, 전설 가중치(`npcWeight`, 임시 뮤츠 2 / 나머지 10)는 로스터 확장(M5)에서 조정한다.
 
 ---
 
@@ -309,15 +341,20 @@ Bridge (Platform)      ← IHostBridge: WebGL(jslib ↔ postMessage) / Editor(Nu
 
 ### 7.3 엔진 ↔ 화면: 이벤트 로그와 연출 디렉터
 
+실제 정의는 `Assets/Scripts/Domain/Battle/BattleEvents.cs`. Side 0 = 플레이어, 1 = NPC.
+
 ```csharp
 public abstract record BattleEvent;
-public sealed record BattleStarted(...) : BattleEvent;
+public sealed record PokemonSentOut(int Side, int SpeciesId, int Hp, int MaxHp) : BattleEvent; // NPC 먼저, 다음 플레이어
+public sealed record TurnStarted(int Turn) : BattleEvent;
 public sealed record MoveUsed(int Side, string MoveId) : BattleEvent;
 public sealed record MoveMissed(int Side, string MoveId) : BattleEvent;
-public sealed record DamageDealt(int Side, int Amount, int HpAfter, float Effectiveness, bool Critical) : BattleEvent;
+public sealed record DamageDealt(int TargetSide, int Amount, int HpAfter, double Effectiveness, bool Critical) : BattleEvent;
 public sealed record Fainted(int Side) : BattleEvent;
 public sealed record BattleEnded(int WinnerSide) : BattleEvent;
 ```
+
+엔진 API: `new BattleEngine(state, rules, random)` → `Start()`(등장 이벤트) → `PlayTurn(playerAction, npcAction)`(한 턴 이벤트, 한쪽이 전멸하면 그 자리에서 끝). 행동은 지금 `UseMove(moveIndex)`뿐이고 도망은 Application 흐름에서 처리한다. `BattleSide`는 파티(여러 마리)+출전 인덱스 구조지만 쓰러진 뒤 교체는 3:3 확장 때 넣는다.
 
 ```text
 BattleEngine (Pure C#)
@@ -666,7 +703,7 @@ ottuck/pokepedia-unity    # Unity / C# [확정]
 - 호스팅 최종 선택, `pokepedia.dev` DNS 위치에 따른 서브도메인 방식 (Cloudflare `.br` 헤더 검증 포함, ROADMAP M4)
 
 **에이전트에 위임 (완료 후 문서에 정리)**
-- 전투 수치 세부: 위력·명중률 값, 급소 확률(1/16 가정), 압축 계수 k, 전설 가중치, 상성 편향, 이상치 보정 (6.5)
+- 전투 수치 세부: Demo 매치업 기준 값은 M2에서 정함(k 0.65, 위력 35/16, 명중 95/100, 급소 1/16 — 6.5). **남은 것:** 전설 가중치, 나머지 매치업의 상성 편향·이상치 보정 (M5)
 - 전투 흐름 세부: 승리·패배 화면 구성 (5.3)
 - 공격 연출 종류(`animKind`) 분류, 매니페스트 전달 방식, 프로토콜 요청 ID 필요 여부, 사운드 구체 소스·선곡
 

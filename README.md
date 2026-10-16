@@ -18,14 +18,14 @@
 ```text
 Assets/
   Scripts/
-    Domain/        Pokepedia.Domain        순수 C#, UnityEngine 참조 금지 (배틀 규칙, IRandom)
-    Content/       Pokepedia.Content       순수 C# (로케일·데이터 파싱)
-    Application/   Pokepedia.Application   순수 C#, 네임스페이스 Pokepedia.App (흐름, IHostBridge)
+    Domain/        Pokepedia.Domain        순수 C#, UnityEngine 참조 금지 (모델, Battle/ 엔진·이벤트, Rules/ 상성·능력치·데미지, IRandom)
+    Content/       Pokepedia.Content       순수 C# (JSON 파서, 데이터 로더·카탈로그, 로케일)
+    Application/   Pokepedia.Application   순수 C#, 네임스페이스 Pokepedia.App (NPC AI, 시뮬레이터, 연결 흐름, IHostBridge)
     Bridge/        Pokepedia.Bridge        IHostBridge 의 Unity/WebGL 구현 + HostBridge.jslib
     Presentation/  Pokepedia.Presentation  화면·입력·연출 (규칙 판단 금지)
   Editor/          ProjectSetup, FontAtlasBuilder, WebBuild
   Tests/EditMode/  NUnit 테스트 (UnityEngine 미사용 → dotnet 에서도 실행)
-  Content/         Locale(ko/en/ja), Fonts(Galmuri11 + Static 아틀라스), Sprites(생성물, 커밋 안 함)
+  Content/         Data(species·moves·roster.json), Locale(ko/en/ja), Fonts(Galmuri11 + Static 아틀라스), Sprites(생성물, 커밋 안 함)
   WebGLTemplates/Pokepedia/  웹 템플릿 (10:9 화면, 키 입력 차단, origin 검증)
 Tests.Dotnet/      Unity 없이 순수 C# 테스트를 돌리는 프로젝트 (소스 링크)
 Tools/             sprites(스프라이트 재현), web(로컬 서버·모의 호스트), audio(울음소리 시제품), unity
