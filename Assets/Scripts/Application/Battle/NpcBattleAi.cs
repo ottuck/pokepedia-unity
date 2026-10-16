@@ -1,4 +1,3 @@
-using System;
 using Pokepedia.Domain.Battle;
 using Pokepedia.Domain.Rules;
 
@@ -12,7 +11,14 @@ namespace Pokepedia.App.Battle
     {
         public static UseMove Choose(Battler self, Battler target, BattleRules rules)
         {
-            throw new NotImplementedException();
+            int best = 0;
+            double bestValue = double.MinValue;
+            for (int i = 0; i < self.Moves.Count; i++)
+            {
+                var value = DamageCalculator.Expected(self, target, self.Moves[i], rules);
+                if (value > bestValue) { best = i; bestValue = value; }
+            }
+            return new UseMove(best);
         }
     }
 }

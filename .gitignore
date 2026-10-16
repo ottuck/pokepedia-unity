@@ -40,6 +40,9 @@ crashlytics-build.properties
 /Tools/sprites/.venv/
 /Tools/sprites/_work/
 
+# --- 에이전트 임시 worktree ---
+/.claude/worktrees/
+
 # --- 기타 ---
 __pycache__/
 .DS_Store
