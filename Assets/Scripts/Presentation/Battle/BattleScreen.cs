@@ -200,6 +200,7 @@ namespace Pokepedia.Presentation.Battle
         {
             foreach (var v in sides) v.Reset();
             message.Clear();
+            sound.PlayMusic(SoundBank.BattleMusicKey); // 판마다 처음부터
             yield return PlayThenPrompt(start());
         }
 
@@ -238,6 +239,7 @@ namespace Pokepedia.Presentation.Battle
             var outcome = session.TryRun();
             yield return message.Say(locale.Get(BattleMessages.ForRun(outcome).Key));
             if (outcome == RunOutcome.CannotEscape) { ShowActionMenu(); yield break; }
+            yield return sound.FadeOutMusic(0.3f);
             yield return NewBattle(session.NextBattle);
         }
 
@@ -276,6 +278,7 @@ namespace Pokepedia.Presentation.Battle
             SetMenu(null);
             if (i == 1)
             {
+                sound.StopMusic();
                 root.SetActive(false);
                 onExit?.Invoke();
                 return;
@@ -325,6 +328,7 @@ namespace Pokepedia.Presentation.Battle
                         yield return SayAll(e);
                         break;
                     case BattleEnded b:
+                        yield return sound.FadeOutMusic(0.25f);
                         sound.Play(b.WinnerSide == BattleState.Player ? SfxKind.Victory : SfxKind.Defeat);
                         if (b.WinnerSide == BattleState.Player) StartCoroutine(director.Victory(b.WinnerSide));
                         yield return SayAll(e);
