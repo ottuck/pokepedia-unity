@@ -23,11 +23,14 @@ namespace Pokepedia.Presentation.Battle.Fx
         readonly SoundBank sound;
         readonly AnimationCatalog anim;
         readonly ContentCatalog catalog;
+        readonly BattleWorld world;
+        readonly BattleLighting lighting;
 
         public AnimationDirector(MonoBehaviour host, BattleSideView[] sides, VfxLayer vfx, SoundBank sound,
-                                 AnimationCatalog anim, ContentCatalog catalog)
+                                 AnimationCatalog anim, ContentCatalog catalog, BattleWorld world, BattleLighting lighting)
         {
             this.host = host; this.sides = sides; this.vfx = vfx; this.sound = sound; this.anim = anim; this.catalog = catalog;
+            this.world = world; this.lighting = lighting;
         }
 
         AnimationProfile ProfileOf(int speciesId) => anim.ProfileFor(catalog.GetSpecies(speciesId).AnimProfile);
@@ -68,17 +71,30 @@ namespace Pokepedia.Presentation.Battle.Fx
         public IEnumerator Victory(int side)
         {
             var view = sides[side];
+            // 승리: 따뜻한 빛 번짐 + 반짝이는 입자, 카메라가 이긴 쪽으로 천천히 다가간다
+            host.StartCoroutine(lighting.Pulse(view.Center, new Color(1f, 0.85f, 0.45f), 120, 1.5f, 0.9f));
+            vfx.Burst(view.Center, new Color(1f, 0.92f, 0.5f), Color.white, 36, 25, 95, 0.9f, 3, 150, 14);
+            host.StartCoroutine(world.PanTo(side == BattleState.Player ? -6 : 6, 0.5f));
             for (int i = 0; i < 2; i++)
             {
-                yield return Move(view, Vector2.zero, new Vector2(0, -8), 0.1f);
-                yield return Move(view, new Vector2(0, -8), Vector2.zero, 0.12f);
+                yield return Move(view, Vector2.zero, new Vector2(0, -8), 0.1f, true);
+                yield return Move(view, new Vector2(0, -8), Vector2.zero, 0.12f, true);
             }
+            host.StartCoroutine(world.PanTo(0, 0.6f));
         }
 
         // ------------------------------------------------------------------ 기술
         /// <param name="hit">명중했으면 피해 이벤트, 빗나갔으면 null</param>
         /// <param name="hpAnimation">HP 바를 줄이는 코루틴 (화면이 넘긴다)</param>
         public IEnumerator UseMove(int side, int attackerSpeciesId, int targetSpeciesId, MoveInfo move, DamageDealt hit, Func<IEnumerator> hpAnimation)
+        {
+            // 카메라가 공격하는 쪽으로 살짝 움직였다가 돌아온다 (배경 레이어가 다르게 따라가 깊이가 보인다)
+            host.StartCoroutine(world.PanTo(side == BattleState.Player ? 5 : -5, 0.12f));
+            yield return UseMoveCore(side, attackerSpeciesId, targetSpeciesId, move, hit, hpAnimation);
+            host.StartCoroutine(world.PanTo(0, 0.25f));
+        }
+
+        IEnumerator UseMoveCore(int side, int attackerSpeciesId, int targetSpeciesId, MoveInfo move, DamageDealt hit, Func<IEnumerator> hpAnimation)
         {
             var attacker = sides[side];
             var target = sides[BattleState.Opponent(side)];
@@ -104,6 +120,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                 case "lightning_strike":
                     yield return Charge(attacker, c1, c2, prof.WindupSec, 26);
                     host.StartCoroutine(vfx.ScreenFlash(new Color(1f, 1f, 0.7f, 0.55f), 0.18f));
+                    host.StartCoroutine(lighting.Pulse(missed ? target.Center + new Vector2(28, 0) : target.Center, c1, 130, 2.4f, 0.5f));
                     if (missed)
                     {
                         var aside = target.Center + new Vector2(28, 0);
@@ -118,11 +135,16 @@ namespace Pokepedia.Presentation.Battle.Fx
                     break;
 
                 case "water_cannon":
+                    host.StartCoroutine(lighting.Pulse(attacker.Center, c1, 60, 1.1f, 0.55f));
                     yield return Recoil(attacker, -toTarget * 5, prof.WindupSec);
                     yield return vfx.Stream(attacker.Center, missed ? target.Center + new Vector2(30, -10) : target.Center,
                                             c1, c2, 0.5f, 6, 260, 4, 3);
                     if (missed) yield return Dodge(target);
-                    else vfx.Burst(target.Center, c1, c2, 36, 40, 120, 0.55f, 3, 260, 4);
+                    else
+                    {
+                        vfx.Burst(target.Center, c1, c2, 36, 40, 120, 0.55f, 3, 260, 4);
+                        host.StartCoroutine(lighting.Pulse(target.Center, c1, 90, 1.6f, 0.55f));
+                    }
                     break;
 
                 case "contact":
@@ -137,6 +159,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                     {
                         yield return Move(attacker, Vector2.zero, reach, 0.1f);
                         vfx.Burst(target.Center, Color.white, c1, 18, 30, 90, 0.3f, 3);
+                        host.StartCoroutine(lighting.Pulse(target.Center, Color.Lerp(c1, Color.white, 0.5f), 75, 1.3f, 0.3f));
                         yield return Move(attacker, reach, Vector2.zero, 0.15f);
                     }
                     break;
@@ -149,6 +172,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                     {
                         yield return vfx.Orb(attacker.Center, dest, c1, 10, 0.35f, c2);
                         vfx.Burst(dest, c1, c2, 24, 30, 90, 0.4f, 3);
+                        host.StartCoroutine(lighting.Pulse(dest, c1, 85, 1.5f, 0.4f));
                     }
                     break;
 
@@ -157,6 +181,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                     if (missed) yield return Dodge(target);
                     else
                     {
+                        host.StartCoroutine(lighting.Pulse(target.Center, c1, 95, 1.4f, 0.6f));
                         yield return vfx.Rings(target.Center, c1, 3, 0.5f);
                         vfx.Burst(target.Center, c1, c2, 20, 10, 50, 0.6f, 3, 0, 10);
                     }
@@ -214,6 +239,7 @@ namespace Pokepedia.Presentation.Battle.Fx
             {
                 host.StartCoroutine(vfx.ScreenFlash(new Color(1, 1, 1, 0.9f), 0.25f));
                 host.StartCoroutine(vfx.Shake(4, 0.3f));
+                host.StartCoroutine(lighting.Pulse(target.Center, Color.white, 110, 1.8f, 0.3f));
             }
             // 넉백(종 데이터) + 흔들림 + 셰이더 번쩍임 3회
             var away = (target.Feet - sides[BattleState.Opponent(SideOf(target))].Feet).normalized;
@@ -239,6 +265,7 @@ namespace Pokepedia.Presentation.Battle.Fx
         IEnumerator Charge(BattleSideView view, Color c1, Color c2, double seconds, int sparks)
         {
             float total = (float)Math.Max(0.05, seconds);
+            if (total >= 0.2f) host.StartCoroutine(lighting.Pulse(view.Center, c1, 52, 0.9f, total));
             float nextSpark = 0;
             for (float t = 0; t < total; t += Time.deltaTime)
             {
@@ -269,14 +296,14 @@ namespace Pokepedia.Presentation.Battle.Fx
             yield return Move(view, step, Vector2.zero, 0.12f);
         }
 
-        static IEnumerator Move(BattleSideView view, Vector2 from, Vector2 to, float seconds)
+        static IEnumerator Move(BattleSideView view, Vector2 from, Vector2 to, float seconds, bool airborne = false)
         {
             for (float t = 0; t < seconds; t += Time.deltaTime)
             {
-                view.SetOffset(Vector2.Lerp(from, to, t / seconds));
+                view.SetOffset(Vector2.Lerp(from, to, t / seconds), airborne);
                 yield return null;
             }
-            view.SetOffset(to);
+            view.SetOffset(to, airborne);
         }
 
         /// <summary>두 코루틴을 동시에 돌리고 둘 다 끝날 때까지 기다린다</summary>

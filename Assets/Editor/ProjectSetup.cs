@@ -99,6 +99,8 @@ namespace Pokepedia.EditorTools
             bso.FindProperty("flashMaterial").objectReferenceValue = MaterialAsset("Assets/Content/VFX/SpriteFlash.mat", "Pokepedia/Sprite Flash");
             // 파티클: URP 2D 렌더러가 그리는 스프라이트 Unlit 셰이더. 텍스처 없이 정사각형 입자(도트 느낌)
             bso.FindProperty("particleMaterial").objectReferenceValue = MaterialAsset("Assets/Content/VFX/Particle.mat", "Universal Render Pipeline/2D/Sprite-Unlit-Default");
+            // 조명을 받는 월드 스프라이트(배경·발판·포켓몬)용
+            bso.FindProperty("litMaterial").objectReferenceValue = MaterialAsset("Assets/Content/VFX/SpriteLit.mat", "Universal Render Pipeline/2D/Sprite-Lit-Default");
             bso.ApplyModifiedPropertiesWithoutUndo();
 
             var app = new GameObject("App", typeof(TitleScreen)).GetComponent<TitleScreen>();

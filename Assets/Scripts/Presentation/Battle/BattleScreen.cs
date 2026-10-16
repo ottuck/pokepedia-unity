@@ -33,7 +33,8 @@ namespace Pokepedia.Presentation.Battle
         [SerializeField] TextAsset localeEn;
         [SerializeField] TextAsset localeJa;
         [SerializeField] Material flashMaterial;     // Pokepedia/Sprite Flash (피격 번쩍임, 본체 위에 겹치는 렌더러용)
-        [SerializeField] Material particleMaterial;  // 파티클·월드 스프라이트 (URP 2D Sprite-Unlit)
+        [SerializeField] Material particleMaterial;  // 파티클·월드의 조명 안 받는 스프라이트 (URP 2D Sprite-Unlit)
+        [SerializeField] Material litMaterial;       // 월드의 조명 받는 스프라이트: 배경·발판·포켓몬 (URP 2D Sprite-Lit)
 
         const int DemoPlayer = 25; // 피카츄
         const int DemoNpc = 9;     // 거북왕
@@ -63,6 +64,7 @@ namespace Pokepedia.Presentation.Battle
         GameObject root;
         readonly BattleSideView[] sides = new BattleSideView[2];
         BattleWorld world;
+        BattleLighting lighting;
         VfxLayer vfx;
         AnimationDirector director;
         SoundBank sound;
@@ -116,7 +118,14 @@ namespace Pokepedia.Presentation.Battle
             sound = new SoundBank(gameObject);
 
             // 월드(배경·발판·포켓몬·이펙트)는 SpriteRenderer 와 카메라로 그린다. 머티리얼은 URP 2D 언릿 스프라이트 셰이더다.
-            world = new BattleWorld(transform, Camera.main, particleMaterial);
+            world = new BattleWorld(transform, Camera.main, particleMaterial, litMaterial);
+            // 2.5D 연출 (PROJECT.md 5.5): 배경 레이어(패럴랙스·안개·비) + 조명(분위기·타입별 glow) + 후처리(Bloom)
+            var theme = BackdropTheme.Storm;
+            var backdrop = new BattleBackdrop(world, theme);
+            world.Backdrop = backdrop;
+            world.Container.AddComponent<BackdropTicker>().OnTick = backdrop.Tick;
+            lighting = new BattleLighting(world.Root, theme.Ambient, 1f);
+            new BattlePostFx(world.Container.transform, Camera.main);
 
             // 240×216 HUD 영역을 캔버스 가운데에 둔다 (정수 배율은 PixelCanvasScaler, 홀수 창의 반 픽셀은 PixelAlign)
             var screen = new GameObject("Screen", typeof(RectTransform), typeof(PixelAlign));
@@ -130,7 +139,7 @@ namespace Pokepedia.Presentation.Battle
             sides[BattleState.Npc] = MakeSide(srt, "Npc", new Vector2(178, 86), 6, 6, 116, 32, false);
             sides[BattleState.Player] = MakeSide(srt, "Player", new Vector2(66, 154), 122, 100, 112, 46, true);
             vfx = new VfxLayer(world, srt, particleMaterial);
-            director = new AnimationDirector(this, sides, vfx, sound, animation, catalog);
+            director = new AnimationDirector(this, sides, vfx, sound, animation, catalog, world, lighting);
 
             var msgInner = Ui.Box(srt, "MessageBox", 2, 156, 236, 58);
             message = new MessageBox(msgInner, font);
@@ -175,7 +184,7 @@ namespace Pokepedia.Presentation.Battle
             var nameLabel = Ui.Label(inner, "Name", font, 4, 2, bw - 50, 14);
             Ui.Label(inner, "Level", font, bw - 42, 2, 36, 14, TextAlignmentOptions.TopRight).text = ":L50";
             var hp = new HpBar(inner, font, 6, 18, bw - 34, player);
-            var view = new BattleSideView(world, name, feet, particleMaterial, flashMaterial, inner.parent.gameObject, nameLabel, hp);
+            var view = new BattleSideView(world, name, feet, flashMaterial, inner.parent.gameObject, nameLabel, hp);
             view.Reset();
             return view;
         }
