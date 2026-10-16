@@ -334,6 +334,7 @@ MonoBehaviour:
   localeEn: {fileID: 4900000, guid: b5bec185fc14cb641b72f93be5b2269f, type: 3}
   localeJa: {fileID: 4900000, guid: 08400b697519dd643a6699270884e351, type: 3}
   flashMaterial: {fileID: 2100000, guid: 06121aa088c554e4f888236a32ef22bf, type: 2}
+  litMaterial: {fileID: 2100000, guid: 814f1c09b508ec34ab5cd6971eb97f43, type: 2}
   particleMaterial: {fileID: 2100000, guid: 61863687beef8594b90ebbf6c9a1dc3e, type: 2}
 --- !u!4 &2041322542
 Transform:

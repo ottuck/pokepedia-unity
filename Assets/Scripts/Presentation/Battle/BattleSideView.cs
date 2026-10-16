@@ -5,13 +5,16 @@ using UnityEngine;
 namespace Pokepedia.Presentation.Battle
 {
     /// <summary>
-    /// 한쪽 진영의 화면 요소 (PROJECT.md 5.5): 월드의 포켓몬 스프라이트(발 위치 기준) + HUD 의 정보 상자(이름·HP).
+    /// 한쪽 진영의 화면 요소 (PROJECT.md 5.5): 월드의 포켓몬 스프라이트(발 위치 기준) + 그림자 + HUD 의 정보 상자(이름·HP).
     /// 좌표는 화면 픽셀(좌상단 원점, y 아래로) — 월드 위치로 바꾸는 건 BattleWorld.ToLocal 이다.
     /// 피격 번쩍임은 본체 위에 겹친 두 번째 렌더러(Pokepedia/Sprite Flash)의 알파로 낸다.
+    /// 그림자는 바닥에 붙어 있어서, 뛰어오르는 동작(airborne)에서는 몸만 올라가고 그림자는 바닥에 남아 높이가 보인다.
     /// </summary>
     public sealed class BattleSideView
     {
-        readonly SpriteRenderer body, flashRenderer;
+        static readonly Color ShadowColor = new Color(0.04f, 0.07f, 0.12f, 0.34f);
+
+        readonly SpriteRenderer body, flashRenderer, shadow;
         readonly Transform bodyTransform;
         bool visible;
         float flash;
@@ -24,12 +27,14 @@ namespace Pokepedia.Presentation.Battle
         public TextMeshProUGUI Name { get; }
         public HpBar Hp { get; }
 
-        public BattleSideView(BattleWorld world, string name, Vector2 feet, Material unlit, Material flashMaterial,
+        public BattleSideView(BattleWorld world, string name, Vector2 feet, Material flashMaterial,
                               GameObject infoBox, TextMeshProUGUI nameLabel, HpBar hp)
         {
             Feet = feet; InfoBox = infoBox; Name = nameLabel; Hp = hp;
 
-            body = world.NewRenderer(world.Root, name + "Sprite", null, BattleWorld.SortSprite);
+            shadow = world.NewRenderer(world.Root, name + "Shadow", null, BattleWorld.SortShadow);
+            shadow.enabled = false;
+            body = world.NewRenderer(world.Root, name + "Sprite", null, BattleWorld.SortSprite, true);
             bodyTransform = body.transform;
             body.enabled = false;
             flashRenderer = world.NewRenderer(bodyTransform, "Flash", null, BattleWorld.SortFlash);
@@ -49,6 +54,13 @@ namespace Pokepedia.Presentation.Battle
         {
             Animator.Play(sheet);
             visible = sheet != null;
+            if (sheet != null)
+            {
+                // 그림자 크기는 스프라이트 폭에 비례 (짝수 픽셀)
+                int w = Mathf.Clamp(Mathf.RoundToInt(sheet.Size.x * 0.62f / 2f) * 2, 26, 76);
+                int h = Mathf.Max(6, Mathf.RoundToInt(w * 0.2f / 2f) * 2);
+                shadow.sprite = BattleWorld.Ellipse(w, h);
+            }
             Refresh();
         }
 
@@ -58,9 +70,13 @@ namespace Pokepedia.Presentation.Battle
             Refresh();
         }
 
-        /// <summary>발 위치에서 offset(화면 픽셀, y 아래로)만큼 옮긴다. 정수 픽셀로 맞춘다.</summary>
-        public void SetOffset(Vector2 offset)
-            => bodyTransform.localPosition = BattleWorld.ToLocal(new Vector2(Mathf.Round(Feet.x + offset.x), Mathf.Round(Feet.y + offset.y)));
+        /// <summary>발 위치에서 offset(화면 픽셀, y 아래로)만큼 옮긴다. 정수 픽셀로 맞춘다. airborne 이면 그림자는 바닥(세로 위치 고정)에 남는다.</summary>
+        public void SetOffset(Vector2 offset, bool airborne = false)
+        {
+            var at = new Vector2(Mathf.Round(Feet.x + offset.x), Mathf.Round(Feet.y + offset.y));
+            bodyTransform.localPosition = BattleWorld.ToLocal(at);
+            shadow.transform.localPosition = BattleWorld.ToLocal(airborne ? new Vector2(at.x, Mathf.Round(Feet.y)) : at);
+        }
 
         public void SetFlash(float amount)
         {
@@ -87,6 +103,8 @@ namespace Pokepedia.Presentation.Battle
             bool on = visible && Animator.Sheet != null;
             body.enabled = on;
             body.color = new Color(1, 1, 1, alpha);
+            shadow.enabled = on;
+            shadow.color = new Color(ShadowColor.r, ShadowColor.g, ShadowColor.b, ShadowColor.a * alpha);
             flashRenderer.enabled = on && flash > 0.001f;
             flashRenderer.color = new Color(1, 1, 1, Mathf.Clamp01(flash) * alpha);
         }
