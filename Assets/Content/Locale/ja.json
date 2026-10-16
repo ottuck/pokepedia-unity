@@ -44,6 +44,9 @@
     "lost": "めのまえが まっくらに なった！",
     "escaped": "うまく にげきれた！",
     "cannot_escape": "にげられない！",
+    "prompt": {
+      "what_to_do": "{0}は どうする？"
+    },
     "menu": {
       "fight": "たたかう",
       "run": "にげる"

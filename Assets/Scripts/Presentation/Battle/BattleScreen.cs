@@ -7,6 +7,8 @@ using Pokepedia.Content;
 using Pokepedia.Domain;
 using Pokepedia.Domain.Battle;
 using Pokepedia.Domain.Rules;
+using Pokepedia.Presentation.Audio;
+using Pokepedia.Presentation.Audio.Synth;
 using Pokepedia.Presentation.UI;
 using TMPro;
 using UnityEngine;
@@ -31,21 +33,19 @@ namespace Pokepedia.Presentation.Battle
         const int DemoPlayer = 25; // 피카츄
         const int DemoNpc = 9;     // 거북왕
 
-        /// <summary>로케일 키 (Content/Locale/*.json). 메시지 문장 키는 BattleMessages 가 정한다.</summary>
+        /// <summary>화면 문구 키. 단일 출처는 Application 의 BattleTextKeys (로케일 파일 검사도 그쪽 테스트가 한다).</summary>
         static class Keys
         {
-            public const string Fight = "battle.menu.fight";
-            public const string Run = "battle.menu.run";
-            public const string WhatToDo = "battle.prompt.what_to_do";
-            public const string CantEscape = "battle.run.cant_escape";
-            public const string RanAway = "battle.run.escaped";
-            public const string NextOpponent = "battle.result.next_opponent";
-            public const string Retry = "battle.result.retry";
-            public const string ToTitle = "battle.result.to_title";
-            public const string InfoType = "battle.move_info.type";
-            public const string InfoPower = "battle.move_info.power";
-            public const string InfoAccuracy = "battle.move_info.accuracy";
-            public static string Type(PokemonType t) => "types." + t.ToString().ToLowerInvariant();
+            public const string Fight = BattleTextKeys.MenuFight;
+            public const string Run = BattleTextKeys.MenuRun;
+            public const string WhatToDo = BattleTextKeys.PromptWhatToDo;
+            public const string NextOpponent = BattleTextKeys.ResultNextOpponent;
+            public const string Retry = BattleTextKeys.ResultRetry;
+            public const string ToTitle = BattleTextKeys.ResultTitle;
+            public const string InfoType = BattleTextKeys.InfoType;
+            public const string InfoPower = BattleTextKeys.InfoPower;
+            public const string InfoAccuracy = BattleTextKeys.InfoAccuracy;
+            public static string Type(PokemonType t) => BattleTextKeys.TypeName(t);
         }
 
         sealed class SideView
@@ -72,7 +72,9 @@ namespace Pokepedia.Presentation.Battle
         TextMeshProUGUI moveInfo;
         GameObject moveInfoBox;
         ChoiceMenu activeMenu;
+        SoundBank sound;
         bool lastWin;
+        int lastMoveIndex;
 
         /// <summary>타이틀에서 호출. Demo 매치업(피카츄 vs 거북왕)을 시작한다. onExit 는 [처음으로].</summary>
         public void BeginDemo(string localeCode, Action onExit)
@@ -87,7 +89,21 @@ namespace Pokepedia.Presentation.Battle
 
             var seed = (uint)Environment.TickCount | 1u;
             session = new BattleSession(catalog, BattleRules.Default, new SeededRandom(seed), BattleMode.Demo, DemoPlayer, () => DemoNpc);
-            StartCoroutine(PlayThenPrompt(session.Start()));
+            lastMoveIndex = 0;
+            StartCoroutine(NewBattle(session.Start));
+        }
+
+        /// <summary>새 판: 이전 판의 스프라이트·정보 상자를 치우고 등장부터 재생한다.</summary>
+        IEnumerator NewBattle(Func<IReadOnlyList<BattleEvent>> start)
+        {
+            foreach (var v in sides)
+            {
+                v.Image.enabled = false;
+                v.InfoBox.SetActive(false);
+                v.SpriteRect.anchoredPosition = v.Home;
+            }
+            message.Clear();
+            yield return PlayThenPrompt(start());
         }
 
         // ------------------------------------------------------------------ 레이아웃
@@ -99,6 +115,7 @@ namespace Pokepedia.Presentation.Battle
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 10;
             root = canvasGo;
+            sound = new SoundBank(gameObject);
 
             // 240×216 화면을 캔버스 가운데에 둔다 (정수 배율은 PixelCanvasScaler)
             var screen = new GameObject("Screen", typeof(RectTransform), typeof(Image));
@@ -145,6 +162,13 @@ namespace Pokepedia.Presentation.Battle
                 new[] { new Vector3(6, 6, 128), new Vector3(6, 24, 128) }, 1);
             resultMenu.Chosen += OnResult;
             resultMenu.Hide();
+
+            foreach (var m in new[] { actionMenu, moveMenu, resultMenu })
+            {
+                m.Navigated += () => sound.Play(SfxKind.CursorMove);
+                m.Chosen += _ => sound.Play(SfxKind.Confirm);
+            }
+            moveMenu.Cancelled += () => sound.Play(SfxKind.Cancel);
         }
 
         SideView MakeSide(RectTransform screen, string name, Vector2 feet, float bx, float by, float bw, float bh, bool player)
@@ -188,7 +212,8 @@ namespace Pokepedia.Presentation.Battle
 
         void ShowActionMenu()
         {
-            message.SetStatic(locale.Format(Keys.WhatToDo, names.Species(session.Player.Species.Id)));
+            // 행동 메뉴가 메시지 창 오른쪽을 덮으므로 그 왼쪽 폭(약 130px) 안에서 줄바꿈한다
+            message.SetStatic(locale.Format(Keys.WhatToDo, names.Species(session.Player.Species.Id)), 130);
             SetMenu(actionMenu);
             actionMenu.Show(new[] { locale.Get(Keys.Fight), locale.Get(Keys.Run) });
         }
@@ -202,21 +227,17 @@ namespace Pokepedia.Presentation.Battle
 
         IEnumerator RunAway()
         {
-            if (session.TryRun() == RunOutcome.CannotEscape)
-            {
-                yield return message.Say(locale.Get(Keys.CantEscape));
-                ShowActionMenu();
-                yield break;
-            }
-            yield return message.Say(locale.Get(Keys.RanAway));
-            yield return PlayThenPrompt(session.NextBattle());
+            var outcome = session.TryRun();
+            yield return message.Say(locale.Get(BattleMessages.ForRun(outcome).Key));
+            if (outcome == RunOutcome.CannotEscape) { ShowActionMenu(); yield break; }
+            yield return NewBattle(session.NextBattle);
         }
 
         void ShowMoveMenu()
         {
             message.Clear();
             SetMenu(moveMenu);
-            moveMenu.Show(session.PlayerMoveInfos.Select(m => locale.Get(m.NameKey)).ToArray());
+            moveMenu.Show(session.PlayerMoveInfos.Select(m => locale.Get(m.NameKey)).ToArray(), lastMoveIndex);
         }
 
         void ShowMoveInfo(int i)
@@ -224,11 +245,12 @@ namespace Pokepedia.Presentation.Battle
             var infos = session.PlayerMoveInfos;
             if (i < 0 || i >= infos.Count) return;
             var m = infos[i].Move;
-            moveInfo.text = $"{locale.Get(Keys.InfoType)}/\n{locale.Get(Keys.Type(m.Type))}\n{locale.Get(Keys.InfoPower)} {m.Power}\n{locale.Get(Keys.InfoAccuracy)} {m.Accuracy}";
+            moveInfo.text = $"{locale.Get(Keys.Type(m.Type))}\n{locale.Get(Keys.InfoPower)} {m.Power}\n{locale.Get(Keys.InfoAccuracy)} {m.Accuracy}";
         }
 
         void OnMove(int i)
         {
+            lastMoveIndex = i;
             SetMenu(null);
             message.Clear();
             StartCoroutine(PlayThenPrompt(session.UseMove(i)));
@@ -250,7 +272,7 @@ namespace Pokepedia.Presentation.Battle
                 onExit?.Invoke();
                 return;
             }
-            StartCoroutine(PlayThenPrompt(lastWin ? session.NextBattle() : session.Retry()));
+            StartCoroutine(NewBattle(lastWin ? session.NextBattle : (Func<IReadOnlyList<BattleEvent>>)session.Retry));
         }
 
         // ------------------------------------------------------------------ 이벤트 재생 (M3-2 에서 AnimationDirector 로 옮긴다)
@@ -268,11 +290,21 @@ namespace Pokepedia.Presentation.Battle
                         yield return Lunge(m.Side);
                         break;
                     case DamageDealt d:
+                        if (d.Amount > 0) sound.Play(d.Critical ? SfxKind.CriticalHit : SfxKind.Hit);
                         yield return Hit(d);
                         yield return SayAll(e);
                         break;
                     case Fainted f:
+                        sound.Play(SfxKind.Faint);
                         yield return Faint(f.Side);
+                        yield return SayAll(e);
+                        break;
+                    case MoveMissed _:
+                        sound.Play(SfxKind.Miss);
+                        yield return SayAll(e);
+                        break;
+                    case BattleEnded b:
+                        sound.Play(b.WinnerSide == BattleState.Player ? SfxKind.Victory : SfxKind.Defeat);
                         yield return SayAll(e);
                         break;
                     default:

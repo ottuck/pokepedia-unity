@@ -47,3 +47,9 @@ crashlytics-build.properties
 __pycache__/
 .DS_Store
 Thumbs.db
+
+# --- 사운드 렌더 도구 산출물 ---
+/Tools/audio/out/
+/Tools/audio/render/bin/
+/Tools/audio/render/obj/
+!/Tools/audio/render/*.csproj

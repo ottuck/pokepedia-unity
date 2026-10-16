@@ -60,6 +60,8 @@ namespace Pokepedia.App.Battle
         public const string CannotEscape = "battle.cannot_escape";
 
         // ----- 화면 문구 (인자 없음) -----
+        /// <summary>{0} 플레이어 종 이름: 행동 메뉴와 함께 띄우는 "{0}은(는) 무엇을 할까?"</summary>
+        public const string PromptWhatToDo = "battle.prompt.what_to_do";
         public const string MenuFight = "battle.menu.fight";
         public const string MenuRun = "battle.menu.run";
         public const string ResultNextOpponent = "battle.result.next_opponent";
@@ -82,7 +84,7 @@ namespace Pokepedia.App.Battle
         /// <summary>메뉴·결과·기술 정보 라벨과 18개 타입 이름</summary>
         public static IReadOnlyList<string> UiKeys { get; } = new[]
             {
-                MenuFight, MenuRun, ResultNextOpponent, ResultRetry, ResultTitle, InfoType, InfoPower, InfoAccuracy,
+                PromptWhatToDo, MenuFight, MenuRun, ResultNextOpponent, ResultRetry, ResultTitle, InfoType, InfoPower, InfoAccuracy,
             }
             .Concat(((PokemonType[])Enum.GetValues(typeof(PokemonType))).Select(TypeName))
             .ToArray();

@@ -44,6 +44,9 @@
     "lost": "You blacked out!",
     "escaped": "Got away safely!",
     "cannot_escape": "Can't escape!",
+    "prompt": {
+      "what_to_do": "What will {0} do?"
+    },
     "menu": {
       "fight": "FIGHT",
       "run": "RUN"

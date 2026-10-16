@@ -21,8 +21,10 @@ namespace Pokepedia.Presentation.Battle
 
         public event Action<int> Chosen;
         public event Action Cancelled;
-        /// <summary>커서가 옮겨 갈 때 (기술 정보 표시용)</summary>
+        /// <summary>커서가 옮겨 갈 때 (기술 정보 표시용, Show 직후 포함)</summary>
         public event Action<int> Highlighted;
+        /// <summary>사용자가 방향키로 커서를 옮겼을 때 (효과음용)</summary>
+        public event Action Navigated;
 
         public bool Visible => root.activeSelf;
         public int Count { get; private set; }
@@ -72,7 +74,7 @@ namespace Pokepedia.Presentation.Battle
             if (BattleInput.Down) next += columns;
             if (columns > 1 && BattleInput.Left && index % columns > 0) next -= 1;
             if (columns > 1 && BattleInput.Right && index % columns < columns - 1) next += 1;
-            if (next != index && next >= 0 && next < Count) Move(next);
+            if (next != index && next >= 0 && next < Count) { Move(next); Navigated?.Invoke(); }
             if (BattleInput.Confirm) Chosen?.Invoke(index);
             else if (BattleInput.Cancel) Cancelled?.Invoke();
         }

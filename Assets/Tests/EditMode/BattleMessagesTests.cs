@@ -225,7 +225,7 @@ namespace Pokepedia.Tests
         public void LocaleStrings_UseEveryArgumentAndNoOther()
         {
             var counts = ArgCountByKey();
-            foreach (var k in BattleTextKeys.UiKeys) counts[k] = 0;
+            foreach (var k in BattleTextKeys.UiKeys) counts[k] = k == BattleTextKeys.PromptWhatToDo ? 1 : 0; // "{0}은(는) 무엇을 할까?"
             foreach (var lang in Locales)
             {
                 var table = Locale(lang);
