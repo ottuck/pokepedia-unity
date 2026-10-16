@@ -175,6 +175,202 @@ namespace Pokepedia.Presentation.Battle.Fx
             Object.Destroy(root.gameObject);
         }
 
+        /// <summary>
+        /// from → to 로 뻗는 지그재그 번개(몸에서 발사하는 전기). 가운데가 가장 크게 휘고 양 끝은 정확히 from·to 에 붙는다.
+        /// forks 만큼 잔가지를 친다. 선분을 만들어 깜빡인 뒤 지운다.
+        /// </summary>
+        public IEnumerator Lightning(Vector2 from, Vector2 to, Color core, Color glow, int flickers, float seconds,
+                                     float jitter = 9, int forks = 0, float glowWidth = 5)
+        {
+            var root = new GameObject("Lightning").transform;
+            root.SetParent(fx, false);
+            var dir = to - from;
+            var perp = new Vector2(-dir.y, dir.x).normalized;
+            int segments = Mathf.Clamp(Mathf.RoundToInt(dir.magnitude / 14f), 5, 12);
+            var points = new List<Vector2> { from };
+            for (int i = 1; i < segments; i++)
+            {
+                float t = i / (float)segments;
+                points.Add(Vector2.Lerp(from, to, t) + perp * Random.Range(-jitter, jitter) * Mathf.Sin(t * Mathf.PI));
+            }
+            points.Add(to);
+            for (int i = 0; i < points.Count - 1; i++)
+            {
+                Segment(root, points[i], points[i + 1], glowWidth, glow, BattleWorld.SortFx);
+                Segment(root, points[i], points[i + 1], 2, core, BattleWorld.SortFx + 1);
+            }
+            for (int f = 0; f < forks; f++)
+            {
+                var start = points[Random.Range(1, points.Count - 1)];
+                float angle = Random.Range(25f, 50f) * (Random.value < 0.5f ? 1 : -1);
+                var fdir = (Vector2)(Quaternion.Euler(0, 0, angle) * dir.normalized);
+                var a = start;
+                for (int k = 0; k < 3; k++)
+                {
+                    var b = a + fdir * Random.Range(6f, 10f) + perp * Random.Range(-3f, 3f);
+                    Segment(root, a, b, 3, glow, BattleWorld.SortFx);
+                    Segment(root, a, b, 1, core, BattleWorld.SortFx + 1);
+                    a = b;
+                }
+            }
+            float each = seconds / Mathf.Max(1, flickers * 2);
+            for (int f = 0; f < flickers; f++)
+            {
+                root.gameObject.SetActive(true); yield return Wait(each);
+                root.gameObject.SetActive(false); yield return Wait(each * 0.6f);
+            }
+            Object.Destroy(root.gameObject);
+        }
+
+        /// <summary>
+        /// 굵은 물줄기 빔: from 에서 to 까지 extendSec 동안 뻗어 holdSec 동안 출렁이며 유지하다가 가늘어지며 사라진다.
+        /// 바깥(outer)·안쪽(inner)·흰 심(core) 세 겹이고, 두께는 정수 픽셀로 반올림한다.
+        /// </summary>
+        public IEnumerator Beam(Vector2 from, Vector2 to, Color outer, Color inner, float width, float extendSec, float holdSec)
+        {
+            var root = new GameObject("Beam").transform;
+            root.SetParent(fx, false);
+            root.localPosition = ToLocal(from);
+            root.localEulerAngles = new Vector3(0, 0, Mathf.Atan2(-(to.y - from.y), to.x - from.x) * Mathf.Rad2Deg);
+            var o = world.NewRenderer(root, "Outer", BattleWorld.PixelLeft, BattleWorld.SortFx);
+            var i = world.NewRenderer(root, "Inner", BattleWorld.PixelLeft, BattleWorld.SortFx + 1);
+            var c = world.NewRenderer(root, "Core", BattleWorld.PixelLeft, BattleWorld.SortFx + 2);
+            o.color = outer; i.color = inner; c.color = Color.white;
+            float length = Vector2.Distance(from, to);
+
+            void Shape(float len, float w)
+            {
+                o.transform.localScale = new Vector3(len, Mathf.Max(1, Mathf.Round(w)), 1);
+                i.transform.localScale = new Vector3(len, Mathf.Max(1, Mathf.Round(w * 0.55f)), 1);
+                c.transform.localScale = new Vector3(len, Mathf.Max(1, Mathf.Round(w * 0.2f)), 1);
+            }
+
+            for (float t = 0; t < extendSec; t += Time.deltaTime)
+            {
+                float k = t / extendSec;
+                Shape(Mathf.Round(length * (1 - (1 - k) * (1 - k))), width * (0.6f + 0.4f * k));
+                yield return null;
+            }
+            for (float t = 0; t < holdSec; t += Time.deltaTime)
+            {
+                Shape(length, width * (1 + 0.18f * Mathf.Sin(t * 45f)));
+                yield return null;
+            }
+            for (float t = 0; t < 0.12f; t += Time.deltaTime)
+            {
+                Shape(length, width * (1 - t / 0.12f));
+                yield return null;
+            }
+            Object.Destroy(root.gameObject);
+        }
+
+        /// <summary>
+        /// 물줄기(하이드로펌프): 레이저처럼 곧은 막대가 아니라 물처럼 보이도록 길이 방향으로 잘게 나눈 조각마다 굵기가 시간·위치에 따라 출렁인다.
+        /// 바깥(진한 물색, 반투명)·안쪽(밝은 물색)·흰 거품 줄(군데군데 끊기며 앞으로 흐름) 세 겹이고, 발사구에서 멀어질수록 퍼져 굵어진다.
+        /// to 는 상대 몸의 "표면"이어야 한다(가운데를 주면 몸을 뚫은 것처럼 보인다). 맞는 동안 끝에서 물보라가 튀고, 끝날 때는 꼬리부터 끊겨 날아간다.
+        /// </summary>
+        public IEnumerator WaterJet(Vector2 from, Vector2 to, Color deep, Color light, float width, float extendSec, float holdSec, bool splash = true)
+        {
+            const int N = 24;
+            var root = new GameObject("WaterJet").transform;
+            root.SetParent(fx, false);
+            root.localPosition = ToLocal(from);
+            var dir = to - from;
+            float length = dir.magnitude;
+            root.localEulerAngles = new Vector3(0, 0, Mathf.Atan2(-dir.y, dir.x) * Mathf.Rad2Deg);
+            float seg = length / N;
+            var outer = new SpriteRenderer[N];
+            var inner = new SpriteRenderer[N];
+            var core = new SpriteRenderer[N];
+            var deepA = new Color(deep.r, deep.g, deep.b, 0.88f);
+            for (int i = 0; i < N; i++)
+            {
+                outer[i] = world.NewRenderer(root, "O" + i, BattleWorld.PixelLeft, BattleWorld.SortFx);
+                inner[i] = world.NewRenderer(root, "I" + i, BattleWorld.PixelLeft, BattleWorld.SortFx + 1);
+                core[i] = world.NewRenderer(root, "C" + i, BattleWorld.PixelLeft, BattleWorld.SortFx + 2);
+                outer[i].color = deepA; inner[i].color = light; core[i].color = Color.white;
+                foreach (var r in new[] { outer[i], inner[i], core[i] })
+                {
+                    r.transform.localPosition = new Vector3(Mathf.Round(i * seg), 0, 0);
+                    r.enabled = false;
+                }
+            }
+            var perp = new Vector2(-dir.y, dir.x).normalized;
+
+            void Shape(float t, int head, int tail, float thin)
+            {
+                for (int i = 0; i < N; i++)
+                {
+                    bool on = i >= tail && i < head;
+                    outer[i].enabled = inner[i].enabled = on;
+                    if (!on) { core[i].enabled = false; continue; }
+                    float grow = 0.7f + 0.45f * i / N;                                      // 멀어질수록 퍼진다
+                    float wob = 1 + 0.22f * Mathf.Sin(t * 38 + i * 0.9f) + 0.12f * Mathf.Sin(t * 23 - i * 1.7f);
+                    float w = Mathf.Max(1, Mathf.Round(width * grow * wob * thin));
+                    float wi = Mathf.Max(1, Mathf.Round(w * (0.5f + 0.1f * Mathf.Sin(t * 29 + i * 1.3f))));
+                    float len = Mathf.Ceil(seg) + 1;
+                    outer[i].transform.localScale = new Vector3(len, w, 1);
+                    inner[i].transform.localScale = new Vector3(len, wi, 1);
+                    // 거품 줄: 군데군데 끊기고 그 끊김이 앞으로 흘러간다
+                    core[i].enabled = ((i + (int)(t * 34)) % 5) != 0;
+                    core[i].transform.localScale = new Vector3(len, Mathf.Max(1, Mathf.Round(w * 0.16f)), 1);
+                }
+            }
+
+            float time = 0;
+            for (float t = 0; t < extendSec; t += Time.deltaTime, time += Time.deltaTime)
+            {
+                float k = t / extendSec;
+                int head = Mathf.Clamp(Mathf.CeilToInt(N * (1 - (1 - k) * (1 - k))), 1, N);
+                Shape(time, head, 0, 0.8f + 0.2f * k);
+                yield return null;
+            }
+            for (float t = 0; t < holdSec; t += Time.deltaTime, time += Time.deltaTime)
+            {
+                Shape(time, N, 0, 1);
+                // 물줄기 가장자리에서 떨어지는 물방울, 끝에서 튀는 물보라
+                var along = Vector2.Lerp(from, to, Random.Range(0.15f, 0.95f)) + perp * Random.Range(-width * 0.6f, width * 0.6f);
+                Burst(along, light, Color.white, 1, 10, 40, 0.35f, 2, 160);
+                if (splash) Spray(to, -dir, 75, light, Color.white, 5, 50, 140, 0.4f, 2, 300);
+                yield return null;
+            }
+            for (float t = 0; t < 0.16f; t += Time.deltaTime, time += Time.deltaTime)
+            {
+                int tail = Mathf.Clamp(Mathf.FloorToInt(N * t / 0.16f), 0, N);
+                Shape(time, N, tail, 1 - 0.5f * t / 0.16f);
+                yield return null;
+            }
+            Object.Destroy(root.gameObject);
+        }
+
+        /// <summary>
+        /// 한 방향(dir, 화면 좌표)을 중심으로 spreadDeg 각도 안에 퍼지는 입자 (물이 몸에 부딪혀 되튀는 물보라 등). gravity 는 픽셀/초² (아래로 +).
+        /// </summary>
+        public void Spray(Vector2 at, Vector2 dir, float spreadDeg, Color a, Color b, int count, float speedMin, float speedMax, float life, float size, float gravity)
+        {
+            var ps = Next();
+            var main = ps.main;
+            main.gravityModifier = 0;
+            var force = ps.forceOverLifetime;
+            force.enabled = gravity != 0;
+            force.space = ParticleSystemSimulationSpace.Local;
+            force.y = new ParticleSystem.MinMaxCurve(-gravity);
+            force.x = new ParticleSystem.MinMaxCurve(0);
+            float baseAngle = Mathf.Atan2(-dir.y, dir.x) * Mathf.Rad2Deg;                 // 화면 y 아래 → 월드 y 위
+            for (int i = 0; i < count; i++)
+            {
+                float ang = (baseAngle + Random.Range(-spreadDeg, spreadDeg)) * Mathf.Deg2Rad;
+                ps.Emit(new ParticleSystem.EmitParams
+                {
+                    position = ToLocal(at),
+                    velocity = new Vector3(Mathf.Cos(ang), Mathf.Sin(ang), 0) * Random.Range(speedMin, speedMax),
+                    startLifetime = life * Random.Range(0.6f, 1f),
+                    startSize = Mathf.Round(size * Random.Range(0.7f, 1.4f)),
+                    startColor = Color.Lerp(a, b, Random.value),
+                }, 1);
+            }
+        }
+
         void Segment(Transform parent, Vector2 a, Vector2 b, float thickness, Color color, int order)
         {
             var len = Vector2.Distance(a, b);

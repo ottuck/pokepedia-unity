@@ -8,10 +8,13 @@ namespace Pokepedia.Presentation.Battle
 {
     /// <summary>
     /// HP 바(초록 &gt; 50% &gt; 노랑 &gt; 20% &gt; 빨강)와 선택적인 "현재/최대" 숫자. 피해를 받으면 일정 속도로 줄어든다.
+    /// 모양은 원작 참고: 어두운 "HP:" 표 + 어두운 테두리 안의 바, 바 위 1px 은 밝게·아래 1px 은 어둡게 해 입체감을 준다.
     /// MonoBehaviour 가 아닌 일반 클래스: 코루틴은 화면(BattleScreen)이 돌린다.
     /// </summary>
     public sealed class HpBar
     {
+        const int TagW = 12, BarH = 8;
+
         readonly RectTransform fill;
         readonly Image fillImage;
         readonly TextMeshProUGUI numbers;
@@ -23,11 +26,32 @@ namespace Pokepedia.Presentation.Battle
         public HpBar(Transform parent, TMP_FontAsset font, float x, float y, float width, bool showNumbers)
         {
             this.width = width;
-            Ui.Label(parent, "HpLabel", font, x, y - 4, 20, 12).text = "HP";
-            Ui.Fill(parent, "HpTrack", x + 18, y, width + 2, 5, Ui.HpTrack);
-            fillImage = Ui.Fill(parent, "HpFill", x + 19, y + 1, width, 3, Ui.HpGreen);
+            var tag = Ui.Fill(parent, "HpTag", x, y, TagW, BarH, Color.white);
+            tag.sprite = Ui.HpTagSprite;
+            float bx = x + TagW + 1;
+            Ui.Fill(parent, "HpFrame", bx, y, width + 4, BarH, Ui.Outline);
+            Ui.Fill(parent, "HpTrack", bx + 1, y + 1, width + 2, BarH - 2, Ui.HpTrack);
+            fillImage = Ui.Fill(parent, "HpFill", bx + 2, y + 2, width, BarH - 4, Ui.HpGreen);
             fill = (RectTransform)fillImage.transform;
-            if (showNumbers) numbers = Ui.Label(parent, "HpNumbers", font, x, y + 6, width + 20, 14, TextAlignmentOptions.TopRight);
+            Edge(fill, true, new Color(1, 1, 1, 0.5f));
+            Edge(fill, false, new Color(0, 0, 0, 0.22f));
+            if (showNumbers) numbers = Ui.Label(parent, "HpNumbers", font, x, y + BarH + 1, width + TagW + 6, 14, TextAlignmentOptions.TopRight);
+        }
+
+        /// <summary>채움의 위(밝게)·아래(어둡게) 1px 줄. 채움 폭을 따라 늘어난다.</summary>
+        static void Edge(RectTransform parent, bool top, Color color)
+        {
+            var go = new GameObject(top ? "Highlight" : "Shade", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = new Vector2(0, top ? 1 : 0);
+            rt.anchorMax = new Vector2(1, top ? 1 : 0);
+            rt.pivot = new Vector2(0.5f, top ? 1 : 0);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(0, 1);
+            var img = go.GetComponent<Image>();
+            img.color = color;
+            img.raycastTarget = false;
         }
 
         public void Set(int hp, int maxHp)
@@ -58,7 +82,7 @@ namespace Pokepedia.Presentation.Battle
             float ratio = Mathf.Clamp01(Shown / (float)max);
             fill.sizeDelta = new Vector2(Mathf.Round(width * ratio), fill.sizeDelta.y);
             fillImage.color = ratio > 0.5f ? Ui.HpGreen : ratio > 0.2f ? Ui.HpYellow : Ui.HpRed;
-            if (numbers != null) numbers.text = $"{Shown}/{max}";
+            if (numbers != null) numbers.text = $"{Shown}/ {max}";
         }
     }
 }

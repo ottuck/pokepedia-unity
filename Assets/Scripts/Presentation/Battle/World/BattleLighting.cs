@@ -6,7 +6,7 @@ namespace Pokepedia.Presentation.Battle
 {
     /// <summary>
     /// 월드 조명 (PROJECT.md 5.5): 전역 조명(분위기 색) + 공격·피격 때 번쩍이는 점 조명(타입별 glow).
-    /// 조명은 조명을 받는 머티리얼(Sprite-Lit)로 그린 배경·발판·포켓몬에만 닿고, 이펙트·그림자·HUD 는 영향받지 않는다.
+    /// 조명은 조명을 받는 머티리얼(Sprite-Lit)로 그린 배경·포켓몬에만 닿고, 이펙트·그림자·HUD 는 영향받지 않는다.
     /// 점 조명은 "더하기" 블렌드 스타일이라 색을 보탠다(밝기가 1을 넘으면 후처리 Bloom 이 번진다).
     /// </summary>
     public sealed class BattleLighting
@@ -14,8 +14,9 @@ namespace Pokepedia.Presentation.Battle
         const int AdditiveStyle = 1;   // Renderer2D 기본 Light Blend Style: 0 Multiply, 1 Additive
 
         readonly Light2D ambient;
-        readonly Light2D[] pool = new Light2D[4];
+        readonly Light2D[] pool = new Light2D[6];
         int next;
+        int ambientToken;
 
         public BattleLighting(Transform parent, Color ambientColor, float ambientIntensity)
         {
@@ -39,6 +40,32 @@ namespace Pokepedia.Presentation.Battle
             var l = go.GetComponent<Light2D>();
             l.lightType = type;
             return l;
+        }
+
+        /// <summary>전역 조명 색을 바로 바꾼다 (진행 중인 FadeAmbient 는 멈춘다)</summary>
+        public void SetAmbient(Color color)
+        {
+            ambientToken++;
+            ambient.color = color;
+            ambient.intensity = 1f;
+        }
+
+        /// <summary>전역 조명 색을 seconds 동안 바꾼다 (승리 후 하늘이 개는 연출)</summary>
+        public IEnumerator FadeAmbient(Color to, float seconds, float intensity = 1f)
+        {
+            int token = ++ambientToken;
+            var from = ambient.color;
+            float fromI = ambient.intensity;
+            for (float t = 0; t < seconds; t += Time.deltaTime)
+            {
+                if (token != ambientToken) yield break;
+                ambient.color = Color.Lerp(from, to, t / seconds);
+                ambient.intensity = Mathf.Lerp(fromI, intensity, t / seconds);
+                yield return null;
+            }
+            if (token != ambientToken) yield break;
+            ambient.color = to;
+            ambient.intensity = intensity;
         }
 
         /// <summary>화면 픽셀 위치에 점 조명을 켜고 seconds 동안 서서히 끈다 (타입별 glow). radius 는 픽셀.</summary>

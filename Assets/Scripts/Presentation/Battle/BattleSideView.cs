@@ -9,10 +9,13 @@ namespace Pokepedia.Presentation.Battle
     /// 좌표는 화면 픽셀(좌상단 원점, y 아래로) — 월드 위치로 바꾸는 건 BattleWorld.ToLocal 이다.
     /// 피격 번쩍임은 본체 위에 겹친 두 번째 렌더러(Pokepedia/Sprite Flash)의 알파로 낸다.
     /// 그림자는 바닥에 붙어 있어서, 뛰어오르는 동작(airborne)에서는 몸만 올라가고 그림자는 바닥에 남아 높이가 보인다.
+    /// 발판은 없다(사용자 피드백: 배경 위의 2D 발판이 따로 놀았다) — 진한 그림자가 발판 역할을 한다.
     /// </summary>
     public sealed class BattleSideView
     {
-        static readonly Color ShadowColor = new Color(0.04f, 0.07f, 0.12f, 0.34f);
+        // 발판 없이 그림자만으로 바닥에 서 있게 보인다. 빛이 왼쪽 위에서 오므로 오른쪽으로 2px 비킨다.
+        static readonly Color ShadowColor = new Color(0.01f, 0.03f, 0.03f, 0.78f);
+        const int ShadowShiftX = 2;
 
         readonly SpriteRenderer body, flashRenderer, shadow;
         readonly Transform bodyTransform;
@@ -57,9 +60,9 @@ namespace Pokepedia.Presentation.Battle
             if (sheet != null)
             {
                 // 그림자 크기는 스프라이트 폭에 비례 (짝수 픽셀)
-                int w = Mathf.Clamp(Mathf.RoundToInt(sheet.Size.x * 0.62f / 2f) * 2, 26, 76);
-                int h = Mathf.Max(6, Mathf.RoundToInt(w * 0.2f / 2f) * 2);
-                shadow.sprite = BattleWorld.Ellipse(w, h);
+                int w = Mathf.Clamp(Mathf.RoundToInt(sheet.Size.x * 0.8f / 2f) * 2, 34, 90);
+                int h = Mathf.Max(10, Mathf.RoundToInt(w * 0.3f / 2f) * 2);
+                shadow.sprite = BattleWorld.SoftShadow(w, h);
             }
             Refresh();
         }
@@ -75,7 +78,8 @@ namespace Pokepedia.Presentation.Battle
         {
             var at = new Vector2(Mathf.Round(Feet.x + offset.x), Mathf.Round(Feet.y + offset.y));
             bodyTransform.localPosition = BattleWorld.ToLocal(at);
-            shadow.transform.localPosition = BattleWorld.ToLocal(airborne ? new Vector2(at.x, Mathf.Round(Feet.y)) : at);
+            var ground = airborne ? new Vector2(at.x, Mathf.Round(Feet.y)) : at;
+            shadow.transform.localPosition = BattleWorld.ToLocal(ground + new Vector2(ShadowShiftX, -1));
         }
 
         public void SetFlash(float amount)
