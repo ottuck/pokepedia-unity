@@ -6,17 +6,12 @@
 
 - Unity 6.3 LTS (6000.3.26f1), C#, uGUI + TextMesh Pro, URP 2D
 - 웹(WebGL) 빌드, Pokepedia에서는 iframe으로 접속하고 단독으로도 플레이할 수 있습니다(Demo 모드).
-- 서버·DB가 없습니다. 보유 포켓몬 목록은 Pokepedia(React)가 `postMessage`로 한 번 넘깁니다 → [docs/bridge-protocol.md](docs/bridge-protocol.md)
-- 기획·설계 전체: [docs/design.md](docs/design.md) (확정/위임/미정 사항, 로드맵)
+- 서버·DB가 없습니다. 보유 포켓몬 목록은 Pokepedia(React)가 `postMessage`로 한 번 넘깁니다 → [docs/PROJECT.md 9.2](docs/PROJECT.md)
+- 기획·설계·연동 규약: [docs/PROJECT.md](docs/PROJECT.md) (확정/위임/미정 사항) · 단계별 진행: [docs/ROADMAP.md](docs/ROADMAP.md)
 
 ## 진행 상태
 
-| 마일스톤 | 내용 | 상태 |
-|---|---|---|
-| M0 | 기술 검증 PoC 9가지 | 완료 → [docs/M0-poc-result.md](docs/M0-poc-result.md) |
-| M1 | 정식 프로젝트 초기화: 계층 분리(asmdef), 테스트(Unity + dotnet), 웹 빌드 설정, 진입 화면·브리지 | 완료 |
-| M2 | 순수 C# 배틀 엔진(TDD) | 예정 |
-| M3 | 피카츄 vs 거북왕 Vertical Slice | 예정 |
+마일스톤 현황과 진행 기록은 [docs/ROADMAP.md](docs/ROADMAP.md)에서 관리합니다.
 
 ## 구조
 
@@ -34,7 +29,7 @@ Assets/
   WebGLTemplates/Pokepedia/  웹 템플릿 (10:9 화면, 키 입력 차단, origin 검증)
 Tests.Dotnet/      Unity 없이 순수 C# 테스트를 돌리는 프로젝트 (소스 링크)
 Tools/             sprites(스프라이트 재현), web(로컬 서버·모의 호스트), audio(울음소리 시제품), unity
-docs/              설계 문서(design.md), M0 결과, 브리지 규약, 스프라이트 스타일 비교 페이지
+docs/              PROJECT.md(기획·설계·연동 규약), ROADMAP.md(진행 기록, M0 결과), 스프라이트 스타일 비교 페이지
 ```
 
 의존 방향: `Presentation → Application → Domain`, `Bridge → Application`(인터페이스 구현), `Application → Content → Domain`.

@@ -5,7 +5,7 @@ namespace Pokepedia.App.Host
     /// <summary>
     /// React(Pokepedia) 와의 통신 창구. Application 은 이 인터페이스만 알고,
     /// 실제 구현(WebGL jslib / 에디터용 Null)은 Bridge 어셈블리가 제공한다. (의존성 역전)
-    /// 메시지 규약은 docs/bridge-protocol.md 가 단일 출처다.
+    /// 메시지 규약은 docs/PROJECT.md 9.2 가 단일 출처다.
     /// </summary>
     public interface IHostBridge
     {

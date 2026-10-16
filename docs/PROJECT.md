@@ -1,9 +1,8 @@
-# Unity Pokepedia Battle — 프로젝트 기획 및 개발 인수인계 (v6)
+# Pokepedia Battle — PROJECT (기획·설계·연동 규약)
 
-**개정 기준: 2026년 10월 16일**
-
-> 이 문서는 논의를 거쳐 **확정된 사항 위주**로 정리한 최신본이다. 이전 버전과 논의 기록은 남기지 않는다.
+> 확정된 사항 위주의 최신본이다. 논의·진행 기록은 남기지 않는다(진행은 ROADMAP.md).
 > **[확정]** 은 합의된 사항, **[위임]** 은 에이전트가 알아서 정하고 나중에 정리하기로 한 사항, **[권장안]** 은 제안, **[미정]** 은 결정 전 항목이다. 에이전트는 [미정]을 임의로 확정하지 않는다.
+> **문서 구성:** 이 문서(기획·설계·연동 규약) · [ROADMAP.md](ROADMAP.md)(단계별 진행 기록, M0 결과) · [CLAUDE.md](../CLAUDE.md)(에이전트 안내).
 
 ## 요약
 
@@ -64,7 +63,7 @@ Pokepedia에서 모은 띠부띠부씰 포켓몬 중 배틀 지원 포켓몬으�
 | 퀴즈 출제 | `features/quiz/rules.ts`의 `pickNextPokemon(pool, seen, random)`가 이번 run에서 나오지 않은 포켓몬 중 **균등 확률**로 고름 (코드 일부 확인) |
 | 에셋 | 레포에 이미지 없음. 아트워크·실루엣은 Supabase Storage. 트레이너 도트·타이틀·효과음은 SVG·CSS·Web Audio로 직접 제작 |
 | 환경 | Supabase remote 프로젝트 하나를 **Prod와 Preview가 공유**. migration은 main 머지 시 자동 적용 |
-| 정책 | 구조 변경은 `docs/system_design.md`를 먼저 수정. 머지 정책은 `CLAUDE.md` |
+| 정책 | 구조 변경은 `docs/system_design.md`를 먼저 수정. 머지 정책은 pokepedia 저장소의 `CLAUDE.md` |
 
 ---
 
@@ -90,7 +89,7 @@ Unity Battle (신규)
 
 | 구분 | 기술 | 상태 |
 |---|---|---|
-| Engine | **Unity 6.3 LTS (6000.3.x)** — 설치 시 Unity Hub의 최신 패치 | 확정 |
+| Engine | **Unity 6.3 LTS (6000.3.x)** — 현재 6000.3.26f1 | 확정 |
 | Language | C# | 확정 |
 | UI | **uGUI** | 확정 |
 | 애니메이션 | Animator + 코드 트위닝 (외부 라이브러리는 근거 제시 후 도입) | |
@@ -98,13 +97,13 @@ Unity Battle (신규)
 | 데이터 | JSON (ContentLoader가 Domain 모델로 변환) | 확정 |
 | 규칙 로직 | Pure C# | 확정 |
 | 테스트 | Unity Test Framework / NUnit | 확정 |
-| 폰트 | Galmuri 계열 + TextMesh Pro **Static** 글리프 아틀라스 (7.7) | 권장안, M0 검증 |
-| 사운드 | AI 활용 8비트 + 라이선스가 명확한 무료(CC0) 소스 우선 (8.5) | 방향 확정 |
+| 폰트 | Galmuri11 + TextMesh Pro **Static** 글리프 아틀라스 (7.7) | 확정 |
+| 사운드 | AI 활용 8비트 + 라이선스가 명확한 무료(CC0) 소스 우선 (8.3) | 방향 확정 |
 | 웹 | Unity Web(WebGL), 정적 호스팅 (10절) | |
 | 서버·DB | **없음.** Unity는 인증·DB를 다루지 않는다 | 확정 |
 
 - ASP.NET Core, 별도 REST 서버, WebSocket, 별도 DB는 사용하지 않는다. 공개 웹 빌드에 외부 AI API 키를 포함하지 않는다.
-- **Unity 6.3 LTS 선택 근거:** 공식 릴리스 페이지 기준 2027년 12월까지 지원된다. 6.0 LTS는 2026년 10월에 지원이 끝나므로 선택하지 않는다 (사용자가 제공한 검색 결과 화면과 웹 검색으로 교차 확인). 최신 패치 번호는 확인하지 못했으므로 설치 시점의 최신을 쓴다.
+- **Unity 6.3 LTS 선택 근거:** 공식 릴리스 페이지 기준 2027년 12월까지 지원된다. 6.0 LTS는 2026년 10월에 지원이 끝나므로 선택하지 않는다. 현재 프로젝트 버전은 6000.3.26f1이다.
 - 텍스트 입력이 없으므로 IME, 정답 정규화 같은 퀴즈 이식 항목은 필요 없다. 한·영·일 **폰트 글리프 문제는 UI와 전투 메시지 때문에 남는다** (7.7).
 
 ---
@@ -179,27 +178,13 @@ Pokepedia가 151마리를 지원한다고 해서 Unity 배틀도 151마리를 �
 - **입력:** 방향키 + Z/X, 마우스 클릭, 터치. 모바일 브라우저(세로·가로)에서도 완벽하게 보이도록 반응형으로 만든다.
 - 승리해도 보상·점수는 없다 (연속으로 다음 상대와 싸울 수 있다).
 
-### 5.4 개발 순서와 범위
+### 5.4 개발 방침과 범위
 
-**Vertical Slice 우선** [확정]: 시각적 완성도가 가장 큰 리스크이므로 콘텐츠 확장보다 먼저 **피카츄 vs 거북왕**을 최종 품질에 가깝게 완성한다.
+**Vertical Slice 우선** [확정]: 시각적 완성도가 가장 큰 리스크이므로 콘텐츠 확장보다 먼저 **피카츄 vs 거북왕**을 최종 품질에 가깝게 완성한다. 단계별 계획(M0~M6)과 현황은 [ROADMAP.md](ROADMAP.md)가 단일 출처다.
 
-**Phase 0 — PoC (가장 먼저).** 먼저 **검증용 최소 Unity 프로젝트**를 만든다 (정식 저장소·구조는 M1). 결과를 확인한 뒤 폐기하거나 필요한 부분만 이관한다.
+**성능 목표 [추정 기준 — 공식 표준 아님, 프로젝트 성패 기준 아님]**
 
-1. **한·영·일 폰트**: Galmuri11/14 + TMP Static 아틀라스로 글리프 커버리지, 빌드 용량 (7.7)
-2. **WebGL 빌드**: 용량, 로딩 시간
-3. **iframe + postMessage 왕복**: Unity `ready` → React `init` (9.2)
-4. iframe 안 키보드(방향키, Z, X) 처리와 페이지 스크롤 간섭, 터치 동작
-5. **호스팅 검증** (10절): 압축 방식별 파일 크기, `Content-Encoding`·wasm MIME 헤더, 스트리밍 컴파일, 캐시 갱신
-6. **공격 연출 PoC**: 피카츄 전기 공격 1개를 Animator + Particle System으로 구현
-7. **애니메이션 스프라이트 변환 PoC**: 블랙·화이트 GIF → 프레임·스프라이트 시트(+프레임 지연 데이터) → Unity 재생, 용량·프레임 수·투명도·루프 확인 (8.2)
-8. **모바일 브라우저 레이아웃**: 휴대폰 크기(세로·가로)에서 비율, 터치, 안전 영역
-9. **오디오 재생**: START 버튼 이후 효과음·BGM, WebGL 오디오 제약, PokeAPI 울음소리 6마리(latest/legacy) 청취 비교 (8.5)
-
-**완료 기준:** 위 9가지에 대해 가능/불가/우회책이 결론 난다.
-
-**M0 성능 목표 [추정 기준 — 공식 표준 아님, 프로젝트 성패 기준 아님]**
-
-> 아래 수치는 업계 가이드(FRVR의 초기 다운로드 약 8 MB 권장, CrazyGames의 빈 프로젝트 사례 12.5~14.7 MB)와 일반적인 웹 로딩 감각을 바탕으로 한 **추측성 측정 기준**이다. 달성하지 못해도 프로젝트 실패로 판단하지 않으며, M0에서 실측한 뒤 조정한다. 이 지표는 서버가 아니라 **사용자 브라우저(클라이언트)** 에서 실행되는 성능이므로 일반 노트북·중급 휴대폰에서도 확인한다. 서버는 정적 파일만 전달하므로 서버 메모리·CPU 부담은 없고 영향은 전송량과 응답 속도뿐이다.
+> 업계 가이드(FRVR의 초기 다운로드 약 8 MB 권장, CrazyGames의 빈 프로젝트 사례 12.5~14.7 MB)와 일반적인 웹 로딩 감각을 바탕으로 한 추측성 기준이다. 달성하지 못해도 프로젝트 실패로 보지 않는다. 사용자 브라우저에서 실행되는 성능이므로 일반 노트북·중급 휴대폰에서도 확인하며, 서버는 정적 파일만 전달하므로 영향은 전송량과 응답 속도뿐이다.
 
 | 항목 | 목표 | 허용 | 재검토 |
 |---|---|---|---|
@@ -213,13 +198,6 @@ Pokepedia가 151마리를 지원한다고 해서 Unity 배틀도 151마리를 �
 - 측정: Chrome 개발자 도구 Network 탭(캐시 비활성화, Fast 4G 스로틀링), Chrome 작업 관리자 또는 Unity Profiler.
 - Unity 6 문서의 WebGL 힙 기본값은 초기 32 MB, 최대 2048 MB, 증가 단위 상한 기본 96 MB다. 이 게임의 실제 메모리는 아직 측정하지 않았다.
 - 기준을 넘으면 (1) 최적화(스트리핑 강화, `Disk Size with LTO`, 불필요한 패키지 제거, 텍스처 압축) → (2) 지연 로딩·범위 축소 → (3) 플랫폼 우선순위 재검토 순으로 대응한다. Cloudflare의 단일 파일 25 MiB 한도(10.2)도 함께 확인한다.
-- **폰트와 이펙트 에셋이 스프라이트보다 더 큰 변수**일 가능성이 높다 (로스터 6마리의 GIF 원본은 합계 약 0.8 MB).
-
-**Phase 1 — Showcase 데모 (Vertical Slice).** 피카츄 vs 거북왕 1:1을 실제 엔진으로 플레이 가능한 한 판으로 완성: 순수 C# 엔진과 NUnit 테스트, 5.3의 전투 흐름과 게임보이식 화면, 공격·피격·급소·빗나감 연출, 사운드, 반응형 레이아웃, 웹 빌드와 **Demo Mode** 단독 배포.
-
-**Phase 2 — 로스터 확장 + Standard 연출.** 4마리 확장(리자몽, 이상해꽃, 팬텀, 뮤츠), 공통 배틀 연출과 타입별 이펙트 프리팹·AnimationProfile 검증, 여러 체형의 스프라이트 대응, 밸런스 조정.
-
-**Phase 3 — Pokepedia 연동 (Collection Mode).** 보유 ∩ 지원 선택, iframe 연동 (9절). 퀴즈의 지원 포켓몬 우선 출제와 컬렉션 "배틀 가능" 필터 등 Pokepedia 쪽 세부는 **게임 완성 후** 정한다 (9.6, 9.7).
 
 **이후 / 향후 확장.** 1순위는 1:1 배틀의 완성도이며, 그 이후에 다음을 확장한다.
 - **3:3 배틀**, **포켓몬 교체 메뉴와 가방 메뉴** (3:3과 함께 추가) [확정: 향후 확장 계획, 시점·규칙은 미정]. 엔진은 처음부터 여러 포켓몬(파티)을 지원하는 구조로 설계해 둔다 (7.2).
@@ -294,9 +272,7 @@ Pokepedia가 151마리를 지원한다고 해서 Unity 배틀도 151마리를 �
 - **Demo Mode:** 피카츄(플레이어) vs 거북왕(NPC) 고정. **피카츄 승률 60~70%** 를 시드 고정 시뮬레이션 테스트로 검증·조정한다 [확정].
 - 신규 사용자(스티커 없음)와 단독 실행은 Demo Mode로 처리한다. Collection에서 보유 ∩ 지원이 0마리면 자동 전환하지 않고 안내와 [데모 체험] 선택지를 보여 준다 (9.2).
 
-**참고: 종족값 합** (Pokepedia 현재 기준) 피카츄 320, 팬텀 500, 이상해꽃 525, 거북왕 530, 리자몽 534, 뮤츠 680. 피카츄가 가장 약하고 뮤츠가 가장 강한 이상치이며 나머지는 비슷하다.
-
-**참고: 시뮬레이션 요약** (에이전트의 단순 모델, 레벨 50, 기본기 40·대표 기술 90/명중 95 기준, 급소 1/16×1.5, AI는 예상 데미지 최대 기술 선택): 보정 없이는 평균 약 2라운드이고 피카츄는 거북왕에게 17%, 나머지에게 거의 0%. 압축 k=0.6과 위력 ×0.4를 쓰면 평균 약 4.6라운드, 피카츄 vs 거북왕 약 77%. 피카츄 능력치를 추가로 올리면 100%가 되어 과하다. 같은 위력의 기술끼리는 **타입 상성이 승패를 거의 결정**한다(물 > 불꽃 > 풀 > 물 구조). 뮤츠는 압축 후에도 거의 전승이라 전설 가중치·보정이 필요하다. 실제 값은 M2에서 엔진으로 확정한다.
+종족값 합은 피카츄 320 ~ 뮤츠 680(Pokepedia 현재 기준)으로 격차가 커서 압축 계수 k를 쓴다.
 
 ---
 
@@ -369,49 +345,20 @@ AnimationDirector (Presentation)
 | Spring Bean 주입 | 생성자 주입 직접 구현 |
 | 스레드/Future | 코루틴, `async/await` (Unity 메인 스레드 제약 주의) |
 
-### 7.5 디렉터리 구조 (초기 예시)
+### 7.5 디렉터리 구조
 
-```text
-pokepedia-unity/
-├── Assets/
-│   ├── Scripts/
-│   │   ├── Domain/            # .asmdef, UnityEngine 참조 없음
-│   │   │   ├── Battle/        # BattleEngine, BattleState, BattleAction, BattleEvent
-│   │   │   └── Rules/         # DamageCalculator, TypeChart, TurnOrder
-│   │   ├── Application/       # BattleController, NpcBattleAi
-│   │   ├── Content/           # ContentLoader, Dto, RosterProvider
-│   │   ├── Bridge/            # IHostBridge, WebGlHostBridge, NullHostBridge, *.jslib
-│   │   └── Presentation/      # 화면, SpriteLibrary
-│   │       └── Animation/     # AnimationDirector, 타임라인, AnimationProfile 적용
-│   ├── Content/
-│   │   ├── Data/              # species.json, roster.json, moves.json, typechart.json
-│   │   ├── Animation/         # AnimationProfile 데이터 (종족/기술 오버라이드)
-│   │   ├── Audio/             # 사운드 + 매니페스트
-│   │   ├── Locale/            # ko/en/ja
-│   │   ├── Sprites/           # PokeAPI 스프라이트 (스크립트로 생성, 커밋 안 함)
-│   │   └── Placeholder/
-│   ├── VFX/                   # 타입별 공통 이펙트 프리팹, Showcase 전용 이펙트
-│   ├── Tests/EditMode/        # Domain 테스트 (가짜 종족·기술 사용)
-│   └── Scenes/ Animations/ Prefabs/ Shaders/
-├── Tools/                     # 데이터 export, 스프라이트 다운로드·변환, 글리프 추출 스크립트
-├── WebTemplates/              # WebGL 템플릿
-└── README.md
-```
-
-의존 방향: `Presentation → Application → Domain`, `Presentation/Application → Content → Domain`. Bridge는 Application이 인터페이스로만 사용한다. asmdef는 5개 이내.
+실제 구조와 어셈블리 의존 방향은 [README.md](../README.md)의 "구조"가 단일 출처다. asmdef는 5개 이내로 유지하고, Bridge는 Application이 인터페이스로만 사용한다.
 
 ### 7.6 지원 포켓몬 매니페스트 [권장안]
 
 지원 포켓몬 ID 목록의 **단일 출처는 Unity 저장소의 `roster.json`** 이다. React와 Unity가 각자 목록을 관리하지 않는다. 빌드와 함께 `roster.json`(또는 ID 매니페스트)을 정적 파일로 배포하고 Pokepedia가 필요할 때 읽는다 (CORS 헤더 필요). 전달 방식은 [위임].
 
-### 7.7 폰트 (한글·일본어·영어) [권장안, M0에서 검증]
+### 7.7 폰트 (한글·일본어·영어) [확정: Galmuri11 + TMP Static]
 
-- TMP 폰트 에셋에 글리프가 없으면 □로 깨진다. 이 게임은 **사용자 텍스트 입력이 없고 출력 문자열이 정해져 있으므로 필요한 글리프만** 포함하면 된다 (한글 11,172자·일본어 한자 수천 자 불필요).
-- 배포 빌드는 **TMP Static 폰트 에셋(미리 만든 글리프 아틀라스)**. Dynamic은 개발·예비 용도(원본 폰트를 빌드에 포함해 용량↑). (Unity 문서의 권장 취지는 외부 제안 인용이며 직접 확인하지 않음)
-- 글리프 추출: `ko/ja/en.json` + 포켓몬·기술 이름 + 기호 → 중복 제거 → Static 아틀라스. `Tools/` 스크립트로 자동화.
-- **후보 폰트: Galmuri** (한글·가나·영문 비트맵 스타일). 변형은 Galmuri14, 11, 11 Bold, 11 Condensed, 9, 7. 저장소에 라이선스 **OFL-1.1**이 표기됨(원문 직접 확인). 한글 완성형은 14/11/11 Bold/11 Condensed/9에서 지원되고 7은 4,358자만 지원하며, 한자는 JIS X 0208의 6,355자까지만 지원한다. **어느 변형이 히라가나·가타카나를 지원하는지, 11 Bold의 일본어 지원 여부는 확인하지 못했다** → M0에서 Galmuri11·14의 실제 글리프를 검사한다. 보조 폰트로 Noto Sans CJK 계열(OFL)은 필요할 때만 검토.
-- 검사 항목: 일본어 한자, 한글 받침, 기술 이름, 특수문자(♀ ♂ × ! 등), 글자 크기, 빌드 용량. 아틀라스 크기는 설정에 따라 달라 **용량을 단정할 수 없으므로 M0에서 실측**한다.
-- 자동 검증: 모든 로케일 문자열의 글리프 포함 여부를 EditMode 테스트로 확인 (TMP의 글리프 확인 API 시그니처는 확인 필요).
+- TMP 폰트 에셋에 글리프가 없으면 □로 깨진다. 사용자 텍스트 입력이 없고 출력 문자열이 정해져 있으므로 **필요한 글리프만**(M0 기준 419자) 담은 **TMP Static 아틀라스**를 쓴다. Dynamic은 원본 폰트가 빌드에 들어가 용량이 늘어 쓰지 않는다.
+- 폰트는 **Galmuri11**(한글·가나·JIS 한자 지원, OFL-1.1). 11 Bold는 가나·한자·♀♂가 없고 11 Condensed는 한자가 없다. 배포 시 저작권 고지와 라이선스를 동봉한다 (`Assets/Content/Fonts/Galmuri-OFL.txt`).
+- 글리프 추출: `ko/ja/en.json` + 포켓몬·기술 이름 + 기호 → 중복 제거 → Static 아틀라스 (`Assets/Editor/FontAtlasBuilder.cs`).
+- 모든 로케일 문자열의 글리프 포함 여부는 EditMode 테스트로 확인한다. CanvasScaler가 정수 배율이 아니면 도트가 고르지 않으므로 `PixelCanvasScaler`를 쓴다.
 
 ### 7.8 테스트 전략
 
@@ -434,21 +381,12 @@ pokepedia-unity/
 
 ### 8.2 스프라이트 스타일 [확정: 5세대 블랙·화이트 애니메이션]
 
-- **사용 소스** (PokeAPI sprites, 1~151번 전부 존재 확인, 2026-10-16): 앞 `versions/generation-v/black-white/animated/{id}.gif`, 뒤 `animated/back/{id}.gif`, 색이 다른 포켓몬 `animated/shiny/`·`animated/back/shiny/`. 정적 PNG(`black-white/{id}.png`, `back/`, `shiny/`)도 있어 폴백·목록 아이콘에 쓴다. (확인한 것은 파일 존재와 형식뿐이며 이미지 내용·품질은 확인하지 않았다.)
-- **로스터 6마리 GIF 크기**(앞/뒤, KB): 피카츄 23/21, 거북왕 119/120, 리자몽 81/77, 이상해꽃 122/102, 팬텀 24/32, 뮤츠 45/47 (합계 약 0.8 MB).
-- **Unity 처리:** GIF를 직접 임포트하지 못하므로 `Tools/` 스크립트로 **프레임 분해 → 스프라이트 시트 + 프레임 지연 데이터**로 변환하고 Animator 클립 또는 프레임 플레이어로 재생한다. 최대한 원본을 참고해 옮기며 필요하면 일부를 직접 보정한다. 변환 후 용량·프레임 수·투명도·루프는 M0 PoC에서 확인한다.
-- **유의:** 스프라이트는 5세대 도트이고 UI는 게임보이풍이므로 UI·배경·팔레트로 조화시킨다. 포켓몬마다 크기가 다르므로 기준점(발 위치) 보정과 정수 배율·Point 필터가 필요하다 (`SpriteLibrary`).
-- 다른 후보(채택하지 않음: 1세대 레드·블루, 옐로 GBC, 2세대 크리스탈, 기본 96×96)는 비교 페이지 [`sprite-style-compare.html`](sprite-style-compare.html)(같은 `docs` 폴더)에서 다시 볼 수 있다.
+- **사용 소스** (PokeAPI sprites `versions/generation-v/black-white/`): 앞 `animated/{id}.gif`, 뒤 `animated/back/{id}.gif`, 색이 다른 포켓몬 `animated/shiny/`·`animated/back/shiny/`. 정적 PNG(`black-white/{id}.png`, `back/`, `shiny/`)는 폴백·목록 아이콘용이다.
+- **Unity 처리:** GIF를 직접 임포트하지 못하므로 `Tools/sprites` 스크립트로 프레임 분해 → 스프라이트 시트(PNG) + 프레임 지연 JSON으로 변환하고, 런타임 `SpriteFramePlayer`가 재생한다. 피격·기절 같은 상태 전환에만 Animator를 쓴다 (M0 결과).
+- **유의:** 5세대 도트와 게임보이풍 UI를 UI·배경·팔레트로 조화시킨다. 포켓몬마다 크기가 다르므로 발 위치 pivot 보정과 정수 배율·Point 필터가 필요하다 (`SpriteLibrary`).
+- 채택하지 않은 후보(1세대 레드·블루, 옐로 GBC, 2세대 크리스탈, 기본 96×96)는 비교 페이지 [`sprite-style-compare.html`](sprite-style-compare.html)에서 볼 수 있다.
 
-### 8.3 폰트
-
-7.7 참고.
-
-### 8.4 인트로·트레이너
-
-트레이너·인트로 씬은 만들지 않는다 [확정].
-
-### 8.5 사운드 전략 [방향 확정 / 세부는 권장안]
+### 8.3 사운드 전략 [방향 확정 / 세부는 권장안]
 
 - **방향 [확정]:** **AI를 활용한 8비트 사운드**를 기본으로 하고, **에이전트가 구할 수 있는 라이선스가 명확한 무료 소스를 우선** 사용한다. 모든 포켓몬마다 소리를 따로 만들 필요는 없다.
 - **소스 후보** (외부 제안의 조사 + 일부 직접 확인). 사용 전 각 파일의 라이선스를 반드시 확인한다.
@@ -461,7 +399,7 @@ pokepedia-unity/
 | ChipTone / Jfxr / BeepBox | 8비트 효과음·칩튠 BGM 생성 도구 (브라우저) | 생성물의 상업적 이용 가능으로 알려짐 (직접 확인하지 않음). 도구 약관 확인 |
 | ElevenLabs Sound Effects (AI) | 자연어로 효과음 생성 | 무료 플랜 생성물의 상업적 이용 제한, 유료 플랜은 조건부로 알려짐 (직접 확인하지 않음). 생성 시점의 요금제·약관을 기록 |
 
-- **포켓몬 울음소리 [방침 확정]:** PokeAPI `cries` 저장소(`cries/pokemon/latest|legacy/{id}.ogg`, README는 1~9세대 전체라고 설명, 151마리 존재 여부는 직접 세지 못함)를 참고한다. **품질이 좋으면 사용 1순위, 나쁘면 비슷한 소리를 새로 제작**한다. M0에서 로스터 6마리의 `latest`와 `legacy`를 사용자가 직접 듣고 판단한다. 음원은 Showdown·Veekun·The Sounds Resource에서 가져온 원작 음원이며 저장소 라이선스는 자동 인식되지 않는다(NOASSERTION). 권리는 8.1의 정책과 같은 수준으로 취급한다.
+- **포켓몬 울음소리 [확정]:** PokeAPI 원본 음원은 로스터 6마리 모두 어색해 쓰지 않고 **속성 기반 합성**으로 만든다(주 속성 레시피 + 보조 속성 덧칠, 종족별 음높이·길이는 데이터, 시드 고정). 시제품은 [`Tools/audio/type-cries-prototype.html`](../Tools/audio/type-cries-prototype.html)이고 세부 음색은 M3에서 다듬는다. 원작 음원의 권리 문제가 없고 용량이 거의 0이다.
 - **필요한 사운드** (피카츄 vs 거북왕 기준 약 14개): UI(커서 이동·선택·취소 3), 배틀(등장·공통 공격·피격 3), 전기(충전·방전·명중 3), 물(물대포 발사·충돌 2), 결과(승리·패배 2), BGM 1. 같은 소리를 피치·재생 속도로 변형해 개수를 줄인다.
 - **Unity 구현:** 처음에는 `AudioSource.PlayOneShot()`으로 시작해 연출 이벤트와 동기화한다 (준비 → 충전음, 발사 → 방전음, 피격 → 충돌음). **타이밍 동기화가 핵심**이다.
 - **웹 주의:** 브라우저는 사용자 상호작용 전 자동 오디오 재생을 제한하므로 **START 버튼을 누를 때 오디오를 시작**한다. WebGL에서는 AudioMixer 일부 기능에 제약이 있다(외부 제안이 인용한 Unity 문서 내용, 직접 확인하지 않음). BGM은 압축 형식, 짧은 효과음은 압축 해제 방식 등 임포트 설정으로 용량을 관리한다.
@@ -478,24 +416,35 @@ pokepedia-unity/
 - Origin 검증 필수. Pokepedia CSP(`frame-src`)와 Unity 호스트의 `frame-ancestors`를 확인한다.
 - 별도 도메인에 호스팅해도 `postMessage`로 충분하다 (쿠키를 쓰지 않음).
 
-### 9.2 메시지 규약 (초안)
+### 9.2 메시지 규약 (v1) [확정]
 
-| 방향 | 메시지 | 내용 |
-|---|---|---|
-| Unity → React | `ready` | `{ v: 1 }` — 로딩 완료. **React는 이 메시지를 받은 뒤에만 `init`을 보낸다** |
-| React → Unity | `init` | `{ v: 1, locale, owned: [{ id, shiny: bool }] }` — **보유 포켓몬 전체**를 한 번 전달 |
-| Unity → React | `battleEnded` (선택) | `{ result }` — 표시용, 저장하지 않음 |
-| Unity → React | `resize` (필요 시) | 높이 조정 |
+이 절이 Pokepedia ↔ Unity 규약의 **단일 출처**다. Pokepedia(React) 쪽 구현은 이 절을 따른다.
 
+#### 구성
+
+```text
+Pokepedia 페이지 (/[locale]/battle)
+  └─ <iframe src="https://battle.pokepedia.dev/?host=pokepedia" allow="autoplay">
+        Unity Web 빌드 (index.html 템플릿 + HostBridge.jslib + HostBridge.cs)
+```
+
+- 방향은 **단방향**이다. React가 보유 목록을 한 번 넘기고, Unity는 결과를 저장하지 않는다.
+- 쿠키·인증을 쓰지 않으므로 다른 도메인에 호스팅해도 `postMessage`로 충분하다.
 - 컬렉션 조회는 인증된 React(서버/RLS)가 수행한다. Unity는 인증·DB를 다루지 않는다.
 - **지원 포켓몬 필터는 Unity가 처리한다.** React는 보유 목록 전체를 보내고 Unity가 로스터와의 교집합(보유 ∩ 지원)을 계산한다. 로스터가 늘어도 규약이 바뀌지 않는다.
-- Unity로 전달된 보유 목록은 조작될 수 있으나 보상·랭킹에 영향이 없으므로 문제없다.
-- 메시지에 **프로토콜 버전 `v`** 를 넣는다. 요청 ID는 현재 필요하지 않다 [위임].
-- React가 `init`을 먼저 보내면 Unity 로딩 전에 사라질 수 있으므로 반드시 `ready` 이후에 보낸다. Unity가 재로딩되면 `ready`를 다시 보내고 React는 `init`을 다시 전송한다.
+- Unity로 전달된 보유 목록은 조작될 수 있으나 보상·랭킹에 영향이 없으므로 검증하지 않는다.
 
-**로딩 순서:** Unity Web Build 로딩 → Unity → React `ready` → React → Unity `init` → Unity가 보유 ∩ 지원을 계산하고 게임 시작.
+#### 모드 판별 [확정]
 
-**실행 모드 [확정]**
+| iframe 주소 | 동작 |
+|---|---|
+| `?host=pokepedia` 없음 | 즉시 **Demo** 모드(피카츄 vs 거북왕). 대기하지 않는다 |
+| `?host=pokepedia` 있음 | START 후 `ready`를 보내고 `init`을 **5초** 기다린다 |
+
+- 5초 안에 `init`이 오지 않으면 "연결하지 못했습니다" + **[다시 시도] / [데모 체험]**을 보여 준다. **자동으로 Demo로 바꾸지 않으며** Demo는 [데모 체험] 버튼으로 사용자가 명시적으로 선택할 때만 시작한다.
+- [다시 시도]를 누르면 `ready`를 다시 보낸다.
+- iframe 여부(`window.parent !== window`)로는 판별하지 않는다. 포트폴리오 허브도 iframe으로 임베드할 수 있기 때문이다.
+- 쿼리는 jslib로 `location.search`를 읽어 판별한다(iframe에서 `Application.absoluteURL`의 의미가 불명확해 쓰지 않는다. M0 확인).
 
 | 모드 | 포켓몬 선택 | 사용처 |
 |---|---|---|
@@ -503,8 +452,71 @@ pokepedia-unity/
 | **Collection Mode** | Pokepedia가 `init`으로 전달한 **보유 포켓몬 ∩ 지원 포켓몬** | Pokepedia iframe |
 
 - 별도 엔진을 두 개 만드는 것이 아니라 포켓몬 선택(로스터) 데이터만 다르다.
-- **모드 판별: URL 쿼리 파라미터 + `init` 대기** [확정]. Pokepedia가 iframe 주소에 `?host=pokepedia`를 붙이고, 파라미터가 **없으면 즉시 Demo Mode**(대기 없음), **있으면** `ready` 후 `init`을 기다린다. 제한 시간(예: 5초) 안에 오지 않으면 **연결 실패 안내와 [다시 시도] 버튼**을 보여 준다(다시 시도하면 `ready` 재전송). **자동으로 Demo로 전환하지 않으며** Demo는 [데모 체험] 버튼으로 사용자가 명시적으로 선택할 때만 시작한다. iframe 여부(`window.parent !== window`)로는 판별하지 않는다(포트폴리오 허브가 iframe으로 임베드할 수 있음). `init` 수신 시 `event.origin`을 허용 목록과 대조한다. Unity WebGL에서는 `Application.absoluteURL`로 쿼리를 읽을 수 있다 (구현 시 확인).
 - Collection 선택 화면: 지원 포켓몬 목록을 보여 주고 **보유한 포켓몬만 선택 가능, 미보유는 잠금**("퀴즈로 획득"). 보유했지만 지원하지 않는 포켓몬은 "배틀 지원 N종 준비 중" 같은 한 줄로 안내한다. 보유 ∩ 지원이 비어 있으면 안내와 [데모 체험] 버튼을 보여 준다.
+
+#### 메시지
+
+모든 메시지는 `postMessage`로 보내는 **객체**이며 `type`과 프로토콜 버전 `v`를 가진다. 요청 ID는 현재 필요하지 않다 [위임].
+
+**로딩 순서:** Unity Web Build 로딩 → Unity → React `ready` → React → Unity `init` → Unity가 보유 ∩ 지원을 계산하고 게임 시작.
+
+**Unity → React: `ready`**
+
+```json
+{ "type": "ready", "v": 1 }
+```
+
+- Unity 로딩과 START가 끝났다는 뜻이다. **React는 이 메시지를 받은 뒤에만 `init`을 보낸다.** React가 `init`을 먼저 보내면 Unity 로딩 전에 사라질 수 있다.
+- Unity가 재로딩되면 `ready`가 다시 온다. 그때 React는 `init`을 다시 보낸다.
+
+**React → Unity: `init`**
+
+```json
+{ "type": "init", "v": 1, "locale": "ko", "owned": [ { "id": 25, "shiny": false }, { "id": 9, "shiny": true } ] }
+```
+
+| 필드 | 설명 |
+|---|---|
+| `locale` | `ko` / `en` / `ja`. 그 밖의 값은 `ko`로 처리 |
+| `owned` | 사용자가 가진 **스티커 전체**. 배틀 지원 여부는 Unity가 로스터와 교집합으로 판단한다 |
+
+- `v`가 1이 아니면 Unity는 무시한다.
+
+**Unity → React: `battleEnded` (예정, M6)**
+
+```json
+{ "type": "battleEnded", "v": 1, "result": "win" }
+```
+
+표시용이다. 저장하지 않는다.
+
+**Unity → React: `resize` (필요 시)** — 높이 조정. 아직 정의하지 않았다.
+
+#### 보안
+
+| 위치 | 규칙 |
+|---|---|
+| Unity 템플릿 `message` 리스너 | `event.origin`이 허용 목록(`window.pokeHost.allowedOrigins`)에 있을 때만 `init`을 Unity로 전달 |
+| Unity → React 전송(jslib) | `targetOrigin`을 `'*'`로 쓰지 않고 허용 목록의 각 origin으로 보낸다(일치하는 곳에만 도착) |
+| React 쪽 | `event.origin`이 Unity 호스트(`NEXT_PUBLIC_BATTLE_URL`의 origin)일 때만 `ready`를 처리 |
+| Unity 호스트 응답 헤더 | `Content-Security-Policy: frame-ancestors`에 Pokepedia·포트폴리오 허브만 허용 |
+
+허용 목록은 `Assets/WebGLTemplates/Pokepedia/index.html`에 있다. 현재 값: `https://pokepedia.dev`, `https://www.pokepedia.dev`, `http://localhost:3000`(Pokepedia 개발 서버), `http://localhost:8000`(로컬 테스트 페이지). Vercel Preview 도메인은 M6에서 정한다. 또 Pokepedia CSP의 `frame-src`도 확인한다(9.1).
+
+#### 입력
+
+- iframe 안에서는 방향키·Space의 기본 동작(부모 스크롤)을 막는다.
+- 클릭·터치 시 캔버스에 포커스를 준다.
+- React 쪽 iframe에는 `allow="autoplay"`를 준다. 첫 소리는 Unity 안의 START 버튼에서 낸다.
+
+#### 로컬 테스트
+
+```bash
+python -I Tools/web/serve.py --dir Builds/Web --port 8001 --ancestors http://localhost:8000
+python -I Tools/web/serve.py --dir Tools/web/host-test --port 8000
+```
+
+`http://localhost:8000/`를 열면 모의 Pokepedia 페이지가 게임을 iframe으로 띄운다. 이 페이지에서 `ready` → `init` 왕복, 타임아웃(init 보내지 않기 체크), 스크롤 간섭을 확인할 수 있다.
 
 ### 9.3 DB 정책 [확정]
 
@@ -515,7 +527,7 @@ pokepedia-unity/
 
 - 내비게이션 "배틀" 항목, 임베드 페이지(`/[locale]/battle`), 메시지 핸들러.
 - 문구는 `messages/ko·en·ja.json` 세 곳에 모두 추가 (언어별 키 일치 테스트가 있음).
-- 새 라우트는 구조 변경이므로 `docs/system_design.md`를 먼저 수정하고 `CLAUDE.md` 머지 정책을 따른다.
+- 새 라우트는 구조 변경이므로 `docs/system_design.md`를 먼저 수정하고 pokepedia 저장소 `CLAUDE.md`의 머지 정책을 따른다.
 - 기존 퀴즈 코드는 삭제·수정하지 않는다. (예외: 9.7의 우선 출제 — `pickNextPokemon` 확장, 게임 완성 후 별도 PR)
 
 ### 9.5 조작 가능성
@@ -559,12 +571,12 @@ Unity는 규칙이 클라이언트에 있으므로 결과를 서버에서 검증
 | GitHub Pages | 비추천 | 커스텀 헤더 불가 → Decompression Fallback 필요(로더 증가, wasm 스트리밍 불가) |
 | 개인 서버 | 비추천 | 공개 게임용으로는 가동·보안 운영 부담 |
 
-최종 선택은 M0 검증 후 확정한다.
+최종 선택은 실배포(M4)에서 확정한다.
 
 ### 10.3 호스팅 설정
 
-- Unity Web 빌드는 압축 형식에 맞는 `Content-Encoding`(`br` 또는 `gzip`)과 **`.wasm`의 `application/wasm` MIME**이 필요하다 (스트리밍 컴파일). Brotli는 Chrome·Firefox에서 HTTPS에서만 기본 지원한다. 압축을 끄면(Disabled) 파일이 25 MiB 한도를 넘을 수 있으므로 M0에서 크기를 확인한다.
-- 서버에 이미 자동 압축이 있으면 이중 압축이 될 수 있으므로 실제 응답 헤더를 확인한다. **Vercel은 `wasm`·`javascript` MIME을 자동 압축**하므로(문서 기준) Unity 압축을 Disabled로 두는 방법이 있다 (`.data` 같은 `application/octet-stream`은 자동 압축 대상 아님). Cloudflare의 자동 압축 대상과 사전 압축(`.br`) 파일에 `Content-Encoding`을 직접 지정하는 방식은 확인하지 못했으므로 M0에서 검증한다.
+- Unity Web 빌드는 압축 형식에 맞는 `Content-Encoding`(`br` 또는 `gzip`)과 **`.wasm`의 `application/wasm` MIME**이 필요하다 (스트리밍 컴파일). Brotli는 Chrome·Firefox에서 HTTPS에서만 기본 지원한다. 압축을 끄면(Disabled) 파일이 25 MiB 한도를 넘을 수 있으므로 Brotli를 쓴다(현재 전송 약 9.4MB, ROADMAP M0 결과).
+- 서버에 이미 자동 압축이 있으면 이중 압축이 될 수 있으므로 실제 응답 헤더를 확인한다. **Vercel은 `wasm`·`javascript` MIME을 자동 압축**하므로(문서 기준) Unity 압축을 Disabled로 두는 방법이 있다 (`.data` 같은 `application/octet-stream`은 자동 압축 대상 아님). Cloudflare의 자동 압축 대상과 사전 압축(`.br`) 파일에 `Content-Encoding`을 직접 지정하는 방식은 확인하지 못했다. 로컬 모의 서버(`Tools/web/serve.py`)로만 확인했고 Cloudflare 실배포 검증은 M4에서 한다.
 - `Content-Security-Policy: frame-ancestors`로 임베드를 허용할 도메인(Pokepedia, 포트폴리오 허브)만 지정한다. `roster.json`을 Pokepedia가 읽는다면 CORS 헤더를 설정한다.
 - 캐시: 로더·`index.html`은 재검증, 해시 파일명(`Name files as hashes`, 구현 시 확인)을 쓰면 빌드 산출물은 장기 캐시.
 
@@ -578,7 +590,7 @@ Unity는 규칙이 클라이언트에 있으므로 결과를 서버에서 검증
 
 - **초기: 로컬 Unity 빌드 → 스크립트로 업로드** (`wrangler deploy`, `assets.directory`에 빌드 폴더 지정). Unity CI(GameCI 등)는 라이선스·캐시 설정이 번거로워 이후 검토한다.
 - **CI에서는 순수 C# 도메인 테스트만** 실행한다 (GitHub Actions + `dotnet test`). Domain이 UnityEngine을 참조하지 않으므로 별도 테스트 csproj가 Domain 소스를 링크해 Unity 라이선스 없이 매 푸시마다 검증할 수 있다.
-- 주의: Unity에서 `record`의 `init` 접근자를 쓰려면 `System.Runtime.CompilerServices.IsExternalInit` 타입을 직접 정의해야 하는 것으로 알고 있다. M0/M1에서 확인한다.
+- 주의: Unity에서 `record`의 `init` 접근자를 쓰려면 `System.Runtime.CompilerServices.IsExternalInit` 타입을 직접 정의해야 한다 (`Assets/Scripts/Domain/IsExternalInit.cs`).
 - 빌드 산출물(`Builds/` 등)은 저장소에 커밋하지 않는다.
 
 ### 10.6 모니터링·보안·비용
@@ -591,7 +603,7 @@ Unity는 규칙이 클라이언트에 있으므로 결과를 서버에서 검증
 
 ### 10.8 Pokepedia 호스팅 이전(Vercel → Cloudflare) [범위 밖, 별도 프로젝트로 검토]
 
-Unity를 Cloudflare에 올리는 것이 Pokepedia 이전을 요구하지 않는다 (별도 origin + postMessage). 이전하려면 검색 결과 기준으로 다음을 확인해야 한다: Cloudflare의 OpenNext 가이드(2026-08 갱신)는 신규 Next.js 앱에는 vinext를 권장하고 OpenNext는 기존 앱 유지용이라고 안내한다, **Node.js 미들웨어(15.2+)는 아직 미지원**으로 표시되며 Pokepedia는 `src/proxy.ts`를 쓰므로 호환 확인이 필요하다(런타임 종류는 미확인), 함수 지역을 도쿄(`hnd1`)에 고정해 줄인 DB 왕복 지연이 Workers에서 다시 늘 수 있다. 위험과 작업량이 크므로 Unity 완성 후 별도로 검토한다.
+Unity를 Cloudflare에 올리는 것이 Pokepedia 이전을 요구하지 않는다(별도 origin + postMessage). 이전은 Next.js 미들웨어(`src/proxy.ts`) 호환과 DB 왕복 지연 등 위험이 커서 Unity 완성 후 별도로 검토한다.
 
 ---
 
@@ -608,36 +620,15 @@ ottuck/pokepedia-unity    # Unity / C# [확정]
 
 ### 포트폴리오 서사
 
-- **Quiz → Collection → Battle** 루프로 기존 서비스에 새 활용처 부여, TypeScript/React(퀴즈)와 C#/Unity(배틀)의 역할 분담, 순수 C# 엔진과 Unity 화면의 분리 설계·이벤트 기반 연출, Next.js와 Unity 웹 게임의 iframe 연동.
-
-| 기술 | 보여줄 결과물 |
-|---|---|
-| C# 도메인 설계 | 독립적인 턴제 배틀 엔진 |
-| NUnit 테스트 | 타입 상성·데미지·명중·급소 검증 |
-| Unity Animator | 포켓몬별 공격·피격 연출 |
-| Particle System | 전기·물·불꽃 효과 |
-| Shader | 피격·색상 변화·특수 효과 |
-| Unity Web Build | 브라우저에서 실행되는 게임 |
-| React 연동 | 기존 Pokepedia 컬렉션 활용 |
-
+- Quiz → Collection → Battle 루프로 기존 서비스에 새 활용처를 주고, TypeScript/React(퀴즈)와 C#/Unity(배틀)로 역할을 나눈다.
+- 보여줄 것: 순수 C# 엔진과 NUnit 테스트(상성·데미지·명중·급소), 이벤트 기반 연출(Animator·Particle·Shader), 브라우저에서 실행되는 Unity 웹 빌드, Next.js와의 iframe 연동.
 - 짧은 플레이 영상(GIF)과 아키텍처 설명을 함께 제시하고, 소개 문구에 실제 지원 수를 정확히 표기한다 (예: "N종을 공통 전투 시스템으로 지원하며 대표 데모에는 고급 연출을 적용했습니다").
 
 ---
 
 ## 12. 로드맵
 
-| Milestone | 내용 | 완료 기준 |
-|---|---|---|
-| M0 | 검증용 최소 Unity 프로젝트 + PoC 9가지 (5.4) | 9가지 항목 결론 (PoC 프로젝트는 폐기하거나 필요한 부분만 M1로 이관) |
-| M1 | **정식** Unity 프로젝트·저장소 초기화 (M0 결과 반영), asmdef, 테스트 환경 | 정식 프로젝트가 웹에서 실행 |
-| M2 | 순수 C# 엔진 (포켓몬 2마리): 타입 상성(18×18), 데미지, 명중·급소, 턴 순서, 승패, NPC AI, 시드 고정 시뮬레이션으로 수치 조정 | UI 없이 1:1 전투를 테스트로 검증 |
-| M3 | **Vertical Slice — 피카츄 vs 거북왕**: 콘텐츠 로딩(로스터 2마리, 기술 약 9개), 5.3의 전투 흐름과 화면, 이벤트 재생, 공격·피격·급소·빗나감 연출, 사운드 (Showcase 품질) | 실제 엔진을 쓰는 한 판이 처음부터 끝까지 플레이됨 (Showcase 연출 적용) |
-| M4 | 웹 배포, 최적화, 포트폴리오 소개 (**Demo Mode**) | 외부 사용자가 로그인 없이 단독 플레이 가능 |
-| M5 | 로스터 확장(4마리) + **Standard 연출**, 체형별 표시 확인, 밸런스 조정 | 추가 포켓몬이 엔진 수정 없이 데이터만으로 플레이됨 |
-| M6 | Pokepedia 연동 (**Collection Mode**): 내비게이션, iframe, `ready` → `init`, 보유 ∩ 지원 선택 화면 | Pokepedia에서 보유 포켓몬으로 배틀 |
-| 이후 | 게임 완성 후: 퀴즈 우선 출제(9.7), "배틀 가능" 필터(9.6), 보상 화면 연동, 로스터 추가 등 | |
-
-마일스톤별 시간 상한은 두지 않는다 [확정].
+마일스톤 표, 현재 상태, 진행 기록은 [ROADMAP.md](ROADMAP.md)가 단일 출처다. 개발 단계는 그 문서에 기록하며 진행한다. 범위와 단계 구분의 근거는 5.4를 따른다.
 
 ---
 
@@ -655,9 +646,11 @@ ottuck/pokepedia-unity    # Unity / C# [확정]
 | 전투 규칙 | 1:1, 현대 기준 데이터, 레벨 50·개체값 31·노력치 0, 기술별 물리/특수, **명중·급소 포함**, PP·상태이상 제외 (6.4) |
 | 밸런스 | 전투 4~6라운드(기술 위력 값으로 조절, HP 배율 규칙 없음), 종족값 압축, **전설은 드물게 등장**, Demo 피카츄 승률 60~70%를 시드 고정 시뮬레이션으로 검증 (6.5) |
 | 기술 | Unity 6.3 LTS, C#, uGUI, 순수 C# Domain, NUnit, JSON |
+| 폰트 | Galmuri11 + TMP Static 글리프 아틀라스 (7.7) |
+| 렌더 | URP 2D 유지 + 용량 다이어트 설정 (ROADMAP M0 결과) |
 | 엔진/콘텐츠 | 처음부터 분리, 엔진은 지원 포켓몬 수를 모름 |
-| 스프라이트 | PokeAPI **5세대 블랙·화이트 애니메이션**(앞/뒤/shiny GIF → Unity 변환), 저장소에 커밋하지 않음 (스크립트+매니페스트), 권리 검토는 제외 |
-| 사운드 | AI 활용 8비트 + CC0 소스 우선, 매니페스트로 출처 관리, 울음소리는 품질이 좋으면 사용 1순위·아니면 비슷하게 제작 |
+| 스프라이트 | PokeAPI **5세대 블랙·화이트 애니메이션**(앞/뒤/shiny GIF → 시트 PNG + 지연 JSON, 런타임 `SpriteFramePlayer`), 저장소에 커밋하지 않음 (스크립트+매니페스트), 권리 검토는 제외 |
+| 사운드 | AI 활용 8비트 + CC0 소스 우선, 매니페스트로 출처 관리, 울음소리는 원본 대신 속성 기반 합성 (세부는 M3) |
 | 연동 | iframe + postMessage, **단방향**, 지원 필터는 Unity 내부 교집합, 경로 `/[locale]/battle` |
 | 모드 | Demo(피카츄 vs 거북왕 고정) / Collection(보유 ∩ 지원). 판별은 `?host=pokepedia` + `init` 대기, 실패 시 [다시 시도], Demo는 명시적 선택 |
 | DB | Pokepedia DB 변경 없음. Unity는 인증·DB 직접 사용 안 함 |
@@ -669,11 +662,8 @@ ottuck/pokepedia-unity    # Unity / C# [확정]
 
 ## 14. 아직 결정하지 않은 사항 (에이전트가 임의로 확정하지 말 것)
 
-**M0 측정·청취로 정해지는 것**
-- 폰트 최종 변형 (Galmuri11/14, 글리프 검사)
-- 울음소리 사용 여부 (청취 후)
-- GIF의 Unity 변환·재생 방식
-- 호스팅 최종 선택, `pokepedia.dev` DNS 위치에 따른 서브도메인 방식
+**실배포로 정해지는 것**
+- 호스팅 최종 선택, `pokepedia.dev` DNS 위치에 따른 서브도메인 방식 (Cloudflare `.br` 헤더 검증 포함, ROADMAP M4)
 
 **에이전트에 위임 (완료 후 문서에 정리)**
 - 전투 수치 세부: 위력·명중률 값, 급소 확률(1/16 가정), 압축 계수 k, 전설 가중치, 상성 편향, 이상치 보정 (6.5)
@@ -699,7 +689,7 @@ ottuck/pokepedia-unity    # Unity / C# [확정]
 4. 규칙은 **테스트를 먼저** 작성한다.
 5. 불필요한 프레임워크·인프라를 추가하지 않는다. 과한 추상화를 피한다.
 6. 초기부터 웹 빌드 가능성을 유지하고 정기적으로 WebGL 빌드를 확인한다.
-7. **Pokepedia 코드·DB는 함부로 수정하지 않는다.** 수정 전 해당 소스, `docs/system_design.md`, `CLAUDE.md` 머지 정책을 확인한다. DB 변경이 꼭 필요하면 additive만 허용하고 Prod/Preview가 같은 DB임을 기억한다.
+7. **Pokepedia 코드·DB는 함부로 수정하지 않는다.** 수정 전 해당 소스, `docs/system_design.md`, pokepedia 저장소 `CLAUDE.md`의 머지 정책을 확인한다. DB 변경이 꼭 필요하면 additive만 허용하고 Prod/Preview가 같은 DB임을 기억한다.
 8. 엔진 코드에 포켓몬 이름·스프라이트·문자열을 넣지 않는다. 포켓몬별 코드를 만들지 않는다. **엔진은 로스터 크기를 알지 못한다.**
 9. 기능 개발과 에셋 제작을 분리한다. 엔진은 에셋 없이 동작해야 한다.
 10. **Showcase 데모도 실제 엔진을 사용해야 한다.** 가짜 전투 로직이나 미리 만든 연출만 재생하지 않는다. Standard와 Showcase를 별도 시스템으로 만들지 않는다.
@@ -727,16 +717,6 @@ ottuck/pokepedia-unity    # Unity / C# [확정]
 - `unity command`·`unity eval`이 실행 중인 에디터를 반드시 필요로 하는지. 문서의 "running Editor" 표현에서 추정한 것이다.
 - GPT가 전한 CoreCLR 로드맵(Unity 7.0에서 CoreCLR 에디터 도입 등). 공식 확인 전이다. 어느 쪽이든 WebGL 빌드는 IL2CPP라 6.3 LTS 유지 결정에는 영향이 없다고 본다.
 
-**병렬 에이전트 운영 규칙**
-- Unity 에디터는 프로젝트 폴더당 하나만 열 수 있다(`Library/`와 `Temp/UnityLockfile` 점유). 에디터가 열린 폴더에서는 batchmode 실행(컴파일 확인·테스트·빌드)이 실패한다.
-- 에디터 조작이 필요한 작업(씬 배치, 파티클, UI)은 에이전트 한 명이 순서대로 맡는다. 순수 C# 로직(`Domain`, `Content`, `Application`)과 `dotnet test`는 별도 worktree에서 병렬로 진행할 수 있다.
-- IDE(Rider·VS Code)는 에디터와 별개라서 에이전트 작업 중에도 같이 열어도 된다.
-- worktree를 새로 만들면 `Library/`를 다시 임포트하느라 첫 실행이 오래 걸린다.
+**운영 주의**
+- 에디터 단일 점유와 병렬 작업 규칙은 [CLAUDE.md](../CLAUDE.md)를 따른다.
 - `unity eval`은 에디터에서 임의 C#을 실행할 수 있다. 권한 허용 목록에는 필요한 명령만 넣는다.
-
-### 새 에이전트 세션의 첫 작업
-
-이 문서를 **별도 세션(Opus 모델)** 에 전달해 작업을 시작한다.
-
-1. **M0 PoC** 수행: 폰트(Galmuri11/14 + TMP Static), WebGL 빌드·호스팅 헤더, iframe 왕복(`ready` → `init`), 키 입력, 피카츄 공격 연출 1개, BW GIF 변환·재생, 모바일 브라우저 레이아웃, 오디오 재생(START 버튼)과 울음소리 청취 비교.
-2. M1(정식 초기화) → M2(엔진, TDD, 시드 고정 시뮬레이션으로 수치 조정) → M3(피카츄 vs 거북왕 Vertical Slice) 순으로 진행한다.

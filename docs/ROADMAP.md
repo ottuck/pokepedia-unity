@@ -1,10 +1,44 @@
-# M0 PoC 결과
+# 로드맵
+
+개발 단계 현황과 진행 기록. **에이전트는 작업 전에 "현재 상태"를 확인하고, 단계가 바뀌거나 완료·주요 결정이 생기면 같은 PR에서 이 문서를 갱신한다.** 범위·설계는 [PROJECT.md](PROJECT.md), 에이전트 규칙은 [CLAUDE.md](../CLAUDE.md)에 있다. 마일스톤별 시간 상한은 두지 않는다 [확정].
+
+## 현재 상태
+
+- **다음 작업:** M2 — 순수 C# 배틀 엔진(TDD)
+- 마지막 갱신: 2026-10-16
+
+## 마일스톤
+
+| Milestone | 내용 | 완료 기준 | 상태 |
+|---|---|---|---|
+| M0 | 검증용 최소 Unity 프로젝트 + PoC 9가지 (항목은 M0 결과 요약 참고) | 9가지 항목 결론 | 완료 → [M0 결과](#m0--poc-결과) |
+| M1 | **정식** Unity 프로젝트·저장소 초기화 (M0 결과 반영), asmdef, 테스트 환경, 웹 빌드 설정, 진입 화면·브리지 | 정식 프로젝트가 웹에서 실행 | 완료 |
+| M2 | 순수 C# 엔진 (포켓몬 2마리): 타입 상성(18×18), 데미지, 명중·급소, 턴 순서, 승패, NPC AI, 시드 고정 시뮬레이션으로 수치 조정 | UI 없이 1:1 전투를 테스트로 검증 | 예정 (다음) |
+| M3 | **Vertical Slice — 피카츄 vs 거북왕**: 콘텐츠 로딩(로스터 2마리, 기술 약 9개), 5.3의 전투 흐름과 화면, 이벤트 재생, 공격·피격·급소·빗나감 연출, 사운드 (Showcase 품질) | 실제 엔진을 쓰는 한 판이 처음부터 끝까지 플레이됨 | 예정 |
+| M4 | 웹 배포, 최적화, 포트폴리오 소개 (**Demo Mode**). Cloudflare 실배포 헤더 검증 포함 | 외부 사용자가 로그인 없이 단독 플레이 가능 | 예정 |
+| M5 | 로스터 확장(4마리) + **Standard 연출**, 체형별 표시 확인, 밸런스 조정 | 추가 포켓몬이 엔진 수정 없이 데이터만으로 플레이됨 | 예정 |
+| M6 | Pokepedia 연동 (**Collection Mode**): 내비게이션, iframe, `ready` → `init`, 보유 ∩ 지원 선택 화면 | Pokepedia에서 보유 포켓몬으로 배틀 | 예정 |
+| 이후 | 게임 완성 후: 퀴즈 우선 출제(9.7), "배틀 가능" 필터(9.6), 보상 화면 연동, 3:3·교체·가방, 로스터 추가 등 | | 미정 |
+
+상태 표기: 예정 / 진행 중 / 완료. 마일스톤이 바뀌면 위 표와 "현재 상태"를 함께 고친다.
+
+## 진행 기록
+
+최신이 위. 한 줄에 날짜, 한 일, 근거(커밋·PR·문서 절)를 적는다.
+
+- 2026-10-16 문서 구조 정리: `design.md` → `PROJECT.md`, `bridge-protocol.md`를 PROJECT.md 9.2로 통합, `M0-poc-result.md` → 이 문서, 에이전트 파일은 `CLAUDE.md` 하나로 일원화. PROJECT.md에서 끝난 PoC 목록·단계별 서술(이 문서와 중복)·옛 디렉터리 예시·시뮬레이션 메모·인수인계 문구를 제거하고 M0 확정 사항(폰트, 울음소리, GIF 변환)을 반영. CI가 도는 PR은 통과하면 병합하는 것이 기본(GitHub auto-merge는 이 저장소에서 사용 불가, CLAUDE.md).
+- 2026-10-16 Unity CLI 연동 조사: 에디터 내장 MCP 서버는 deprecated, Unity CLI가 대체. 검증 결과는 PROJECT.md 15장. `unity pipeline install`은 아직 하지 않음. (PR #1)
+- 2026-10-16 CI 경로 필터 적용: 도메인 테스트가 도는 파일이 바뀔 때만 `domain-tests` 실행.
+- 2026-10-16 M1 완료: asmdef 계층 분리, 테스트(Unity + dotnet), 웹 빌드 설정(Brotli, 스트리핑 High, Data Caching 끔, 스플래시 로고 제거), `PixelCanvasScaler`, 진입 화면·브리지. M0 → M1 이관 항목 중 Cloudflare 실배포 헤더 검증만 M4로 남음.
+- 2026-10-16 M0 완료: PoC 9가지 모두 결론. 아래 "M0 — PoC 결과".
+
+## M0 — PoC 결과
 
 **측정일: 2026-10-16 · Unity 6000.3.26f1 (6.3 LTS) · Universal 2D 템플릿 · PoC 프로젝트 `pokepedia-unity-poc`**
 
 > 9개 검증 항목의 결론(가능 / 불가 / 우회책)만 정리한다. 수치는 이 PC(Windows 11, Chrome 152 계열 내장 브라우저)에서 잰 값이며 모바일 실기기 수치는 아니다.
 
-## 요약
+### 요약
 
 | # | 항목 | 결론 |
 |---|---|---|
@@ -18,7 +52,7 @@
 | 8 | 모바일 브라우저 레이아웃 | **기본 가능.** 세로·가로 모두 10:9 유지, 탭 입력 동작. 실기기·실제 터치 이벤트는 미검증 |
 | 9 | 오디오 | **가능.** START 클릭 후 효과음 재생. 울음소리는 원본 대신 **속성 기반 합성으로 확정**(세부는 M3) |
 
-## 1. 폰트
+### 1. 폰트
 
 - **Galmuri11 채택 권장.** 한글·히라가나·가타카나·JIS 한자를 모두 가져 보조 폰트가 필요 없다. 11 Bold는 가나·한자·♀♂가 없고, 11 Condensed는 한자가 없다.
 - TMP Static 폰트 에셋: 12pt 샘플링, `RASTER_HINTED`, 512×512 Alpha8, 419자 전부 추가(누락 0). 에셋 크기(비압축) 295KB. 소스 TTF 참조를 끊어 5.4MB TTF가 빌드에 들어가지 않음을 빌드 리포트로 확인.
@@ -28,7 +62,7 @@
   - TMP Essentials를 넣으면 `Resources/`의 LiberationSans SDF(1MB)·TTF(344KB)·EmojiOne(341KB)이 빌드에 포함된다 → M1에서 TMP Settings 기본 폰트를 Galmuri로 바꾸고 제거.
 - 도구: `Tools/fonts/extract_glyphs.py`(locale JSON → 글리프 목록), `check_coverage.py`, `Assets/Editor/PocFontBuild.cs`(Static 아틀라스 생성).
 
-## 2. WebGL 빌드 용량·로딩
+### 2. WebGL 빌드 용량·로딩
 
 | 빌드 | 설정 | wasm | data | 합계(전송) |
 |---|---|---|---|---|
@@ -54,30 +88,30 @@
 - 빌드 시간: 첫 WebGL 빌드 약 14.5분, LTO 빌드 약 7~10분, 캐시가 있는 비LTO 재빌드 약 1분.
 - Unity 6.3: Personal에서도 스플래시를 끌 수 있다(`SplashScreen.show=false`). 이때 로딩 후 바로 게임이 보인다.
 
-## 3. iframe + postMessage
+### 3. iframe + postMessage
 
 - 구조: C# `HostBridge` → `.jslib`(`window.parent.postMessage`) / 템플릿의 `message` 리스너가 `event.origin`을 허용 목록과 대조한 뒤 `unityInstance.SendMessage("HostBridge", "OnHostInit", json)`.
 - `?host=pokepedia` 쿼리는 jslib로 `location.search`를 읽어 판별(iframe에서 `Application.absoluteURL`의 의미가 불명확하므로 쓰지 않음).
 - 확인: `ready` → `init`(보유 목록 4마리) 수신, init 미전송 시 5초 후 [RETRY] 표시(자동 Demo 전환 없음), RETRY → `ready` 재전송 → `init` 수신.
 - 남은 일: 정식 빌드에서 jslib의 `targetOrigin`을 `'*'`에서 허용 origin으로 제한.
 
-## 4. 키 입력
+### 4. 키 입력
 
 - 템플릿에서 방향키·Space의 `keydown` 기본 동작을 막고, 포인터/터치 시 캔버스에 포커스.
 - 부모 페이지가 스크롤 가능한 상태에서 iframe 포커스 후 방향키·Space를 눌러도 `scrollY = 0` 유지. Z/X는 Input System `Keyboard.current`로 인식.
 
-## 5. 호스팅
+### 5. 호스팅
 
 - 로컬 모의 서버(`Tools/web/serve.py`)로 `.br` 사전 압축 파일 + `Content-Encoding: br` + `application/wasm` + `frame-ancestors` 조합이 정상 동작함을 확인(Chrome은 `http://localhost`에서도 br을 받음).
 - Cloudflare Workers 정적 자산에서 `_headers`로 `.br` 파일의 `Content-Encoding`을 지정할 수 있는지는 **문서에 명시가 없어 미검증**. 실배포로 확인 필요(계정 필요). 안 되면 `run_worker_first` Worker에서 헤더를 붙인다.
 - Safari는 iframe 안에서 IndexedDB(Data Caching)를 지원하지 않는다(Unity 6.3 문서) → 재방문 캐시는 HTTP 캐시(해시 파일명 + `immutable`)에 의존.
 
-## 6. 공격 연출
+### 6. 공격 연출
 
 - Animator(Idle 루프 + Attack 트리거) 클립 안의 AnimationEvent가 `FireSpark` 호출 → ParticleSystem 버스트 + 절차 생성 효과음 + 대상 흔들림·깜빡임(코드 트위닝).
 - 규칙(엔진)과 무관한 순수 연출 경로로 동작함을 확인. Showcase 품질의 이펙트 제작은 M3.
 
-## 7. 스프라이트
+### 7. 스프라이트
 
 - PokeAPI BW 애니메이션 GIF 12개(6마리 × 앞/뒤) 변환 성공. 알파는 0/255뿐이라 Point 필터 + 비압축으로 깨끗하다.
 - 시트 PNG 합계: 기본 856KB → `--dedupe --indexed` 245KB.
@@ -85,13 +119,13 @@
 - 발 위치 pivot (0.5, 0), PPU 16(게임보이 160×144 기준 카메라)에서 피카츄·거북왕이 투명도 문제 없이 표시됨.
 - 도구: `Tools/sprites/fetch_sprites.py`, `convert_gif.py`.
 
-## 8. 모바일 레이아웃
+### 8. 모바일 레이아웃
 
 - 세로(375×812): 10:9 화면이 폭에 맞고 위아래가 비어 있다 → **M3에서 세로 모드 하단 여백에 터치 버튼(방향·A·B)을 배치**하는 레이아웃 권장.
 - 가로(812×375): 높이에 맞춰 10:9 유지.
 - 확인 못 한 것: 실기기, 실제 터치 이벤트(테스트 브라우저는 클릭으로 전달), safe-area 값, iOS Safari 메모리.
 
-## 9. 오디오
+### 9. 오디오
 
 - START 버튼 클릭 안에서 첫 효과음 → "Audio context resumed" 로그 확인. 이후 Z 키 효과음·공격 효과음 정상.
 - 울음소리 **[확정]**: PokeAPI 원본(latest/legacy)은 6마리 모두 어색해 **사용하지 않는다.** 대신 **속성 기반 합성**으로 만든다. 세부 음색은 M3에서 다듬는다.
@@ -102,7 +136,7 @@
   - 장점: 원본 음원의 권리 문제가 없고 용량이 거의 0이다. 로스터를 늘려도 속성 레시피만 재사용한다.
   - Unity 이식(M3): 같은 레시피를 `AudioClip.Create`로 절차 생성하거나 오프라인 렌더로 WAV를 구워 쓴다(WebGL은 `AudioClip.Create`에 `stream=false`만 지원).
 
-## URP vs Built-in
+### URP vs Built-in
 
 **결론: URP(2D Renderer) 유지 + 다이어트 설정.** 프로젝트 사본 두 개(`pokepedia-unity-poc-rp`, `pokepedia-unity-poc-builtin`)로 비교했다. Opt2 기준이며 폰트·스프라이트는 없다.
 
@@ -117,7 +151,7 @@
 - Built-in이 약 1.2MB 더 작지만, Unity가 Built-in을 6.5부터 deprecated로 지정했고 신규 프로젝트에는 권장하지 않는다(Unity "Render Pipelines strategy for 2026"). 또 2D Light, Sprite-Lit, Volume 후처리, URP용 2D Shader Graph를 잃는다. 1.2MB 차이는 이 비용을 감수할 만큼 크지 않다.
 - 두 변형 모두 브라우저에서 START·오디오·공격 연출까지 정상 동작했다. URP 빌드 콘솔에는 `Hidden/CoreSRP/CoreCopy`, `Hidden/Universal/HDRDebugView` 셰이더 미지원 로그가 찍히지만 화면에는 영향이 없다.
 
-## M1로 넘길 결정·작업
+### M1로 넘길 결정·작업
 
 - 폰트 Galmuri11 확정, TMP 기본 리소스 정리, 정수 배율 스케일링.
 - 렌더 파이프라인: URP 2D 유지, `showUnityLogo=false` → `show=false`, PostProcessData 제거.
