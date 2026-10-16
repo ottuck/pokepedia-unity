@@ -26,7 +26,7 @@
 
 최신이 위. 한 줄에 날짜, 한 일, 근거(커밋·PR·문서 절)를 적는다.
 
-- 2026-10-16 문서 구조 정리: `design.md` → `PROJECT.md`, `bridge-protocol.md`를 PROJECT.md 9.2로 통합, `M0-poc-result.md` → 이 문서, 에이전트 파일은 `CLAUDE.md` 하나로 일원화. PROJECT.md에서 끝난 PoC 목록·단계별 서술(이 문서와 중복)·옛 디렉터리 예시·시뮬레이션 메모·인수인계 문구를 제거하고 M0 확정 사항(폰트, 울음소리, GIF 변환)을 반영. PR은 CI 통과 시 자동 병합이 기본(CLAUDE.md).
+- 2026-10-16 문서 구조 정리: `design.md` → `PROJECT.md`, `bridge-protocol.md`를 PROJECT.md 9.2로 통합, `M0-poc-result.md` → 이 문서, 에이전트 파일은 `CLAUDE.md` 하나로 일원화. PROJECT.md에서 끝난 PoC 목록·단계별 서술(이 문서와 중복)·옛 디렉터리 예시·시뮬레이션 메모·인수인계 문구를 제거하고 M0 확정 사항(폰트, 울음소리, GIF 변환)을 반영. CI가 도는 PR은 통과하면 병합하는 것이 기본(GitHub auto-merge는 이 저장소에서 사용 불가, CLAUDE.md).
 - 2026-10-16 Unity CLI 연동 조사: 에디터 내장 MCP 서버는 deprecated, Unity CLI가 대체. 검증 결과는 PROJECT.md 15장. `unity pipeline install`은 아직 하지 않음. (PR #1)
 - 2026-10-16 CI 경로 필터 적용: 도메인 테스트가 도는 파일이 바뀔 때만 `domain-tests` 실행.
 - 2026-10-16 M1 완료: asmdef 계층 분리, 테스트(Unity + dotnet), 웹 빌드 설정(Brotli, 스트리핑 High, Data Caching 끔, 스플래시 로고 제거), `PixelCanvasScaler`, 진입 화면·브리지. M0 → M1 이관 항목 중 Cloudflare 실배포 헤더 검증만 M4로 남음.
