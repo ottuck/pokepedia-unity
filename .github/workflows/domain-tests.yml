@@ -3,9 +3,25 @@
 # Assets/Tests/EditMode 를 링크한 Tests.Dotnet 프로젝트를 dotnet test 로 돌린다.
 name: domain-tests
 
+# 테스트가 컴파일하는 코드가 바뀔 때만 돈다. 문서·에셋·Unity 화면 코드만 바뀐 커밋에서는 돌지 않는다.
 on:
   push:
+    paths:
+      - "Assets/Scripts/Domain/**"
+      - "Assets/Scripts/Content/**"
+      - "Assets/Scripts/Application/**"
+      - "Assets/Tests/EditMode/**"
+      - "Tests.Dotnet/**"
+      - ".github/workflows/domain-tests.yml"
   pull_request:
+    paths:
+      - "Assets/Scripts/Domain/**"
+      - "Assets/Scripts/Content/**"
+      - "Assets/Scripts/Application/**"
+      - "Assets/Tests/EditMode/**"
+      - "Tests.Dotnet/**"
+      - ".github/workflows/domain-tests.yml"
+  workflow_dispatch: # Actions 탭에서 수동 실행
 
 permissions:
   contents: read
