@@ -23,23 +23,13 @@ namespace Pokepedia.EditorTools
         public static void Bake()
         {
             Directory.CreateDirectory(OutDir);
-            var catalog = ContentLoader.Load(Read("species.json"), Read("moves.json"), Read("roster.json"));
-            var anim = AnimationCatalog.Parse(Read("animation.json"));
             int count = 0;
-
-            foreach (var s in catalog.Species)
-            {
-                var types = s.Species.Types.Select(ContentLoader.ToJsonName).Where(TypeCries.IsSupported).ToArray();
-                if (types.Length == 0) continue;
-                var cry = anim.ProfileFor(s.AnimProfile).Cry;
-                Write(SoundBank.CryKey(s.Species.Id), TypeCries.Render(types, cry.Semitones, cry.Length, SampleRate));
-                count++;
-            }
+            // 속성 공격음 (기술 사용 시). 포켓몬 울음소리는 미정이라 굽지 않는다.
             var supported = ((Pokepedia.Domain.PokemonType[])Enum.GetValues(typeof(Pokepedia.Domain.PokemonType)))
-                .Select(ContentLoader.ToJsonName).Where(TypeCries.IsSupported);
+                .Select(ContentLoader.ToJsonName).Where(TypeAttackSounds.IsSupported);
             foreach (var type in supported)
             {
-                Write(SoundBank.MoveKey(type), TypeCries.Render(new[] { type }, 0, SoundBank.MoveSoundLength, SampleRate));
+                Write(SoundBank.MoveKey(type), TypeAttackSounds.Render(new[] { type }, 0, SoundBank.MoveSoundLength, SampleRate));
                 count++;
             }
             foreach (SfxKind kind in Enum.GetValues(typeof(SfxKind)))

@@ -44,19 +44,13 @@ namespace Pokepedia.Presentation.Battle.Fx
             // NPC 는 오른쪽에서, 플레이어는 왼쪽에서 미끄러져 들어온다
             var from = new Vector2(side == BattleState.Npc ? 150 : -150, 0);
             yield return Move(view, from, Vector2.zero, 0.35f);
-            Cry(info);
-            // 등장 직후 한 번 번쩍임
+            // 등장 직후 한 번 번쩍임. 울음소리(등장 소리)는 미정이라 아직 없다 — 속성 소리는 공격음이므로 여기서 쓰지 않는다.
             view.SetFlash(0.8f); yield return VfxLayer.Wait(0.06f); view.SetFlash(0);
         }
 
-        /// <summary>울음소리 (종 타입 + 프로필 cry 값으로 미리 구운 클립, AudioBaker)</summary>
-        public void Cry(SpeciesInfo info) => sound.Cry(info.Species.Id);
-
-        public IEnumerator Faint(int side, SpeciesInfo info)
+        public IEnumerator Faint(int side)
         {
             var view = sides[side];
-            Cry(info); // 쓰러지기 전 울음 (원작 관례)
-            yield return VfxLayer.Wait(0.35f);
             sound.Play(SfxKind.Faint);
             for (float t = 0; t < 0.45f; t += Time.deltaTime)
             {
@@ -94,8 +88,8 @@ namespace Pokepedia.Presentation.Battle.Fx
             var typeName = ContentLoader.ToJsonName(move.Move.Type);
             bool missed = hit == null;
 
-            // 기술 소리: 속성 레시피(울음소리와 같은 합성기, 원래 "속성 공격음" 으로 만든 소리). 노말은 레시피가 없어 타격음만.
-            if (TypeCries.IsSupported(typeName)) sound.Move(typeName);
+            // 속성 공격음 (기술을 쓰는 순간). 노말은 레시피가 없어 맞을 때 타격음만 난다.
+            if (TypeAttackSounds.IsSupported(typeName)) sound.Move(typeName);
 
             var fx = anim.MoveFxFor(prof.Key, move.Move.Id) ?? move.AnimKind switch
             {

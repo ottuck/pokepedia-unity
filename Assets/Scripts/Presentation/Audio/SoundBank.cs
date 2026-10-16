@@ -11,10 +11,9 @@ namespace Pokepedia.Presentation.Audio
     /// </summary>
     public sealed class SoundBank
     {
-        /// <summary>기술 사용음 = 속성 레시피를 조금 짧게 (울음소리와 같은 합성기)</summary>
+        /// <summary>기술 사용음(속성 공격음) 길이 배수</summary>
         public const double MoveSoundLength = 0.8;
 
-        public static string CryKey(int speciesId) => "cry_" + speciesId;
         public static string MoveKey(string typeName) => "move_" + typeName;
         public static string SfxKey(SfxKind kind) => "sfx_" + kind.ToString().ToLowerInvariant();
 
@@ -28,7 +27,6 @@ namespace Pokepedia.Presentation.Audio
         }
 
         public void Play(SfxKind kind) => PlayKey(SfxKey(kind));
-        public void Cry(int speciesId) => PlayKey(CryKey(speciesId));
         public void Move(string typeName) => PlayKey(MoveKey(typeName));
 
         void PlayKey(string key)

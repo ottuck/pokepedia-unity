@@ -10,19 +10,14 @@ using Pokepedia.Presentation.Audio.Synth;
 namespace Pokepedia.Tools.AudioRender
 {
     /// <summary>
-    /// 울음소리(로스터 6 + 속성 단독 8)와 배틀 효과음을 16bit PCM mono WAV 로 렌더하고,
+    /// 속성 공격음(8종)과 배틀 효과음을 16bit PCM mono WAV 로 렌더하고,
+    /// (속성 소리는 포켓몬 울음소리가 아니라 기술을 쓸 때 나는 공격음이다)
     /// 길이·피크·RMS·클리핑·무음·결정성(해시)을 표로 보여 준다. 문제가 있으면 종료 코드 1.
     /// 실행(저장소 루트에서): <c>dotnet run -c Release --project Tools/audio/render</c>
     /// 선택 인자: <c>-- --sr 44100 --out 경로</c> (기본 22050Hz, Tools/audio/out).
     /// </summary>
     static class Program
     {
-        // 시제품 HTML 의 MONS 표(pitch = 반음, len = 길이 배수). 속성은 species.json 에서 읽는다.
-        static readonly (int id, double pitch, double len)[] Roster =
-        {
-            (25, 4, 0.9), (9, -5, 1.15), (6, -3, 1.2), (3, -4, 1.1), (94, 0, 1.1), (150, -2, 1.3),
-        };
-
         sealed class Job
         {
             public string Name;
@@ -33,7 +28,7 @@ namespace Pokepedia.Tools.AudioRender
         {
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-            int sr = TypeCries.DefaultSampleRate;
+            int sr = TypeAttackSounds.DefaultSampleRate;
             string root = FindRepoRoot();
             string outDir = Path.Combine(root, "Tools", "audio", "out");
             for (int i = 0; i < args.Length; i++)
@@ -85,20 +80,10 @@ namespace Pokepedia.Tools.AudioRender
         static List<Job> BuildJobs(string root, int sr)
         {
             var jobs = new List<Job>();
-            var species = LoadSpecies(Path.Combine(root, "Assets", "Content", "Data", "species.json"));
-            foreach (var (id, pitch, len) in Roster)
+            foreach (AttackElement e in Enum.GetValues(typeof(AttackElement)))
             {
-                var (types, profile) = species[id];
-                jobs.Add(new Job
-                {
-                    Name = $"cry_{id:000}_{profile}",
-                    Render = () => TypeCries.Render(types, pitch, len, sr),
-                });
-            }
-            foreach (CryElement e in Enum.GetValues(typeof(CryElement)))
-            {
-                CryElement el = e;
-                jobs.Add(new Job { Name = "type_" + el.ToString().ToLowerInvariant(), Render = () => TypeCries.Render(el, null, 0, 1, sr) });
+                AttackElement el = e;
+                jobs.Add(new Job { Name = "type_" + el.ToString().ToLowerInvariant(), Render = () => TypeAttackSounds.Render(el, null, 0, 1, sr) });
             }
             foreach (SfxKind k in Enum.GetValues(typeof(SfxKind)))
             {
@@ -106,19 +91,6 @@ namespace Pokepedia.Tools.AudioRender
                 jobs.Add(new Job { Name = "sfx_" + ToSnake(kind.ToString()), Render = () => BattleSfx.Render(kind, sr) });
             }
             return jobs;
-        }
-
-        static Dictionary<int, (string[] types, string profile)> LoadSpecies(string path)
-        {
-            var map = new Dictionary<int, (string[], string)>();
-            using var doc = JsonDocument.Parse(File.ReadAllText(path));
-            foreach (var el in doc.RootElement.EnumerateArray())
-            {
-                int id = el.GetProperty("id").GetInt32();
-                string[] types = el.GetProperty("types").EnumerateArray().Select(t => t.GetString()).ToArray();
-                map[id] = (types, el.GetProperty("animProfile").GetString());
-            }
-            return map;
         }
 
         static string FindRepoRoot()

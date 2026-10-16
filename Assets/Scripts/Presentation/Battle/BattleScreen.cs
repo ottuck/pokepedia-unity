@@ -77,15 +77,19 @@ namespace Pokepedia.Presentation.Battle
         public void BeginDemo(string localeCode, Action onExit)
         {
             this.onExit = onExit;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             if (catalog == null)
             {
                 catalog = ContentLoader.Load(speciesJson.text, movesJson.text, rosterJson.text);
+                Perf("content", sw);
                 animation = AnimationCatalog.Parse(animationJson.text);
+                Perf("animation", sw);
             }
             var asset = localeCode switch { "en" => localeEn, "ja" => localeJa, _ => localeKo };
             locale = LocaleTable.Parse(asset.text);
+            Perf("locale", sw);
             names = new BattleNames(id => locale.Get(catalog.GetSpecies(id).NameKey), id => locale.Get(catalog.GetMove(id).NameKey));
-            if (root == null) Build();
+            if (root == null) { Build(); Perf("build ui", sw); }
             root.SetActive(true);
 
             var seed = (uint)Environment.TickCount | 1u;
@@ -93,6 +97,9 @@ namespace Pokepedia.Presentation.Battle
             lastMoveIndex = 0;
             StartCoroutine(NewBattle(session.Start));
         }
+
+        /// <summary>배틀 시작 단계별 누적 시간을 콘솔에 남긴다 (WebGL 시작 지연 조사용, 처음 한 번만 몇 줄)</summary>
+        static void Perf(string step, System.Diagnostics.Stopwatch sw) => Debug.Log($"[Perf] {step}: {sw.ElapsedMilliseconds} ms");
 
         // ------------------------------------------------------------------ 레이아웃
         void Build()
@@ -314,7 +321,7 @@ namespace Pokepedia.Presentation.Battle
                         break;
                     }
                     case Fainted f:
-                        yield return director.Faint(f.Side, catalog.GetSpecies(SpeciesOf(f.Side)));
+                        yield return director.Faint(f.Side);
                         yield return SayAll(e);
                         break;
                     case BattleEnded b:

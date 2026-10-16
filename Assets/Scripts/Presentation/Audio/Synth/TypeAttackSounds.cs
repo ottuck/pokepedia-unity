@@ -3,24 +3,24 @@ using System.Collections.Generic;
 
 namespace Pokepedia.Presentation.Audio.Synth
 {
-    /// <summary>울음소리 레시피가 있는 속성(로스터에 쓰이는 8종). species.json 의 소문자 이름과 1:1.</summary>
-    public enum CryElement { Electric, Water, Fire, Flying, Grass, Poison, Ghost, Psychic }
+    /// <summary>속성 공격음 레시피가 있는 속성(로스터에 쓰이는 8종). species.json 의 소문자 이름과 1:1.</summary>
+    public enum AttackElement { Electric, Water, Fire, Flying, Grass, Poison, Ghost, Psychic }
 
     /// <summary>
-    /// 속성 기반 울음소리 합성기 (Tools/audio/type-cries-prototype.html v3 레시피의 오프라인 C# 이식).
+    /// 속성 기반 공격음 합성기 (Tools/audio/type-attack-sounds-prototype.html v3 레시피의 오프라인 C# 이식).
+    /// <b>기술을 쓸 때(공격 모션) 나는 소리다. 포켓몬 울음소리(등장 소리)가 아니다</b> (사용자 정정, 2026-10-17).
     /// 규칙: 주 속성 = 본체(세기 LOUD), 보조 속성 = 덧칠(세기 0.45×LOUD, 0.06×L 늦게, 길이 0.85×L),
     /// 출력 0.8 → 컴프레서(−12dB, 8:1) → 리미터. 같은 입력이면 같은 샘플을 낸다(시드 고정).
-    /// UnityEngine 을 쓰지 않는다. Unity 에서는
-    /// <c>var clip = AudioClip.Create(name, s.Length, 1, sampleRate, false); clip.SetData(s, 0);</c> 로 쓴다.
+    /// UnityEngine 을 쓰지 않는다. WebGL 에서 실행 중 합성은 느려서 에디터가 미리 굽는다(AudioBaker).
     /// </summary>
-    public static class TypeCries
+    public static class TypeAttackSounds
     {
         public const int DefaultSampleRate = 22050;
 
         delegate void Recipe(SynthBus c, double[] d, double t, double p, double L, double v);
 
         /// <summary>
-        /// 울음소리를 mono float[] [-1, 1] 로 렌더한다.
+        /// 속성 공격음을 mono float[] [-1, 1] 로 렌더한다.
         /// </summary>
         /// <param name="types">species.json 의 types (예: ["fire", "flying"]). 첫째가 주 속성, 둘째가 보조 속성.</param>
         /// <param name="semitones">반음 단위 음높이 오프셋(체급이 클수록 낮게).</param>
@@ -29,13 +29,13 @@ namespace Pokepedia.Presentation.Audio.Synth
         public static float[] Render(IReadOnlyList<string> types, double semitones = 0, double lengthMul = 1, int sampleRate = DefaultSampleRate)
         {
             if (types == null || types.Count == 0) throw new ArgumentException("속성이 하나 이상 필요합니다.", nameof(types));
-            CryElement primary = Parse(types[0]);
-            CryElement? secondary = types.Count > 1 ? Parse(types[1]) : (CryElement?)null;
+            AttackElement primary = Parse(types[0]);
+            AttackElement? secondary = types.Count > 1 ? Parse(types[1]) : (AttackElement?)null;
             return Render(primary, secondary, semitones, lengthMul, sampleRate);
         }
 
-        /// <summary>울음소리를 mono float[] [-1, 1] 로 렌더한다. secondary 가 null 이면 단일 속성.</summary>
-        public static float[] Render(CryElement primary, CryElement? secondary, double semitones = 0, double lengthMul = 1, int sampleRate = DefaultSampleRate)
+        /// <summary>속성 공격음을 mono float[] [-1, 1] 로 렌더한다. secondary 가 null 이면 단일 속성.</summary>
+        public static float[] Render(AttackElement primary, AttackElement? secondary, double semitones = 0, double lengthMul = 1, int sampleRate = DefaultSampleRate)
         {
             double[] d = RenderDry(primary, secondary, semitones, lengthMul, sampleRate);
             // 시제품 설정(−12dB, knee 6, 8:1, attack 1ms). release 는 명세 기본값이 0.25초지만 Chrome 은 적응형으로 더 빨리 풀린다.
@@ -46,7 +46,7 @@ namespace Pokepedia.Presentation.Audio.Synth
         }
 
         /// <summary>컴프레서·리미터·꼬리 정리 전의 믹스(출력 게인 0.8 까지 적용). 시제품과 비교·검증용.</summary>
-        internal static double[] RenderDry(CryElement primary, CryElement? secondary, double semitones, double lengthMul, int sampleRate)
+        internal static double[] RenderDry(AttackElement primary, AttackElement? secondary, double semitones, double lengthMul, int sampleRate)
         {
             if (!(lengthMul > 0)) throw new ArgumentOutOfRangeException(nameof(lengthMul));
             if (sampleRate < 8000) throw new ArgumentOutOfRangeException(nameof(sampleRate));
@@ -57,7 +57,7 @@ namespace Pokepedia.Presentation.Audio.Synth
             RecipeOf(primary)(bus, d, 0, p, len, Loud(primary));
             if (secondary.HasValue)
             {
-                CryElement s = secondary.Value;
+                AttackElement s = secondary.Value;
                 RecipeOf(s)(bus, d, 0.06 * len, p, len * 0.85, 0.45 * Loud(s));
             }
             for (int i = 0; i < d.Length; i++) d[i] *= 0.8;
@@ -66,53 +66,53 @@ namespace Pokepedia.Presentation.Audio.Synth
 
         public static bool IsSupported(string type) => TryParse(type, out _);
 
-        public static bool TryParse(string type, out CryElement element)
+        public static bool TryParse(string type, out AttackElement element)
         {
             switch (type == null ? "" : type.Trim().ToLowerInvariant())
             {
-                case "electric": element = CryElement.Electric; return true;
-                case "water": element = CryElement.Water; return true;
-                case "fire": element = CryElement.Fire; return true;
-                case "flying": element = CryElement.Flying; return true;
-                case "grass": element = CryElement.Grass; return true;
-                case "poison": element = CryElement.Poison; return true;
-                case "ghost": element = CryElement.Ghost; return true;
-                case "psychic": element = CryElement.Psychic; return true;
+                case "electric": element = AttackElement.Electric; return true;
+                case "water": element = AttackElement.Water; return true;
+                case "fire": element = AttackElement.Fire; return true;
+                case "flying": element = AttackElement.Flying; return true;
+                case "grass": element = AttackElement.Grass; return true;
+                case "poison": element = AttackElement.Poison; return true;
+                case "ghost": element = AttackElement.Ghost; return true;
+                case "psychic": element = AttackElement.Psychic; return true;
                 default: element = default; return false;
             }
         }
 
-        static CryElement Parse(string type)
+        static AttackElement Parse(string type)
         {
-            if (TryParse(type, out CryElement e)) return e;
-            throw new ArgumentException($"울음소리 레시피가 없는 속성입니다: '{type}' (지원: electric, water, fire, flying, grass, poison, ghost, psychic)");
+            if (TryParse(type, out AttackElement e)) return e;
+            throw new ArgumentException($"속성 공격음 레시피가 없는 속성입니다: '{type}' (지원: electric, water, fire, flying, grass, poison, ghost, psychic)");
         }
 
         /// <summary>속성별 체감 음량 보정 (시제품 LOUD 표, 없는 속성은 1).</summary>
-        static double Loud(CryElement e)
+        static double Loud(AttackElement e)
         {
             switch (e)
             {
-                case CryElement.Water: return 2.2;
-                case CryElement.Grass: return 2.0;
-                case CryElement.Fire: return 1.3;
-                case CryElement.Poison: return 2.0;
-                case CryElement.Flying: return 2.5;
+                case AttackElement.Water: return 2.2;
+                case AttackElement.Grass: return 2.0;
+                case AttackElement.Fire: return 1.3;
+                case AttackElement.Poison: return 2.0;
+                case AttackElement.Flying: return 2.5;
                 default: return 1.0; // electric 1.0, ghost·psychic 은 표에 없음
             }
         }
 
-        static Recipe RecipeOf(CryElement e)
+        static Recipe RecipeOf(AttackElement e)
         {
             switch (e)
             {
-                case CryElement.Electric: return Electric;
-                case CryElement.Water: return Water;
-                case CryElement.Fire: return Fire;
-                case CryElement.Flying: return Flying;
-                case CryElement.Grass: return Grass;
-                case CryElement.Poison: return Poison;
-                case CryElement.Ghost: return Ghost;
+                case AttackElement.Electric: return Electric;
+                case AttackElement.Water: return Water;
+                case AttackElement.Fire: return Fire;
+                case AttackElement.Flying: return Flying;
+                case AttackElement.Grass: return Grass;
+                case AttackElement.Poison: return Poison;
+                case AttackElement.Ghost: return Ghost;
                 default: return Psychic;
             }
         }
