@@ -34,7 +34,7 @@ namespace Pokepedia.Presentation.Audio.Synth
     /// </summary>
     public static class BattleSfx
     {
-        public const int DefaultSampleRate = TypeCries.DefaultSampleRate;
+        public const int DefaultSampleRate = TypeAttackSounds.DefaultSampleRate;
 
         // 음이름 주파수(Hz, A4 = 440 평균율)
         const double G3 = 196.00, C4 = 261.63, E4 = 329.63, F4 = 349.23, Fs4 = 369.99, G4 = 392.00;

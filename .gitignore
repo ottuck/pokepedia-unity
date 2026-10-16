@@ -37,6 +37,10 @@ crashlytics-build.properties
 # --- 스프라이트: 저장소에 커밋하지 않음 (Tools/sprites/build_sprites.py 로 재현) ---
 /Assets/Resources/Sprites/
 /Assets/Resources/Sprites.meta
+
+# --- 구운 소리: 커밋하지 않음 (Setup Project / Pokepedia > Bake Audio 가 합성기로 재생성) ---
+/Assets/Resources/Audio/
+/Assets/Resources/Audio.meta
 /Tools/sprites/.venv/
 /Tools/sprites/_work/
 

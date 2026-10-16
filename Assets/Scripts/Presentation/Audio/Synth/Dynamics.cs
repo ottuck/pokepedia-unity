@@ -13,7 +13,7 @@ namespace Pokepedia.Presentation.Audio.Synth
         ///   (명세는 knee 를 threshold "위" 구간으로 정의한다. Chrome 의 지수형 니 곡선 자체는 옮기지 않았다.)
         /// - 메이크업 게인: 명세대로 (1 / 곡선(0dBFS))^0.6.
         /// - 검출기: 앞으로 6ms 구간의 최대 피크를 dB 로 보고 attack/release 1차 평활(Chrome 의 프리딜레이 6ms 를 지연 없이 흉내).
-        ///   Chrome 의 적응형 release 는 옮기지 않고, 호출하는 쪽이 고정 release 를 짧게 줘서 근사한다(TypeCries 참고).
+        ///   Chrome 의 적응형 release 는 옮기지 않고, 호출하는 쪽이 고정 release 를 짧게 줘서 근사한다(TypeAttackSounds 참고).
         /// </summary>
         public static void Compress(double[] x, int sampleRate,
             double thresholdDb = -12, double kneeDb = 6, double ratio = 8, double attackSec = 0.001, double releaseSec = 0.25)

@@ -26,6 +26,8 @@
 
 최신이 위. 한 줄에 날짜, 한 일, 근거(커밋·PR·문서 절)를 적는다.
 
+- 2026-10-17 M3-2(연출): `AnimationDirector`(접촉/발사/효과 + 프로필·전용 이펙트), Showcase 이펙트(피카츄 낙뢰, 거북왕 물대포), `UIFlash` 피격 셰이더, `VfxLayer`(Particle System + 번개·구체·고리, 화면 번쩍임·흔들림), `animation.json`/`AnimationCatalog`(PROJECT.md 5.2). 소리는 WebGL 실행 중 합성이 화면을 멈춰 에디터에서 미리 굽도록 변경(`AudioBaker`). **사용자 정정: 속성 합성 소리는 울음소리가 아니라 공격음** → 등장·기절에서 빼고 이름을 `TypeAttackSounds`로, 연출 데이터의 `cry` 제거, 울음소리는 미정(PROJECT.md 8.3·14).
+
 - 2026-10-16 M3-1(전투 흐름·화면): `BattleSession`(흐름·도망·다음 상대·다시 도전), `BattleMessages`/`BattleTextKeys`(이벤트 → 로케일 키, ko/en/ja), 배틀 화면(240×216, 행동·기술 2×2·결과 메뉴, 타자기 메시지, HP 바, BW 스프라이트 재생, 기본 연출), 속성 기반 사운드 합성기 C# 이식(`Presentation/Audio/Synth`, 시제품 크롬 렌더와 RMS ±0.6dB) + 배틀 효과음 연결. 스프라이트 생성 위치 `Assets/Resources/Sprites`로 변경. `pokepedia.dev`가 Vercel에서 관리됨을 기록(PROJECT.md 10.4). 남은 것: M3-2 연출(AnimationDirector·Showcase 이펙트·울음소리 프로필), M3-3 사운드 다듬기.
 
 - 2026-10-16 M2 완료: 순수 C# 배틀 엔진(TDD, 테스트 15 → 329개 + 수동 실행 조정용 표 1개, Unity·dotnet 양쪽 통과). 18타입 상성표(PokeAPI·Pokémon DB 324칸 대조), 능력치·데미지 계산(Showdown 소스로 단계별 정수 처리 검증), 턴 처리 엔진(난수 소비 순서 고정), NPC AI, 시드 고정 시뮬레이터, 콘텐츠 JSON(로스터 6종·기술 9개, PokeAPI 확인)·로더·이름 로케일. 밸런스: k 0.65, 대표 기술 위력 35 → 피카츄 vs 거북왕 승률 68.5%·평균 4.92턴(PROJECT.md 6.5). Unity는 asmdef마다 `IsExternalInit`이 필요해 `AssemblyLayoutTests`로 검사(dotnet CI가 못 잡는 문제). 병렬 작업은 서브에이전트 3명이 worktree에서 상성·계산·콘텐츠를 나눠 맡음.
@@ -54,7 +56,7 @@
 | 6 | 공격 연출 | **가능.** Animator 클립(돌진) + AnimationEvent → Particle + 효과음 + 피격 흔들림 |
 | 7 | BW GIF 변환·재생 | **가능.** GIF → 시트 PNG + 지연 JSON → 런타임 `SpriteFramePlayer` 재생 |
 | 8 | 모바일 브라우저 레이아웃 | **기본 가능.** 세로·가로 모두 10:9 유지, 탭 입력 동작. 실기기·실제 터치 이벤트는 미검증 |
-| 9 | 오디오 | **가능.** START 클릭 후 효과음 재생. 울음소리는 원본 대신 **속성 기반 합성으로 확정**(세부는 M3) |
+| 9 | 오디오 | **가능.** START 클릭 후 효과음 재생. PokeAPI 원본 울음소리는 쓰지 않음. 속성 기반 합성 소리를 만듦 — **이것은 공격음이다**(2026-10-17 정정, 울음소리는 미정) |
 
 ### 1. 폰트
 
@@ -132,8 +134,8 @@
 ### 9. 오디오
 
 - START 버튼 클릭 안에서 첫 효과음 → "Audio context resumed" 로그 확인. 이후 Z 키 효과음·공격 효과음 정상.
-- 울음소리 **[확정]**: PokeAPI 원본(latest/legacy)은 6마리 모두 어색해 **사용하지 않는다.** 대신 **속성 기반 합성**으로 만든다. 세부 음색은 M3에서 다듬는다.
-  - 시제품(기록): [`Tools/audio/type-cries-prototype.html`](../Tools/audio/type-cries-prototype.html) — 브라우저에서 열고 버튼으로 재생(Web Audio 즉석 합성).
+- PokeAPI 원본 울음소리(latest/legacy)는 6마리 모두 어색해 **사용하지 않는다.** 대신 **속성 기반 합성 소리**를 만들었다. **2026-10-17 정정: 이 소리는 울음소리가 아니라 기술을 쓸 때 나는 공격음이다.** 울음소리(등장 소리)는 미정(PROJECT.md 8.3·14).
+  - 시제품(기록): [`Tools/audio/type-attack-sounds-prototype.html`](../Tools/audio/type-attack-sounds-prototype.html) — 브라우저에서 열고 버튼으로 재생(Web Audio 즉석 합성). 페이지 안 "울음소리"·"pitch/len" 표기는 당시 이름이다.
   - 규칙: 주 속성 레시피가 소리의 성격을 정하고, 보조 속성은 세기 0.45로 덧칠한다. 종족별 음높이(반음)·길이 배수는 데이터로 둔다. 시드 고정이라 매번 같은 소리가 난다.
   - 레시피(v3, 사용자 청취 후 OK): 전기 = 충전 → 낙뢰 크랙 → 전류 아크 → 천둥 꼬리(라이트닝 스킬), 물 = 물살 + 거품 + 마법 반짝임, 불꽃 = 화악 발사 + 화염 + 착탄 폭발(파이어볼), 풀 = 바람 + 잎사귀 + 덩굴 채찍, 비행 = 날갯짓 + 돌풍(휘파람 제거), 독·고스트·에스퍼 = 음 위주 합성(v1 유지).
   - 청취 이력: v1(음 위주)은 물·불·풀이 속성으로 들리지 않음 → v2에서 노이즈 가공으로 전환 → v3에서 전기를 라이트닝 스킬형으로, 비행을 휘파람에서 날갯짓·돌풍으로 교체.
