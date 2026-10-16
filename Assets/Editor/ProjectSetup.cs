@@ -41,7 +41,8 @@ namespace Pokepedia.EditorTools
             PlayerSettings.SplashScreen.show = false;
 
             var web = NamedBuildTarget.WebGL;
-            PlayerSettings.SetManagedStrippingLevel(web, ManagedStrippingLevel.High);
+            // High 는 리플렉션으로만 쓰이는 코드를 지울 수 있어 되돌렸다(2026-10-17). Minimal 은 클래스 라이브러리·UnityEngine 만 깎는다.
+            PlayerSettings.SetManagedStrippingLevel(web, ManagedStrippingLevel.Minimal);
             PlayerSettings.SetIl2CppCodeGeneration(web, Il2CppCodeGeneration.OptimizeSize);
             PlayerSettings.WebGL.template = "PROJECT:Pokepedia";
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
