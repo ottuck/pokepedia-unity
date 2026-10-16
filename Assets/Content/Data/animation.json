@@ -1,0 +1,31 @@
+{
+  "defaults": { "cry": { "semitones": 0, "length": 1.0 }, "windupSec": 0.15, "lungePx": 10, "hitShakePx": 2, "knockbackPx": 0 },
+  "profiles": {
+    "pikachu":   { "cry": { "semitones": 4,  "length": 0.9 },  "windupSec": 0.5, "lungePx": 6, "moveFx": { "thunderbolt": "lightning_strike" } },
+    "blastoise": { "cry": { "semitones": -5, "length": 1.15 }, "windupSec": 0.35, "lungePx": 4, "hitShakePx": 3, "knockbackPx": 10, "moveFx": { "hydro_pump": "water_cannon" } },
+    "charizard": { "cry": { "semitones": -3, "length": 1.2 } },
+    "venusaur":  { "cry": { "semitones": -4, "length": 1.1 }, "knockbackPx": 6 },
+    "gengar":    { "cry": { "semitones": 0,  "length": 1.1 } },
+    "mewtwo":    { "cry": { "semitones": -2, "length": 1.3 } }
+  },
+  "types": {
+    "normal":   { "primary": "#A8A878", "secondary": "#F0F0E0" },
+    "fire":     { "primary": "#F08030", "secondary": "#FFD860" },
+    "water":    { "primary": "#6890F0", "secondary": "#C8E8FF" },
+    "electric": { "primary": "#F8D030", "secondary": "#FFFFFF" },
+    "grass":    { "primary": "#78C850", "secondary": "#D0F0B0" },
+    "ice":      { "primary": "#98D8D8", "secondary": "#F0FFFF" },
+    "fighting": { "primary": "#C03028", "secondary": "#FFB090" },
+    "poison":   { "primary": "#A040A0", "secondary": "#E8B0F0" },
+    "ground":   { "primary": "#E0C068", "secondary": "#F8E8B8" },
+    "flying":   { "primary": "#A890F0", "secondary": "#E8E0FF" },
+    "psychic":  { "primary": "#F85888", "secondary": "#FFC8E0" },
+    "bug":      { "primary": "#A8B820", "secondary": "#E0F080" },
+    "rock":     { "primary": "#B8A038", "secondary": "#E8D8A0" },
+    "ghost":    { "primary": "#705898", "secondary": "#C8B0F0" },
+    "dragon":   { "primary": "#7038F8", "secondary": "#C0A8FF" },
+    "dark":     { "primary": "#705848", "secondary": "#C8B8A8" },
+    "steel":    { "primary": "#B8B8D0", "secondary": "#F0F0F8" },
+    "fairy":    { "primary": "#EE99AC", "secondary": "#FFE0EC" }
+  }
+}
