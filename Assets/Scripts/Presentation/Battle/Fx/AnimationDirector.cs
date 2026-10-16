@@ -41,10 +41,11 @@ namespace Pokepedia.Presentation.Battle.Fx
             view.Animator.Play(SpriteSheet.Load(side == BattleState.Player ? info.Sprites.Back : info.Sprites.Front));
             view.SetAlpha(1);
             view.SetFlash(0);
-            // NPC 는 오른쪽에서, 플레이어는 왼쪽에서 미끄러져 들어온다
+            // NPC 는 오른쪽에서, 플레이어는 왼쪽에서 미끄러져 들어온다. 등장음의 "뿅"은 번쩍이는 순간(BattleSfx.SendOutPopAt)에 맞춰져 있다.
+            // 울음소리는 M3에서 넣지 않는다(PROJECT.md 8.3) — 속성 소리는 공격음이므로 여기서 쓰지 않는다.
+            sound.Play(SfxKind.SendOut);
             var from = new Vector2(side == BattleState.Npc ? 150 : -150, 0);
-            yield return Move(view, from, Vector2.zero, 0.35f);
-            // 등장 직후 한 번 번쩍임. 울음소리(등장 소리)는 미정이라 아직 없다 — 속성 소리는 공격음이므로 여기서 쓰지 않는다.
+            yield return Move(view, from, Vector2.zero, (float)BattleSfx.SendOutPopAt);
             view.SetFlash(0.8f); yield return VfxLayer.Wait(0.06f); view.SetFlash(0);
         }
 
@@ -88,15 +89,14 @@ namespace Pokepedia.Presentation.Battle.Fx
             var typeName = ContentLoader.ToJsonName(move.Move.Type);
             bool missed = hit == null;
 
-            // 속성 공격음 (기술을 쓰는 순간). 노말은 레시피가 없어 맞을 때 타격음만 난다.
-            if (TypeAttackSounds.IsSupported(typeName)) sound.Move(typeName);
-
             var fx = anim.MoveFxFor(prof.Key, move.Move.Id) ?? move.AnimKind switch
             {
                 AnimKind.Contact => "contact",
                 AnimKind.Projectile => "projectile",
                 _ => "effect",
             };
+
+            ScheduleMoveSounds(fx, typeName, prof.WindupSec);
 
             Vector2 toTarget = (target.Feet - attacker.Feet).normalized;
             switch (fx)
@@ -169,6 +169,36 @@ namespace Pokepedia.Presentation.Battle.Fx
                 yield break;
             }
             yield return HitReaction(target, targetProf, hit, hpAnimation);
+        }
+
+        /// <summary>기 모으기 소리를 넘길 만큼 긴 준비 동작(초)</summary>
+        const double ChargeSoundMinSec = 0.25;
+
+        /// <summary>
+        /// 소리를 연출 타이밍에 맞춘다(PROJECT.md 8.3 "타이밍 동기화가 핵심").
+        /// 발사 순간 = 아래 switch 의 준비 동작이 끝나는 시각. 공격음은 그보다 MoveLead 만큼 먼저 틀어 "터지는 순간"을 발사에 맞추고,
+        /// 준비가 길면 그 앞을 기 모으기 소리로 채운 뒤 공격음이 시작될 때 끊는다.
+        /// </summary>
+        void ScheduleMoveSounds(string fx, string typeName, double windupSec)
+        {
+            double release = fx == "contact" ? windupSec * 0.5 : windupSec;
+            bool charge = fx != "contact" && fx != "water_cannon" && windupSec >= ChargeSoundMinSec;
+            bool hasMove = SoundBank.HasMoveSound(typeName);
+            float cue = Mathf.Max(0, (float)release - (hasMove ? SoundBank.MoveLead(typeName) : 0));
+
+            if (charge) sound.PlayStoppable(SfxKind.Charge);
+            if (!charge && !hasMove) return;
+            host.StartCoroutine(After(cue, () =>
+            {
+                if (charge) sound.StopStoppable();
+                if (hasMove) sound.Move(typeName);
+            }));
+        }
+
+        static IEnumerator After(float seconds, Action action)
+        {
+            if (seconds > 0) yield return new WaitForSeconds(seconds);
+            action();
         }
 
         IEnumerator HitReaction(BattleSideView target, AnimationProfile targetProf, DamageDealt hit, Func<IEnumerator> hpAnimation)

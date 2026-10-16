@@ -25,6 +25,10 @@ namespace Pokepedia.Presentation.Audio.Synth
         Victory,
         /// <summary>패배 징글</summary>
         Defeat,
+        /// <summary>등장 "휙-뿅": 미끄러져 들어오는 바람 소리 후 번쩍임에 맞춘 짧은 상승음 (울음소리 아님)</summary>
+        SendOut,
+        /// <summary>기 모으기 "위이잉": 올라가는 펄스 + 떨림. 공격음이 시작될 때 끊는다</summary>
+        Charge,
     }
 
     /// <summary>
@@ -59,6 +63,8 @@ namespace Pokepedia.Presentation.Audio.Synth
                 case SfxKind.Faint: peak = Faint(c, d); break;
                 case SfxKind.Victory: peak = Victory(c, d); break;
                 case SfxKind.Defeat: peak = Defeat(c, d); break;
+                case SfxKind.SendOut: peak = SendOut(c, d); break;
+                case SfxKind.Charge: peak = Charge(c, d); break;
                 default: throw new ArgumentOutOfRangeException(nameof(kind));
             }
             Dynamics.NormalizePeak(d, peak);
@@ -81,6 +87,8 @@ namespace Pokepedia.Presentation.Audio.Synth
                 case SfxKind.Faint: return 1.05;
                 case SfxKind.Victory: return 1.0;
                 case SfxKind.Defeat: return 1.2;
+                case SfxKind.SendOut: return SendOutPopAt + 0.16;
+                case SfxKind.Charge: return 0.8;
                 default: throw new ArgumentOutOfRangeException(nameof(kind));
             }
         }
@@ -207,6 +215,42 @@ namespace Pokepedia.Presentation.Audio.Synth
             Note(c, d, s, 0.7, E5, 0.45, Waveform.Pulse, 0.125, release: 0.3);
             Note(c, d, s, 0.72, C4, 0.9, Waveform.Triangle, release: 0.3);
             return 0.7;
+        }
+
+        /// <summary>등장음에서 "뿅"이 나는 시각. 연출의 미끄러져 들어오기(0.35초)가 끝나고 번쩍이는 순간과 맞춘다.</summary>
+        public const double SendOutPopAt = 0.35;
+
+        // 등장: 밴드패스 LFSR 노이즈가 위로 쓸리며 커지는 "휙"(미끄러짐) → 번쩍임에 맞춰 12.5% 펄스 G5-C6-G6 "뿅".
+        static double SendOut(SynthBus c, double[] d)
+        {
+            var nz = new LfsrNoise(c.SampleRate);
+            var bp = new Biquad(FilterType.Bandpass, 2, c.SampleRate);
+            var f = new Automation(400).Set(400, 0).ExpTo(2600, SendOutPopAt);
+            var g = new Automation(0).Set(0, 0).LinearTo(0.5, SendOutPopAt * 0.8).LinearTo(0, SendOutPopAt + 0.02);
+            int b = c.IndexAtOrAfter(SendOutPopAt + 0.02);
+            for (int n = 0; n < b; n++)
+            {
+                double t = c.TimeOf(n);
+                d[n] += bp.Process(nz.Next(12000), f.ValueAt(t)) * g.ValueAt(t);
+            }
+            double s = SendOutPopAt;
+            Note(c, d, s, 0.03, G5, 0.9, Waveform.Pulse, 0.125, release: 0.005);
+            Note(c, d, s + 0.03, 0.03, C6, 0.9, Waveform.Pulse, 0.125, release: 0.005);
+            Note(c, d, s + 0.06, 0.09, G6, 0.9, Waveform.Pulse, 0.125, decay: true);
+            return 0.5;
+        }
+
+        // 기 모으기: 25% 펄스가 180Hz → 900Hz 로 오르며 18Hz 로 떨리고 점점 커진다. 아래에 한 옥타브 낮은 삼각파.
+        // 길게 만들어 두고 공격음이 시작될 때 재생을 끊는다(기 모으는 시간은 종마다 다르다, animation.json windupSec).
+        static double Charge(SynthBus c, double[] d)
+        {
+            const double T = 0.8;
+            var freq = new Automation(180).Set(180, 0).ExpTo(900, T);
+            var g = new Automation(0).Set(0, 0).LinearTo(0.35, 0.05).LinearTo(0.9, T - 0.05).LinearTo(0, T);
+            var vib = new Lfo(18, 25, 0.05);
+            c.Osc(d, Waveform.Pulse, 0, T, freq, g, freqLfo: vib, duty: 0.25);
+            c.Osc(d, Waveform.Triangle, 0, T, new Automation(90).Set(90, 0).ExpTo(450, T), g);
+            return 0.4;
         }
 
         // 패배: 반음씩 내려가는 G4-F#4-F4 후 E4 를 떨며 길게(마지막은 아래로 처짐), 삼각파 C4→G3 저음.

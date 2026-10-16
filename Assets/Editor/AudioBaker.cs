@@ -37,26 +37,44 @@ namespace Pokepedia.EditorTools
                 Write(SoundBank.SfxKey(kind), BattleSfx.Render(kind, SampleRate));
                 count++;
             }
+            // 배틀 BGM: 앞에 무음을 붙이고 루프 구간을 smpl 청크로 지정한다(WebGL AAC 변환이 앞 1024 샘플을 건드림, SoundBank.MusicPadSamples)
+            var loop = BattleMusic.Render(SampleRate);
+            var padded = new float[SoundBank.MusicPadSamples + loop.Length];
+            Array.Copy(loop, 0, padded, SoundBank.MusicPadSamples, loop.Length);
+            Write(SoundBank.BattleMusicKey, padded, SoundBank.MusicPadSamples, padded.Length - 1);
+            count++;
             AssetDatabase.Refresh();
             Debug.Log($"[AudioBaker] {count} clips -> {OutDir}");
         }
 
         static string Read(string name) => File.ReadAllText(Path.Combine("Assets/Content/Data", name));
 
-        /// <summary>16bit PCM mono WAV</summary>
-        static void Write(string key, float[] samples)
+        /// <summary>16bit PCM mono WAV. loopStart ≥ 0 이면 smpl 청크에 앞으로 반복 구간 [loopStart, loopEnd](샘플, 끝 포함)을 적는다.</summary>
+        static void Write(string key, float[] samples, int loopStart = -1, int loopEnd = -1)
         {
             var path = Path.Combine(OutDir, key + ".wav");
             using (var fs = new FileStream(path, FileMode.Create))
             using (var w = new BinaryWriter(fs))
             {
                 int dataBytes = samples.Length * 2;
-                w.Write(new[] { 'R', 'I', 'F', 'F' }); w.Write(36 + dataBytes);
+                int smplBytes = loopStart >= 0 ? 8 + 36 + 24 : 0;
+                w.Write(new[] { 'R', 'I', 'F', 'F' }); w.Write(36 + dataBytes + smplBytes);
                 w.Write(new[] { 'W', 'A', 'V', 'E' });
                 w.Write(new[] { 'f', 'm', 't', ' ' }); w.Write(16); w.Write((short)1); w.Write((short)1);
                 w.Write(SampleRate); w.Write(SampleRate * 2); w.Write((short)2); w.Write((short)16);
                 w.Write(new[] { 'd', 'a', 't', 'a' }); w.Write(dataBytes);
                 foreach (var s in samples) w.Write((short)Mathf.RoundToInt(Mathf.Clamp(s, -1f, 1f) * 32767f));
+                if (loopStart >= 0)
+                {
+                    w.Write(new[] { 's', 'm', 'p', 'l' }); w.Write(36 + 24);
+                    w.Write(0); w.Write(0);                      // manufacturer, product
+                    w.Write(1000000000 / SampleRate);            // sample period (ns)
+                    w.Write(60); w.Write(0); w.Write(0); w.Write(0); // MIDI note, pitch fraction, SMPTE format, offset
+                    w.Write(1); w.Write(0);                      // loop 1개, sampler data 없음
+                    w.Write(0); w.Write(0);                      // cue id, 종류 0 = 앞으로 반복
+                    w.Write(loopStart); w.Write(loopEnd);
+                    w.Write(0); w.Write(0);                      // fraction, 무한 반복
+                }
             }
         }
     }

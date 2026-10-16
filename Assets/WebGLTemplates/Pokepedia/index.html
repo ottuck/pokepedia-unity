@@ -34,6 +34,8 @@
       // iframe 안에서 방향키·스페이스가 부모 페이지를 스크롤하지 않도록 막는다
       var BLOCKED = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"];
       window.addEventListener("keydown", function (e) { if (BLOCKED.indexOf(e.code) >= 0) e.preventDefault(); }, { passive: false });
+      // iPhone 은 무음 모드(측면 스위치)면 Web Audio(=Unity 소리)를 끈다. "playback" 이면 동영상처럼 소리가 난다(iOS 17+, 없으면 무시).
+      try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
       // 클릭/터치 시 캔버스에 포커스를 줘야 키 입력이 iframe 안에서 Unity 로 전달된다
       ["pointerdown", "touchstart"].forEach(function (ev) { document.addEventListener(ev, function () { canvas.focus(); window.focus(); }, { passive: true }); });
 
