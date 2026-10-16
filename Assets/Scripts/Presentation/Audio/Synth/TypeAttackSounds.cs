@@ -66,6 +66,13 @@ namespace Pokepedia.Presentation.Audio.Synth
 
         public static bool IsSupported(string type) => TryParse(type, out _);
 
+        /// <summary>
+        /// 소리 시작부터 "터지는 순간"까지의 시간(초). 연출은 기술이 발사되는 순간보다 이만큼 먼저 소리를 튼다.
+        /// 전기는 자체 충전음(0.22L) 뒤에 낙뢰 크랙이 나고, 나머지는 시작과 동시에 발사음이 난다.
+        /// </summary>
+        public static double LeadSeconds(AttackElement element, double lengthMul)
+            => element == AttackElement.Electric ? 0.22 * lengthMul : 0;
+
         public static bool TryParse(string type, out AttackElement element)
         {
             switch (type == null ? "" : type.Trim().ToLowerInvariant())

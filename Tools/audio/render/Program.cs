@@ -14,7 +14,7 @@ namespace Pokepedia.Tools.AudioRender
     /// (속성 소리는 포켓몬 울음소리가 아니라 기술을 쓸 때 나는 공격음이다)
     /// 길이·피크·RMS·클리핑·무음·결정성(해시)을 표로 보여 준다. 문제가 있으면 종료 코드 1.
     /// 실행(저장소 루트에서): <c>dotnet run -c Release --project Tools/audio/render</c>
-    /// 선택 인자: <c>-- --sr 44100 --out 경로</c> (기본 22050Hz, Tools/audio/out).
+    /// 선택 인자: <c>-- --sr 44100 --out 경로 --len 0.8</c> (기본 22050Hz, Tools/audio/out, 속성 공격음 길이 1 — 게임은 0.8).
     /// </summary>
     static class Program
     {
@@ -29,16 +29,18 @@ namespace Pokepedia.Tools.AudioRender
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             int sr = TypeAttackSounds.DefaultSampleRate;
+            double len = 1; // 속성 공격음 길이 배수. 게임은 0.8(SoundBank.MoveSoundLength)
             string root = FindRepoRoot();
             string outDir = Path.Combine(root, "Tools", "audio", "out");
             for (int i = 0; i < args.Length; i++)
             {
                 if (args[i] == "--sr" && i + 1 < args.Length) sr = int.Parse(args[++i]);
                 else if (args[i] == "--out" && i + 1 < args.Length) outDir = Path.GetFullPath(args[++i]);
+                else if (args[i] == "--len" && i + 1 < args.Length) len = double.Parse(args[++i]);
             }
             Directory.CreateDirectory(outDir);
 
-            var jobs = BuildJobs(root, sr);
+            var jobs = BuildJobs(root, sr, len);
             Console.WriteLine($"sampleRate={sr}  out={outDir}");
             Console.WriteLine();
             Console.WriteLine($"| {"file",-28} | {"sec",6} | {"peak",6} | {"peak dBFS",9} | {"RMS dBFS",8} | {"|x|>1",5} | sha256(앞 12) |");
@@ -77,13 +79,13 @@ namespace Pokepedia.Tools.AudioRender
             return ok && mismatch == 0 ? 0 : 1;
         }
 
-        static List<Job> BuildJobs(string root, int sr)
+        static List<Job> BuildJobs(string root, int sr, double len)
         {
             var jobs = new List<Job>();
             foreach (AttackElement e in Enum.GetValues(typeof(AttackElement)))
             {
                 AttackElement el = e;
-                jobs.Add(new Job { Name = "type_" + el.ToString().ToLowerInvariant(), Render = () => TypeAttackSounds.Render(el, null, 0, 1, sr) });
+                jobs.Add(new Job { Name = "type_" + el.ToString().ToLowerInvariant(), Render = () => TypeAttackSounds.Render(el, null, 0, len, sr) });
             }
             foreach (SfxKind k in Enum.GetValues(typeof(SfxKind)))
             {

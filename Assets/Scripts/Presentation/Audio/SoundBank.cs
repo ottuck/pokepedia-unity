@@ -18,18 +18,47 @@ namespace Pokepedia.Presentation.Audio
         public static string SfxKey(SfxKind kind) => "sfx_" + kind.ToString().ToLowerInvariant();
 
         readonly AudioSource source;
+        // 기 모으기처럼 도중에 끊어야 하는 소리는 따로 낸다(PlayOneShot 은 멈출 수 없다)
+        readonly AudioSource stoppable;
         readonly Dictionary<string, AudioClip> cache = new Dictionary<string, AudioClip>();
 
         public SoundBank(GameObject host)
         {
             source = host.AddComponent<AudioSource>();
             source.playOnAwake = false;
+            stoppable = host.AddComponent<AudioSource>();
+            stoppable.playOnAwake = false;
         }
 
         public void Play(SfxKind kind) => PlayKey(SfxKey(kind));
         public void Move(string typeName) => PlayKey(MoveKey(typeName));
 
+        /// <summary>속성 공격음이 있는 속성인지. 없으면(노말 등) 맞을 때 타격음만 난다.</summary>
+        public static bool HasMoveSound(string typeName) => TypeAttackSounds.IsSupported(typeName);
+
+        /// <summary>공격음을 발사 순간보다 몇 초 먼저 틀어야 하는지 (<see cref="TypeAttackSounds.LeadSeconds"/>).</summary>
+        public static float MoveLead(string typeName)
+            => TypeAttackSounds.TryParse(typeName, out var e) ? (float)TypeAttackSounds.LeadSeconds(e, MoveSoundLength) : 0f;
+
+        /// <summary>끊을 수 있는 채널에서 재생한다(이전 소리는 멈춘다).</summary>
+        public void PlayStoppable(SfxKind kind)
+        {
+            var clip = Load(SfxKey(kind));
+            if (clip == null) return;
+            stoppable.Stop();
+            stoppable.clip = clip;
+            stoppable.Play();
+        }
+
+        public void StopStoppable() => stoppable.Stop();
+
         void PlayKey(string key)
+        {
+            var clip = Load(key);
+            if (clip != null) source.PlayOneShot(clip);
+        }
+
+        AudioClip Load(string key)
         {
             if (!cache.TryGetValue(key, out var clip))
             {
@@ -37,7 +66,7 @@ namespace Pokepedia.Presentation.Audio
                 if (clip == null) Debug.LogWarning($"[SoundBank] missing Resources/Audio/{key} — 메뉴 Pokepedia/Bake Audio (또는 Setup Project) 를 실행했는지 확인");
                 cache[key] = clip;
             }
-            if (clip != null) source.PlayOneShot(clip);
+            return clip;
         }
     }
 }
