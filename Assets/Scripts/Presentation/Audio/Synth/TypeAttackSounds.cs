@@ -13,7 +13,7 @@ namespace Pokepedia.Presentation.Audio.Synth
     /// 출력 0.8 → 컴프레서(−12dB, 8:1) → 리미터. 같은 입력이면 같은 샘플을 낸다(시드 고정).
     /// UnityEngine 을 쓰지 않는다. WebGL 에서 실행 중 합성은 느려서 에디터가 미리 굽는다(AudioBaker).
     /// </summary>
-    public static class TypeAttackSounds
+    public static partial class TypeAttackSounds
     {
         public const int DefaultSampleRate = 22050;
 
