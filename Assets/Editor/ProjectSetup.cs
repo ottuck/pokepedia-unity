@@ -52,7 +52,9 @@ namespace Pokepedia.EditorTools
             // IndexedDB 캐시는 끈다: 동시 탭에서 data 손상 1회 재현, Safari iframe 미지원 → HTTP 캐시(immutable)에 맡긴다
             PlayerSettings.WebGL.dataCaching = false;
             PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly;
-            PlayerSettings.runInBackground = false;
+            // 캔버스가 포커스를 잃어도(iframe 밖 Pokepedia 화면 클릭, 다른 창으로 전환) 멈추거나 느려지지 않게 한다.
+            // 탭 자체가 숨겨지면 브라우저가 requestAnimationFrame 을 멈추므로 이 설정으로도 프레임이 돌지 않는다(브라우저 정책).
+            PlayerSettings.runInBackground = true;
         }
 
         static void StripPostProcessing()
