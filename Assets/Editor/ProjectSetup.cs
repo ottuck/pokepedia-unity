@@ -7,7 +7,6 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 
 namespace Pokepedia.EditorTools
 {
@@ -23,7 +22,6 @@ namespace Pokepedia.EditorTools
         public static void Apply()
         {
             ApplyPlayerSettings();
-            StripPostProcessing();
             FontAtlasBuilder.Build();
             AudioBaker.Bake();
             ConfigureTmpDefaults();
@@ -55,23 +53,6 @@ namespace Pokepedia.EditorTools
             // 캔버스가 포커스를 잃어도(iframe 밖 Pokepedia 화면 클릭, 다른 창으로 전환) 멈추거나 느려지지 않게 한다.
             // 탭 자체가 숨겨지면 브라우저가 requestAnimationFrame 을 멈추므로 이 설정으로도 프레임이 돌지 않는다(브라우저 정책).
             PlayerSettings.runInBackground = true;
-        }
-
-        static void StripPostProcessing()
-        {
-            // 후처리(Bloom 등)를 쓰지 않으므로 PostProcessData 참조를 끊어 FilmGrain·SMAA 텍스처와 셰이더를 빌드에서 뺀다.
-            foreach (var guid in AssetDatabase.FindAssets("t:Renderer2DData"))
-            {
-                var data = AssetDatabase.LoadAssetAtPath<Renderer2DData>(AssetDatabase.GUIDToAssetPath(guid));
-                var so = new SerializedObject(data);
-                var p = so.FindProperty("m_PostProcessData");
-                if (p != null && p.objectReferenceValue != null)
-                {
-                    p.objectReferenceValue = null;
-                    so.ApplyModifiedPropertiesWithoutUndo();
-                    EditorUtility.SetDirty(data);
-                }
-            }
         }
 
         static void ConfigureTmpDefaults()
