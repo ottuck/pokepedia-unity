@@ -36,7 +36,9 @@ unity test . --mode EditMode          # Unity EditMode 테스트 (Unity CLI)
 
 1. 작업마다 새 브랜치(`feat/…`, `fix/…`, `docs/…`)를 만들고 `main`에 직접 커밋하지 않는다.
 2. 커밋 메시지는 한국어 `type: 요약`(`docs:`, `ci:`, `feat:` 등), 끝에 시스템이 안내하는 `Co-Authored-By` 문구. PR 본문도 한국어로 변경 내용과 확인 사항을 적는다.
-3. 작업이 끝나면 **큰 문제가 없는 한 항상 push → PR → 병합까지 진행**하고 되묻지 않는다. 병합은 `gh pr merge <번호> --squash --delete-branch`, 이후 `main`을 최신으로 맞춘다. 리뷰 없이 병합해도 되고, Codex 리뷰 반영은 선택이다.
+3. 작업이 끝나면 **큰 문제가 없는 한 항상 push → PR → 병합까지 진행**하고 되묻지 않는다. 병합은 squash + 브랜치 삭제, 병합 뒤 `main`을 최신으로 맞춘다. 리뷰 없이 병합해도 되고, Codex 리뷰 반영은 선택이다.
+   - **CI가 도는 PR은 생성 직후 자동 병합을 켠다**(CI 통과 시 자동 병합. 기본 동작이며 따로 묻지 않는다). 앱의 `set_auto_merge`(squash)를 쓰거나 `gh pr merge <번호> --auto --squash --delete-branch`. 켜기 전에 그 PR에 넣을 커밋을 모두 push한다.
+   - 체크가 없는 PR(문서만 변경 등)은 바로 `gh pr merge <번호> --squash --delete-branch`로 병합한다.
 4. 다음은 큰 문제이니 병합하지 말고 알린다: CI 실패, 충돌, 요구사항 해석이 불확실, 되돌리기 어려운 변경(설정·권한·배포·외부 서비스), 14장 미정 사항 확정.
 5. `gh pr merge`가 자동 모드 분류기에 막히면 우회하지 않고 알린다. 에이전트가 스스로 권한 규칙을 추가하지 않는다(사용자가 `Bash(gh pr merge:*)`를 허용해야 한다).
 

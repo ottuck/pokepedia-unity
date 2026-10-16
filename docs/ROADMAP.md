@@ -11,7 +11,7 @@
 
 | Milestone | 내용 | 완료 기준 | 상태 |
 |---|---|---|---|
-| M0 | 검증용 최소 Unity 프로젝트 + PoC 9가지 (PROJECT.md 5.4) | 9가지 항목 결론 | 완료 → [M0 결과](#m0--poc-결과) |
+| M0 | 검증용 최소 Unity 프로젝트 + PoC 9가지 (항목은 M0 결과 요약 참고) | 9가지 항목 결론 | 완료 → [M0 결과](#m0--poc-결과) |
 | M1 | **정식** Unity 프로젝트·저장소 초기화 (M0 결과 반영), asmdef, 테스트 환경, 웹 빌드 설정, 진입 화면·브리지 | 정식 프로젝트가 웹에서 실행 | 완료 |
 | M2 | 순수 C# 엔진 (포켓몬 2마리): 타입 상성(18×18), 데미지, 명중·급소, 턴 순서, 승패, NPC AI, 시드 고정 시뮬레이션으로 수치 조정 | UI 없이 1:1 전투를 테스트로 검증 | 예정 (다음) |
 | M3 | **Vertical Slice — 피카츄 vs 거북왕**: 콘텐츠 로딩(로스터 2마리, 기술 약 9개), 5.3의 전투 흐름과 화면, 이벤트 재생, 공격·피격·급소·빗나감 연출, 사운드 (Showcase 품질) | 실제 엔진을 쓰는 한 판이 처음부터 끝까지 플레이됨 | 예정 |
@@ -26,7 +26,7 @@
 
 최신이 위. 한 줄에 날짜, 한 일, 근거(커밋·PR·문서 절)를 적는다.
 
-- 2026-10-16 문서 구조 정리: `design.md` → `PROJECT.md`, `bridge-protocol.md`를 PROJECT.md 9.2로 통합, `M0-poc-result.md` → 이 문서, 에이전트 파일은 `CLAUDE.md` 하나로 일원화.
+- 2026-10-16 문서 구조 정리: `design.md` → `PROJECT.md`, `bridge-protocol.md`를 PROJECT.md 9.2로 통합, `M0-poc-result.md` → 이 문서, 에이전트 파일은 `CLAUDE.md` 하나로 일원화. PROJECT.md에서 끝난 PoC 목록·단계별 서술(이 문서와 중복)·옛 디렉터리 예시·시뮬레이션 메모·인수인계 문구를 제거하고 M0 확정 사항(폰트, 울음소리, GIF 변환)을 반영. PR은 CI 통과 시 자동 병합이 기본(CLAUDE.md).
 - 2026-10-16 Unity CLI 연동 조사: 에디터 내장 MCP 서버는 deprecated, Unity CLI가 대체. 검증 결과는 PROJECT.md 15장. `unity pipeline install`은 아직 하지 않음. (PR #1)
 - 2026-10-16 CI 경로 필터 적용: 도메인 테스트가 도는 파일이 바뀔 때만 `domain-tests` 실행.
 - 2026-10-16 M1 완료: asmdef 계층 분리, 테스트(Unity + dotnet), 웹 빌드 설정(Brotli, 스트리핑 High, Data Caching 끔, 스플래시 로고 제거), `PixelCanvasScaler`, 진입 화면·브리지. M0 → M1 이관 항목 중 Cloudflare 실배포 헤더 검증만 M4로 남음.
