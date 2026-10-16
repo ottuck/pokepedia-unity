@@ -27,5 +27,59 @@
     "sludge_bomb": "Sludge Bomb",
     "shadow_ball": "Shadow Ball",
     "psychic": "Psychic"
+  },
+  "battle": {
+    "wild_appeared": "A wild {0} appeared!",
+    "player_sent_out": "Go! {0}!",
+    "player_move": "{0} used {1}!",
+    "wild_move": "The wild {0} used {1}!",
+    "missed": "The attack missed!",
+    "critical_hit": "A critical hit!",
+    "super_effective": "It's super effective!",
+    "not_very_effective": "It's not very effective…",
+    "no_effect": "It had no effect…",
+    "player_fainted": "{0} fainted!",
+    "wild_fainted": "The wild {0} fainted!",
+    "won": "You won the battle!",
+    "lost": "You blacked out!",
+    "escaped": "Got away safely!",
+    "cannot_escape": "Can't escape!",
+    "prompt": {
+      "what_to_do": "What will {0} do?"
+    },
+    "menu": {
+      "fight": "FIGHT",
+      "run": "RUN"
+    },
+    "result": {
+      "next_opponent": "Next opponent",
+      "retry": "Try again",
+      "title": "Title screen"
+    },
+    "info": {
+      "type": "Type",
+      "power": "Power",
+      "accuracy": "Accuracy"
+    }
+  },
+  "types": {
+    "normal": "Normal",
+    "fire": "Fire",
+    "water": "Water",
+    "electric": "Electric",
+    "grass": "Grass",
+    "ice": "Ice",
+    "fighting": "Fighting",
+    "poison": "Poison",
+    "ground": "Ground",
+    "flying": "Flying",
+    "psychic": "Psychic",
+    "bug": "Bug",
+    "rock": "Rock",
+    "ghost": "Ghost",
+    "dragon": "Dragon",
+    "dark": "Dark",
+    "steel": "Steel",
+    "fairy": "Fairy"
   }
 }

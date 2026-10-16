@@ -35,8 +35,8 @@ crashlytics-build.properties
 /Tests.Dotnet/obj/
 
 # --- 스프라이트: 저장소에 커밋하지 않음 (Tools/sprites/build_sprites.py 로 재현) ---
-/Assets/Content/Sprites/
-/Assets/Content/Sprites.meta
+/Assets/Resources/Sprites/
+/Assets/Resources/Sprites.meta
 /Tools/sprites/.venv/
 /Tools/sprites/_work/
 
@@ -47,3 +47,9 @@ crashlytics-build.properties
 __pycache__/
 .DS_Store
 Thumbs.db
+
+# --- 사운드 렌더 도구 산출물 ---
+/Tools/audio/out/
+/Tools/audio/render/bin/
+/Tools/audio/render/obj/
+!/Tools/audio/render/*.csproj

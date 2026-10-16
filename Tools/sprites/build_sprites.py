@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-"""스프라이트 일괄 재현: 매니페스트대로 다운로드(sha256 검증) -> 시트 변환 -> Assets/Content/Sprites/.
+"""스프라이트 일괄 재현: 매니페스트대로 다운로드(sha256 검증) -> 시트 변환 -> Assets/Resources/Sprites/.
 
 사용 (저장소 루트에서):
-  Tools/sprites/.venv/Scripts/python -I Tools/sprites/build_sprites.py [--out Assets/Content/Sprites] [--preview]
+  Tools/sprites/.venv/Scripts/python -I Tools/sprites/build_sprites.py [--out Assets/Resources/Sprites] [--preview]
 
 각 단계는 별도 프로세스(`python -I`)로 실행한다. -I 는 스크립트 폴더를 sys.path 에 넣지 않으므로
 모듈 import 대신 경로로 호출한다.
@@ -17,7 +17,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 MANIFEST = os.path.join(HERE, "manifest.json")
 RAW = os.path.join(HERE, "_work", "raw")
-DEFAULT_OUT = os.path.join(ROOT, "Assets", "Content", "Sprites")
+DEFAULT_OUT = os.path.join(ROOT, "Assets", "Resources", "Sprites")
 
 
 def run(*argv):

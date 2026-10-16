@@ -27,5 +27,59 @@
     "sludge_bomb": "ヘドロばくだん",
     "shadow_ball": "シャドーボール",
     "psychic": "サイコキネシス"
+  },
+  "battle": {
+    "wild_appeared": "あっ！ やせいの {0}が とびだしてきた！",
+    "player_sent_out": "ゆけっ！ {0}！",
+    "player_move": "{0}の {1}！",
+    "wild_move": "やせいの {0}の {1}！",
+    "missed": "こうげきは はずれた！",
+    "critical_hit": "きゅうしょに あたった！",
+    "super_effective": "こうかは ばつぐんだ！",
+    "not_very_effective": "こうかは いまひとつの ようだ…",
+    "no_effect": "こうかが ない みたいだ…",
+    "player_fainted": "{0}は たおれた！",
+    "wild_fainted": "やせいの {0}は たおれた！",
+    "won": "しょうぶに かった！",
+    "lost": "めのまえが まっくらに なった！",
+    "escaped": "うまく にげきれた！",
+    "cannot_escape": "にげられない！",
+    "prompt": {
+      "what_to_do": "{0}は どうする？"
+    },
+    "menu": {
+      "fight": "たたかう",
+      "run": "にげる"
+    },
+    "result": {
+      "next_opponent": "つぎの あいてと たたかう",
+      "retry": "もういちど ちょうせん",
+      "title": "タイトルへ"
+    },
+    "info": {
+      "type": "タイプ",
+      "power": "いりょく",
+      "accuracy": "めいちゅう"
+    }
+  },
+  "types": {
+    "normal": "ノーマル",
+    "fire": "ほのお",
+    "water": "みず",
+    "electric": "でんき",
+    "grass": "くさ",
+    "ice": "こおり",
+    "fighting": "かくとう",
+    "poison": "どく",
+    "ground": "じめん",
+    "flying": "ひこう",
+    "psychic": "エスパー",
+    "bug": "むし",
+    "rock": "いわ",
+    "ghost": "ゴースト",
+    "dragon": "ドラゴン",
+    "dark": "あく",
+    "steel": "はがね",
+    "fairy": "フェアリー"
   }
 }

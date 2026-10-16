@@ -175,6 +175,8 @@ Pokepedia가 151마리를 지원한다고 해서 Unity 배틀도 151마리를 �
 - **기술 선택:** 2×2 격자, 기술은 기본기 + 타입 기술 1~2개(최대 3~4개). 선택 중인 기술의 타입·위력·명중률을 보여 준다 (PP 없음).
 - **턴 처리 메시지:** "○○의 ○○!" → 빗나가면 "공격은 빗나갔다!" → 급소면 "급소에 맞았다!" → 상성에 따라 "효과가 굉장했다!" / "효과가 별로인 듯하다…" / "효과가 없는 것 같다…" → HP 바 감소 애니메이션 → 기절 문구. 메시지는 타자기식으로 출력한다 (Pokepedia 퀴즈에도 타자기 훅이 있음).
 - **화면:** 게임보이식 레이아웃. NPC는 오른쪽 위(앞모습), 플레이어는 왼쪽 아래(뒷모습), 이름·레벨(`:L50`)·HP 바·HP 숫자 표시, 하단에 메시지 창과 메뉴.
+- **기준 해상도 240×216 [위임 → M3 결정]:** 게임보이와 같은 10:9 비율에 160×144의 1.5배. BW 스프라이트가 최대 112px(뮤츠·리자몽 앞모습)이라 160×144에는 1배로 들어가지 않는다. 화면은 이 크기를 **정수 배율**로만 키운다(`PixelCanvasScaler`). 문구는 Galmuri11 12px.
+- **메시지 키:** 문장은 `BattleTextKeys`의 로케일 키로 만든다. 상대 쪽은 "야생의 ○○"처럼 별도 키를 쓴다(원작이 상대를 "야생의/やせいの/The wild"로 구분하고, 영어는 문장 앞뒤 대소문자가 달라 접두어 방식으로는 번역이 안 된다). 영어 문구는 포켓몬 블랙 대사 덤프로 확인, 일본어 일부는 기억 기반이다.
 - **입력:** 방향키 + Z/X, 마우스 클릭, 터치. 모바일 브라우저(세로·가로)에서도 완벽하게 보이도록 반응형으로 만든다.
 - 승리해도 보상·점수는 없다 (연속으로 다음 상대와 싸울 수 있다).
 
@@ -414,12 +416,12 @@ AnimationDirector (Presentation)
 - **포켓몬 이미지는 PokeAPI 스프라이트를 사용한다.** 권리 문제는 사용자 결정에 따라 Pokepedia와 같은 수준(비공식·비영리 팬 프로젝트 고지)으로 진행하며 별도 검토는 하지 않는다. 다른 원작 에셋은 쓰지 않고 UI·효과음은 직접 제작하거나 라이선스가 명확한 것을 쓴다.
 - 퀴즈의 정면 아트워크는 배틀에서 쓰지 않는다. 배틀에는 플레이어 쪽 **뒷모습**이 필요하다.
 - **로스터 포켓몬(소수)에만 필요한 에셋을 준비한다.**
-- **저장소에 스프라이트를 커밋하지 않는다** [확정]: `Assets/Content/Sprites/`는 `.gitignore`에 넣고, `Tools/`의 다운로드·변환 스크립트와 **PokeAPI sprites 커밋 SHA로 고정한 파일 목록 매니페스트**만 커밋한다. clone 후 스크립트를 한 번 실행하면 재현된다 (README에 명시). Pokepedia와 같은 정책(레포에 이미지 없음)이다.
+- **저장소에 스프라이트를 커밋하지 않는다** [확정]: `Assets/Resources/Sprites/`는 `.gitignore`에 넣고, `Tools/`의 다운로드·변환 스크립트와 **PokeAPI sprites 커밋 SHA로 고정한 파일 목록 매니페스트**만 커밋한다. clone 후 스크립트를 한 번 실행하면 재현된다 (README에 명시). Pokepedia와 같은 정책(레포에 이미지 없음)이다.
 
 ### 8.2 스프라이트 스타일 [확정: 5세대 블랙·화이트 애니메이션]
 
 - **사용 소스** (PokeAPI sprites `versions/generation-v/black-white/`): 앞 `animated/{id}.gif`, 뒤 `animated/back/{id}.gif`, 색이 다른 포켓몬 `animated/shiny/`·`animated/back/shiny/`. 정적 PNG(`black-white/{id}.png`, `back/`, `shiny/`)는 폴백·목록 아이콘용이다.
-- **Unity 처리:** GIF를 직접 임포트하지 못하므로 `Tools/sprites` 스크립트로 프레임 분해 → 스프라이트 시트(PNG) + 프레임 지연 JSON으로 변환하고, 런타임 `SpriteFramePlayer`가 재생한다. 피격·기절 같은 상태 전환에만 Animator를 쓴다 (M0 결과).
+- **Unity 처리:** GIF를 직접 임포트하지 못하므로 `Tools/sprites` 스크립트로 프레임 분해 → 스프라이트 시트(PNG) + 프레임 지연 JSON으로 변환한다. 시트는 `Assets/Resources/Sprites/`에 생성되고(커밋 안 함) 런타임에 이름으로 `Resources.Load` 해서 `UiSpriteAnimator`(uGUI Image 프레임 플레이어)가 재생한다. 씬이 시트 파일을 직접 참조하지 않으므로 PC마다 새로 생성해도 참조가 깨지지 않는다. 임포트 설정(Point·무압축·밉맵 없음)은 `SpriteSheetImporter`가 강제한다. 피격·기절 같은 상태 전환에만 Animator를 쓴다 (M0 결과).
 - **유의:** 5세대 도트와 게임보이풍 UI를 UI·배경·팔레트로 조화시킨다. 포켓몬마다 크기가 다르므로 발 위치 pivot 보정과 정수 배율·Point 필터가 필요하다 (`SpriteLibrary`).
 - 채택하지 않은 후보(1세대 레드·블루, 옐로 GBC, 2세대 크리스탈, 기본 96×96)는 비교 페이지 [`sprite-style-compare.html`](sprite-style-compare.html)에서 볼 수 있다.
 
@@ -619,7 +621,8 @@ Unity는 규칙이 클라이언트에 있으므로 결과를 서버에서 검증
 
 ### 10.4 도메인과 환경
 
-- 서브도메인 **`battle.pokepedia.dev`** [확정]. 주의: Workers 커스텀 도메인은 해당 도메인(zone)이 Cloudflare에 있어야 한다는 보고가 있다 (검색 결과, 미확인). `pokepedia.dev`의 DNS 위치를 확인하고, Cloudflare가 아니면 DNS 이전 또는 `*.workers.dev` 주소를 쓴다 [미정].
+- 서브도메인 **`battle.pokepedia.dev`** [확정]. 주의: Workers 커스텀 도메인은 해당 도메인(zone)이 Cloudflare에 있어야 한다는 보고가 있다 (검색 결과, 미확인). Cloudflare가 아니면 DNS 이전 또는 `*.workers.dev` 주소를 쓴다 [미정, M4].
+- **확인된 사실 (2026-10-16, 사용자 제공 화면):** `pokepedia.dev`는 **Vercel**(팀 henry-dev, Hobby 플랜, 프로젝트 `pokepedia`)의 Domains 설정에 Production 도메인으로 연결돼 있다(Valid Configuration). 등록 기관과 네임서버가 Vercel DNS인지 외부인지는 아직 확인하지 않았다. → M4에서 (a) Vercel에 Unity용 별도 프로젝트를 두고 `battle.pokepedia.dev`를 붙이는 안, (b) Cloudflare에 두고 Vercel DNS에 CNAME을 거는 안(Workers 커스텀 도메인 조건 확인 필요), (c) DNS를 Cloudflare로 옮기는 안을 비교해 추천한다. Vercel Hobby의 "비상업적 개인 용도" 조건(10.2)도 함께 본다.
 - Pokepedia에 `NEXT_PUBLIC_BATTLE_URL` 환경변수로 iframe 주소를 둔다 (Prod/Preview 분리 가능, 기존 Zod 환경변수 스키마에 등록).
 - Pokepedia의 `next.config.ts`와 `vercel.json`에는 CSP 헤더 설정이 없다 (`src/proxy.ts`는 미확인). iframe 임베드는 추가 설정 없이 될 가능성이 높다.
 

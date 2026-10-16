@@ -19,7 +19,7 @@ macOS/Linux에서는 `py -3` 대신 `python3`, `.venv/Scripts/python` 대신 `.v
 `build_sprites.py`는 다음 순서로 실행됩니다.
 
 1. `fetch_sprites.py`: `manifest.json`에 적힌 파일을 `https://raw.githubusercontent.com/PokeAPI/sprites/<commit>/<path>`에서 받아 `Tools/sprites/_work/raw/{side}_{id}[_shiny].gif`로 저장합니다. 크기 상한(2MB), GIF 매직, 바이트 수와 sha256을 검사하며, 이미 받아 둔 파일의 해시가 맞으면 다시 받지 않습니다.
-2. `convert_gif.py`: 배포 기본값으로 변환합니다. 기본값은 동일 프레임 셀 재사용(dedupe), 무손실 팔레트 PNG(indexed), GIF 좌표 유지(`--align gif`)입니다. 결과는 `Assets/Content/Sprites/{side}_{id}[_shiny]_sheet.png`와 `_sheet.json`입니다.
+2. `convert_gif.py`: 배포 기본값으로 변환합니다. 기본값은 동일 프레임 셀 재사용(dedupe), 무손실 팔레트 PNG(indexed), GIF 좌표 유지(`--align gif`)입니다. 결과는 `Assets/Resources/Sprites/{side}_{id}[_shiny]_sheet.png`와 `_sheet.json`입니다.
 
 다운로드한 GIF는 신뢰할 수 없는 데이터이므로 항상 `python -I`(격리 모드)로 실행합니다. 변환기도 파일 크기, 화면 크기(512px), 프레임 수(1024) 상한을 검사합니다.
 
@@ -77,7 +77,7 @@ Unity에서 좌표를 쓸 때는 시트 좌상단 원점이므로 `rect.y = shee
 
 - `Tools/sprites/.venv/`
 - `Tools/sprites/_work/`
-- `Assets/Content/Sprites/` 및 `Assets/Content/Sprites.meta`
+- `Assets/Resources/Sprites/` 및 `Assets/Resources/Sprites.meta`
 
 ## 저작권 고지
 
