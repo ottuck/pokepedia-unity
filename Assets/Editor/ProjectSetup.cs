@@ -25,6 +25,7 @@ namespace Pokepedia.EditorTools
             ApplyPlayerSettings();
             StripPostProcessing();
             FontAtlasBuilder.Build();
+            AudioBaker.Bake();
             ConfigureTmpDefaults();
             CreateMainScene();
             AssetDatabase.SaveAssets();

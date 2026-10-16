@@ -49,13 +49,8 @@ namespace Pokepedia.Presentation.Battle.Fx
             view.SetFlash(0.8f); yield return VfxLayer.Wait(0.06f); view.SetFlash(0);
         }
 
-        public void Cry(SpeciesInfo info)
-        {
-            var types = info.Species.Types.Select(ContentLoader.ToJsonName).Where(TypeCries.IsSupported).ToArray();
-            if (types.Length == 0) return;
-            var p = anim.ProfileFor(info.AnimProfile).Cry;
-            sound.Cry(types, p.Semitones, p.Length);
-        }
+        /// <summary>울음소리 (종 타입 + 프로필 cry 값으로 미리 구운 클립, AudioBaker)</summary>
+        public void Cry(SpeciesInfo info) => sound.Cry(info.Species.Id);
 
         public IEnumerator Faint(int side, SpeciesInfo info)
         {
@@ -100,7 +95,7 @@ namespace Pokepedia.Presentation.Battle.Fx
             bool missed = hit == null;
 
             // 기술 소리: 속성 레시피(울음소리와 같은 합성기, 원래 "속성 공격음" 으로 만든 소리). 노말은 레시피가 없어 타격음만.
-            if (TypeCries.IsSupported(typeName)) sound.Cry(new[] { typeName }, 0, 0.8);
+            if (TypeCries.IsSupported(typeName)) sound.Move(typeName);
 
             var fx = anim.MoveFxFor(prof.Key, move.Move.Id) ?? move.AnimKind switch
             {

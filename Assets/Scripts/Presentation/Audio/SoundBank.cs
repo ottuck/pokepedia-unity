@@ -5,16 +5,21 @@ using UnityEngine;
 namespace Pokepedia.Presentation.Audio
 {
     /// <summary>
-    /// 합성기(Synth)가 만든 샘플을 AudioClip 으로 바꿔 캐시하고 재생한다. 음원 파일이 없다 (PROJECT.md 8.3).
-    /// WebGL 은 AudioClip.Create 에 stream=false 만 지원하므로 전체 샘플을 한 번에 만든다.
+    /// 소리 재생. 소리는 합성기(Synth)로 만들되, 실행 중이 아니라 에디터에서 미리 구운 클립
+    /// (Assets/Resources/Audio, AudioBaker)을 이름으로 불러 쓴다. 음원 파일을 외부에서 가져오지 않는다 (PROJECT.md 8.3).
+    /// WebGL 에서 실행 중 합성은 수 초씩 메인 스레드를 막아(M3-2 측정) 쓰지 않는다.
     /// </summary>
     public sealed class SoundBank
     {
-        const int SampleRate = 22050;
+        /// <summary>기술 사용음 = 속성 레시피를 조금 짧게 (울음소리와 같은 합성기)</summary>
+        public const double MoveSoundLength = 0.8;
+
+        public static string CryKey(int speciesId) => "cry_" + speciesId;
+        public static string MoveKey(string typeName) => "move_" + typeName;
+        public static string SfxKey(SfxKind kind) => "sfx_" + kind.ToString().ToLowerInvariant();
 
         readonly AudioSource source;
-        readonly Dictionary<SfxKind, AudioClip> sfx = new Dictionary<SfxKind, AudioClip>();
-        readonly Dictionary<string, AudioClip> cries = new Dictionary<string, AudioClip>();
+        readonly Dictionary<string, AudioClip> cache = new Dictionary<string, AudioClip>();
 
         public SoundBank(GameObject host)
         {
@@ -22,33 +27,19 @@ namespace Pokepedia.Presentation.Audio
             source.playOnAwake = false;
         }
 
-        public void Play(SfxKind kind)
-        {
-            if (!sfx.TryGetValue(kind, out var clip))
-            {
-                clip = ToClip("sfx_" + kind, BattleSfx.Render(kind, SampleRate));
-                sfx[kind] = clip;
-            }
-            source.PlayOneShot(clip);
-        }
+        public void Play(SfxKind kind) => PlayKey(SfxKey(kind));
+        public void Cry(int speciesId) => PlayKey(CryKey(speciesId));
+        public void Move(string typeName) => PlayKey(MoveKey(typeName));
 
-        /// <summary>속성 기반 울음소리. types 는 소문자 타입명(species.json 표기).</summary>
-        public void Cry(IReadOnlyList<string> types, double semitones, double lengthMul)
+        void PlayKey(string key)
         {
-            var key = string.Join("/", types) + "|" + semitones + "|" + lengthMul;
-            if (!cries.TryGetValue(key, out var clip))
+            if (!cache.TryGetValue(key, out var clip))
             {
-                clip = ToClip("cry_" + key, TypeCries.Render(types, semitones, lengthMul, SampleRate));
-                cries[key] = clip;
+                clip = Resources.Load<AudioClip>("Audio/" + key);
+                if (clip == null) Debug.LogWarning($"[SoundBank] missing Resources/Audio/{key} — 메뉴 Pokepedia/Bake Audio (또는 Setup Project) 를 실행했는지 확인");
+                cache[key] = clip;
             }
-            source.PlayOneShot(clip);
-        }
-
-        static AudioClip ToClip(string name, float[] samples)
-        {
-            var clip = AudioClip.Create(name, Mathf.Max(1, samples.Length), 1, SampleRate, false);
-            clip.SetData(samples, 0);
-            return clip;
+            if (clip != null) source.PlayOneShot(clip);
         }
     }
 }

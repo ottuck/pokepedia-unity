@@ -153,8 +153,9 @@ namespace Pokepedia.Presentation.Battle.Fx
         /// <summary>지그재그 번개 (위 → 아래). 선분 Image 를 만들고 깜빡인 뒤 지운다.</summary>
         public IEnumerator Bolt(Vector2 top, Vector2 bottom, Color core, Color glow, int flickers, float seconds)
         {
-            var root = new GameObject("Bolt", typeof(RectTransform));
-            root.transform.SetParent(overlay, false);
+            // 부모를 화면과 같은 크기·원점으로 둬야 선분 좌표가 화면 픽셀과 맞는다
+            // (new GameObject 의 RectTransform 기본값은 가운데 정렬 100×100 이라 그대로 쓰면 어긋난다)
+            var root = Ui.Rect(overlay, "Bolt", 0, 0, PixelCanvasScaler.BaseWidth, PixelCanvasScaler.BaseHeight).gameObject;
             var points = new List<Vector2> { top };
             int segments = 7;
             for (int i = 1; i < segments; i++)

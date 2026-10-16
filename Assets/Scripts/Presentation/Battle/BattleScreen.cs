@@ -115,6 +115,7 @@ namespace Pokepedia.Presentation.Battle
             srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0.5f, 0.5f);
             srt.sizeDelta = new Vector2(PixelCanvasScaler.BaseWidth, PixelCanvasScaler.BaseHeight);
             screen.GetComponent<Image>().color = Ui.Background;
+            screen.AddComponent<RectMask2D>(); // 등장 슬라이드·이펙트가 화면 밖에 그려지지 않게 (UIFlash 셰이더도 클립 지원)
 
             // 발판 → 포켓몬 → 이펙트 → 정보 상자·메시지 순으로 그린다 (나중에 만든 것이 위)
             Ui.Ellipse(srt, "NpcPlatform", 178, 82, 104, 18, Ui.Platform);
