@@ -7,9 +7,6 @@ using Pokepedia.Domain;
 
 namespace Pokepedia.Content
 {
-    /// <summary>울음소리 합성 인자: 반음 오프셋(체급이 클수록 낮게), 길이 배수 (PROJECT.md 8.3)</summary>
-    public sealed record CryParams(double Semitones, double Length);
-
     /// <summary>
     /// 종(species.json 의 animProfile 키)별 연출 데이터 (PROJECT.md 5.2: 포켓몬별 애니메이션을 만들지 않고 강도·속도를 데이터로 조정).
     /// MoveFx: 기술 id → 전용 이펙트 id (Showcase 오버라이드, 예: pikachu 의 thunderbolt → "lightning_strike").
@@ -17,7 +14,6 @@ namespace Pokepedia.Content
     /// </summary>
     public sealed record AnimationProfile(
         string Key,
-        CryParams Cry,
         double WindupSec,
         int LungePx,
         int HitShakePx,
@@ -31,24 +27,20 @@ namespace Pokepedia.Content
     /// Assets/Content/Data/animation.json 로더. 순수 C#.
     /// 구조: { "defaults": {...}, "profiles": { key: {...} }, "types": { type: { primary, secondary } } }.
     /// defaults 는 moveFx 를 뺀 모든 필드가 필수(moveFx 는 종 단위 오버라이드라 defaults 에 둘 수 없다),
-    /// profiles 의 필드는 모두 선택이며 빠진 필드는 defaults 로 채운다(cry 안의 semitones/length 도 각각).
+    /// profiles 의 필드는 모두 선택이며 빠진 필드는 defaults 로 채운다.
     /// ContentLoader 와 같이 엄격하다: 누락·모르는 필드·범위 밖 값은 어느 항목인지 적은 FormatException.
     /// </summary>
     public sealed class AnimationCatalog
     {
         public const double MaxWindupSec = 2;
         public const int MaxPx = 64;
-        public const double MinCryLength = 0.3;
-        public const double MaxCryLength = 3;
-        public const double MaxCrySemitones = 24;
 
         static readonly Regex SnakeCase = new Regex("^[a-z][a-z0-9]*(_[a-z0-9]+)*$");
         static readonly Regex HexColor = new Regex("^#[0-9A-Fa-f]{6}$");
 
         static readonly string[] TopFields = { "defaults", "profiles", "types" };
-        static readonly string[] DefaultsFields = { "cry", "windupSec", "lungePx", "hitShakePx", "knockbackPx" };
-        static readonly string[] ProfileFields = { "cry", "windupSec", "lungePx", "hitShakePx", "knockbackPx", "moveFx" };
-        static readonly string[] CryFields = { "semitones", "length" };
+        static readonly string[] DefaultsFields = { "windupSec", "lungePx", "hitShakePx", "knockbackPx" };
+        static readonly string[] ProfileFields = { "windupSec", "lungePx", "hitShakePx", "knockbackPx", "moveFx" };
         static readonly string[] TypeFields = { "primary", "secondary" };
 
         static readonly IReadOnlyDictionary<string, string> NoMoveFx =
@@ -133,11 +125,8 @@ namespace Pokepedia.Content
         static AnimationProfile ParseDefaults(Obj o)
         {
             o.OnlyFields(DefaultsFields);
-            var cry = o.Object("cry", o.Where + ": cry");
-            cry.OnlyFields(CryFields);
             return new AnimationProfile(
                 "defaults",
-                new CryParams(Semitones(cry), CryLength(cry)),
                 WindupSec(o), Px(o, "lungePx"), Px(o, "hitShakePx"), Px(o, "knockbackPx"),
                 NoMoveFx);
         }
@@ -145,16 +134,6 @@ namespace Pokepedia.Content
         static AnimationProfile ParseProfile(string key, Obj o, AnimationProfile d)
         {
             o.OnlyFields(ProfileFields);
-
-            var cryParams = d.Cry;
-            if (o.Has("cry"))
-            {
-                var cry = o.Object("cry", o.Where + ": cry");
-                cry.OnlyFields(CryFields);
-                cryParams = new CryParams(
-                    cry.Has("semitones") ? Semitones(cry) : d.Cry.Semitones,
-                    cry.Has("length") ? CryLength(cry) : d.Cry.Length);
-            }
 
             var moveFx = NoMoveFx;
             if (o.Has("moveFx"))
@@ -173,7 +152,6 @@ namespace Pokepedia.Content
 
             return new AnimationProfile(
                 key,
-                cryParams,
                 o.Has("windupSec") ? WindupSec(o) : d.WindupSec,
                 o.Has("lungePx") ? Px(o, "lungePx") : d.LungePx,
                 o.Has("hitShakePx") ? Px(o, "hitShakePx") : d.HitShakePx,
@@ -203,8 +181,6 @@ namespace Pokepedia.Content
             return result;
         }
 
-        static double Semitones(Obj cry) => cry.Double("semitones", -MaxCrySemitones, MaxCrySemitones);
-        static double CryLength(Obj cry) => cry.Double("length", MinCryLength, MaxCryLength);
         static double WindupSec(Obj o) => o.Double("windupSec", 0, MaxWindupSec);
         static int Px(Obj o, string name) => o.Int(name, 0, MaxPx);
 
