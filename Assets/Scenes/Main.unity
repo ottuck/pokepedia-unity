@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &12168473
+--- !u!1 &336491611
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 12168475}
-  - component: {fileID: 12168474}
+  - component: {fileID: 336491613}
+  - component: {fileID: 336491612}
   m_Layer: 0
   m_Name: App
   m_TagString: Untagged
@@ -136,30 +136,31 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &12168474
+--- !u!114 &336491612
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 12168473}
+  m_GameObject: {fileID: 336491611}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 066ca0b9026983a4bb9415c9fa08c5f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Pokepedia.Presentation::Pokepedia.Presentation.TitleScreen
-  bridge: {fileID: 1473685814}
+  bridge: {fileID: 1738466034}
+  battle: {fileID: 1535492585}
   font: {fileID: 11400000, guid: e5fa52c29212b264fb61ad9c52fa845d, type: 2}
   localeKo: {fileID: 4900000, guid: e5711554cd65c624d994f61cd507369c, type: 3}
   localeEn: {fileID: 4900000, guid: b5bec185fc14cb641b72f93be5b2269f, type: 3}
   localeJa: {fileID: 4900000, guid: 08400b697519dd643a6699270884e351, type: 3}
---- !u!4 &12168475
+--- !u!4 &336491613
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 12168473}
+  m_GameObject: {fileID: 336491611}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -168,7 +169,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1473685813
+--- !u!1 &1535492584
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -176,8 +177,59 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1473685815}
-  - component: {fileID: 1473685814}
+  - component: {fileID: 1535492586}
+  - component: {fileID: 1535492585}
+  m_Layer: 0
+  m_Name: Battle
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1535492585
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1535492584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9aea36956fa9d85488c5e6cf89bce64a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Pokepedia.Presentation::Pokepedia.Presentation.Battle.BattleScreen
+  font: {fileID: 11400000, guid: e5fa52c29212b264fb61ad9c52fa845d, type: 2}
+  speciesJson: {fileID: 4900000, guid: 00d1dfeedfd8af742ac60182ed586323, type: 3}
+  movesJson: {fileID: 4900000, guid: 617191cc1f7311042ae2fd7c6e59fecb, type: 3}
+  rosterJson: {fileID: 4900000, guid: aa9e82300ec83e849b9e2954c5f636e8, type: 3}
+  localeKo: {fileID: 4900000, guid: e5711554cd65c624d994f61cd507369c, type: 3}
+  localeEn: {fileID: 4900000, guid: b5bec185fc14cb641b72f93be5b2269f, type: 3}
+  localeJa: {fileID: 4900000, guid: 08400b697519dd643a6699270884e351, type: 3}
+--- !u!4 &1535492586
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1535492584}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1738466033
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1738466035}
+  - component: {fileID: 1738466034}
   m_Layer: 0
   m_Name: HostBridge
   m_TagString: Untagged
@@ -185,25 +237,25 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1473685814
+--- !u!114 &1738466034
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1473685813}
+  m_GameObject: {fileID: 1738466033}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ea352baf25d65a645833c6ac4b40aec1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Pokepedia.Bridge::Pokepedia.Bridge.HostBridge
---- !u!4 &1473685815
+--- !u!4 &1738466035
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1473685813}
+  m_GameObject: {fileID: 1738466033}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -212,7 +264,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1763400903
+--- !u!1 &1957837799
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -220,8 +272,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1763400905}
-  - component: {fileID: 1763400904}
+  - component: {fileID: 1957837801}
+  - component: {fileID: 1957837800}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -229,13 +281,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!20 &1763400904
+--- !u!20 &1957837800
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1763400903}
+  m_GameObject: {fileID: 1957837799}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
@@ -280,13 +332,13 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &1763400905
+--- !u!4 &1957837801
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1763400903}
+  m_GameObject: {fileID: 1957837799}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -10}
@@ -299,6 +351,7 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1763400905}
-  - {fileID: 1473685815}
-  - {fileID: 12168475}
+  - {fileID: 1957837801}
+  - {fileID: 1738466035}
+  - {fileID: 1535492586}
+  - {fileID: 336491613}

@@ -1,6 +1,7 @@
 using System.IO;
 using Pokepedia.Bridge;
 using Pokepedia.Presentation;
+using Pokepedia.Presentation.Battle;
 using TMPro;
 using UnityEditor;
 using UnityEditor.Build;
@@ -103,18 +104,32 @@ namespace Pokepedia.EditorTools
 
             var bridge = new GameObject("HostBridge", typeof(HostBridge)).GetComponent<HostBridge>();
 
+            var battle = new GameObject("Battle", typeof(BattleScreen)).GetComponent<BattleScreen>();
+            var bso = new SerializedObject(battle);
+            AssignCommon(bso);
+            bso.FindProperty("speciesJson").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Data/species.json");
+            bso.FindProperty("movesJson").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Data/moves.json");
+            bso.FindProperty("rosterJson").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Data/roster.json");
+            bso.ApplyModifiedPropertiesWithoutUndo();
+
             var app = new GameObject("App", typeof(TitleScreen)).GetComponent<TitleScreen>();
             var so = new SerializedObject(app);
             so.FindProperty("bridge").objectReferenceValue = bridge;
-            so.FindProperty("font").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontAtlasBuilder.OutPath);
-            so.FindProperty("localeKo").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Locale/ko.json");
-            so.FindProperty("localeEn").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Locale/en.json");
-            so.FindProperty("localeJa").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Locale/ja.json");
+            so.FindProperty("battle").objectReferenceValue = battle;
+            AssignCommon(so);
             so.ApplyModifiedPropertiesWithoutUndo();
 
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(scene, MainScene);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(MainScene, true) };
+        }
+
+        static void AssignCommon(SerializedObject so)
+        {
+            so.FindProperty("font").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontAtlasBuilder.OutPath);
+            so.FindProperty("localeKo").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Locale/ko.json");
+            so.FindProperty("localeEn").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Locale/en.json");
+            so.FindProperty("localeJa").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Locale/ja.json");
         }
     }
 }
