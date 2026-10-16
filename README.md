@@ -28,7 +28,7 @@ Assets/
   Content/         Data(species·moves·roster.json), Locale(ko/en/ja), Fonts(Galmuri11 + Static 아틀라스), Sprites(생성물, 커밋 안 함)
   WebGLTemplates/Pokepedia/  웹 템플릿 (10:9 화면, 키 입력 차단, origin 검증)
 Tests.Dotnet/      Unity 없이 순수 C# 테스트를 돌리는 프로젝트 (소스 링크)
-Tools/             sprites(스프라이트 재현), web(로컬 서버·모의 호스트), audio(울음소리 시제품), unity
+Tools/             sprites(스프라이트 재현), web(로컬 서버·모의 호스트), audio(속성 공격음 시제품·렌더 도구), unity
 docs/              PROJECT.md(기획·설계·연동 규약), ROADMAP.md(진행 기록, M0 결과), 스프라이트 스타일 비교 페이지
 ```
 
@@ -78,4 +78,4 @@ python -I Tools/web/serve.py --dir Tools/web/host-test --port 8000
 - 코드: MIT (예정)
 - 폰트: [Galmuri](https://github.com/quiple/galmuri) © Lee Minseo, SIL OFL 1.1 → `Assets/Content/Fonts/Galmuri-OFL.txt`
 - 포켓몬 및 포켓몬 스프라이트의 권리는 Nintendo, Creatures Inc., GAME FREAK inc.에 있습니다. 이 프로젝트는 비공식·비영리 팬 프로젝트이며 스프라이트를 저장소에 포함하지 않습니다.
-- 효과음·울음소리는 원본 음원을 쓰지 않고 속성 기반으로 직접 합성합니다(`Tools/audio/type-cries-prototype.html`).
+- 효과음과 기술 사용 시 속성 공격음은 원본 음원을 쓰지 않고 직접 합성합니다(`Tools/audio/type-attack-sounds-prototype.html`). 소리는 Setup 이 `Assets/Resources/Audio/`에 미리 굽습니다(커밋 안 함).
