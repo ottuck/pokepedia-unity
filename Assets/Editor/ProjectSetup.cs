@@ -110,6 +110,10 @@ namespace Pokepedia.EditorTools
             bso.FindProperty("speciesJson").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Data/species.json");
             bso.FindProperty("movesJson").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Data/moves.json");
             bso.FindProperty("rosterJson").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Data/roster.json");
+            bso.FindProperty("animationJson").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Data/animation.json");
+            bso.FindProperty("flashMaterial").objectReferenceValue = MaterialAsset("Assets/Content/VFX/UIFlash.mat", "Pokepedia/UI Flash");
+            // 파티클: URP 2D 렌더러가 그리는 스프라이트 Unlit 셰이더. 텍스처 없이 정사각형 입자(도트 느낌)
+            bso.FindProperty("particleMaterial").objectReferenceValue = MaterialAsset("Assets/Content/VFX/Particle.mat", "Universal Render Pipeline/2D/Sprite-Unlit-Default");
             bso.ApplyModifiedPropertiesWithoutUndo();
 
             var app = new GameObject("App", typeof(TitleScreen)).GetComponent<TitleScreen>();
@@ -122,6 +126,29 @@ namespace Pokepedia.EditorTools
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(scene, MainScene);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(MainScene, true) };
+        }
+
+        /// <summary>
+        /// 셰이더를 참조하는 머티리얼을 에셋으로 만든다. 코드에서 Shader.Find 만 쓰면 빌드에서 셰이더가 빠질 수 있어서,
+        /// 씬이 참조하는 머티리얼 에셋으로 셰이더를 빌드에 포함시킨다.
+        /// </summary>
+        static Material MaterialAsset(string path, string shaderName)
+        {
+            var shader = Shader.Find(shaderName);
+            if (shader == null) throw new System.Exception("shader not found: " + shaderName);
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                mat = new Material(shader);
+                AssetDatabase.CreateAsset(mat, path);
+            }
+            else if (mat.shader != shader)
+            {
+                mat.shader = shader;
+                EditorUtility.SetDirty(mat);
+            }
+            return mat;
         }
 
         static void AssignCommon(SerializedObject so)
