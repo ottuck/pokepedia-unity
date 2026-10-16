@@ -10,7 +10,7 @@ using Pokepedia.Presentation.Audio.Synth;
 namespace Pokepedia.Tools.AudioRender
 {
     /// <summary>
-    /// 속성 공격음(8종)과 배틀 효과음을 16bit PCM mono WAV 로 렌더하고,
+    /// 속성 공격음(8종)과 배틀 효과음, 배틀 BGM 루프를 16bit PCM mono WAV 로 렌더하고,
     /// (속성 소리는 포켓몬 울음소리가 아니라 기술을 쓸 때 나는 공격음이다)
     /// 길이·피크·RMS·클리핑·무음·결정성(해시)을 표로 보여 준다. 문제가 있으면 종료 코드 1.
     /// 실행(저장소 루트에서): <c>dotnet run -c Release --project Tools/audio/render</c>
@@ -74,7 +74,8 @@ namespace Pokepedia.Tools.AudioRender
             Console.WriteLine();
             Console.WriteLine(mismatch == 0 ? $"결정성: {jobs.Count}개 모두 재렌더 해시 일치" : $"결정성: {mismatch}개 불일치");
             Console.WriteLine(ok ? "검사: 클리핑 없음, 무음 없음" : "검사: 클리핑 또는 무음 발견");
-            return ok && mismatch == 0 ? 0 : 1;
+            bool loopOk = CheckBgmLoop(sr);
+            return ok && loopOk && mismatch == 0 ? 0 : 1;
         }
 
         static List<Job> BuildJobs(string root, int sr)
@@ -90,7 +91,53 @@ namespace Pokepedia.Tools.AudioRender
                 SfxKind kind = k;
                 jobs.Add(new Job { Name = "sfx_" + ToSnake(kind.ToString()), Render = () => BattleSfx.Render(kind, sr) });
             }
+            // 배틀 BGM: 한 루프, 그리고 이음매를 귀로 확인하려고 두 루프를 이어 붙인 것.
+            jobs.Add(new Job { Name = "bgm_battle", Render = () => BattleMusic.Render(sr) });
+            jobs.Add(new Job { Name = "bgm_battle_x2", Render = () => Repeat(BattleMusic.Render(sr), 2) });
             return jobs;
+        }
+
+        static float[] Repeat(float[] s, int times)
+        {
+            var r = new float[s.Length * times];
+            for (int i = 0; i < times; i++) Array.Copy(s, 0, r, i * s.Length, s.Length);
+            return r;
+        }
+
+        /// <summary>
+        /// BGM 루프 검사: 길이 = round(LoopSeconds·sr), 이음매(마지막 → 첫 샘플) 차이가 루프 안쪽 최대 샘플 간 차이 이하,
+        /// 직류 |평균| &lt; 0.001. 채널 균형(믹스 기준 RMS dB)도 보여 준다.
+        /// </summary>
+        static bool CheckBgmLoop(int sr)
+        {
+            float[] s = BattleMusic.Render(sr);
+            int expected = BattleMusic.LoopSampleCount(sr);
+            double mean = 0, maxStep = 0;
+            var steps = new double[s.Length - 1];
+            for (int i = 0; i < s.Length; i++)
+            {
+                mean += s[i];
+                if (i > 0) { steps[i - 1] = Math.Abs(s[i] - s[i - 1]); if (steps[i - 1] > maxStep) maxStep = steps[i - 1]; }
+            }
+            mean /= s.Length;
+            Array.Sort(steps);
+            double p99 = steps[(int)(steps.Length * 0.99)];
+            double seam = Math.Abs(s[0] - s[s.Length - 1]);
+            bool ok = s.Length == expected && seam <= maxStep && Math.Abs(mean) < 1e-3;
+            Console.WriteLine();
+            Console.WriteLine($"BGM 루프: {BattleMusic.BarCount}마디, {BattleMusic.Bpm} BPM, {BattleMusic.LoopSeconds:F4}초, 샘플 {s.Length} (기대 {expected})");
+            Console.WriteLine($"  이음매 |마지막−처음| = {seam:F5}  (안쪽 샘플 간 차이: 99% {p99:F5}, 최대 {maxStep:F5}),  직류 평균 = {mean:E2}");
+            double[][] stems = BattleMusic.RenderStems(sr);
+            var parts = new List<string>();
+            for (int k = 0; k < stems.Length; k++)
+            {
+                double sum = 0;
+                foreach (double x in stems[k]) sum += x * x;
+                parts.Add($"{BattleMusic.StemNames[k]} {Db(Math.Sqrt(sum / stems[k].Length)):F1}dB");
+            }
+            Console.WriteLine($"  채널 RMS(정규화 전): {string.Join(", ", parts)}");
+            Console.WriteLine(ok ? "  루프 검사: 통과" : "  루프 검사: 실패");
+            return ok;
         }
 
         static string FindRepoRoot()
