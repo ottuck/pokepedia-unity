@@ -709,6 +709,31 @@ ottuck/pokepedia-unity    # Unity / C# [확정]
 14. 사용자는 포켓몬 게임 도메인 지식이 약하므로 **규칙·용어는 먼저 설명**하고 추천안과 이유를 제시한 뒤 결정한다. [위임] 항목은 에이전트가 정하되 결과를 문서에 정리한다.
 15. 사운드·에셋은 출처와 라이선스를 매니페스트에 기록한다.
 
+### Unity CLI·에이전트 연동 (2026-10-16 확인)
+
+외부 제안(GPT)의 "Unity MCP 도입" 내용을 공식 문서로 검증한 결과다. 출처: [Unity CLI as the replacement for the in-Editor MCP server](https://docs.unity.com/en-us/unity-cli/replace-mcp-server-unity-cli).
+
+**확인된 사실**
+- 에디터 안 AI Assistant 패키지(`com.unity.ai.assistant`)에 들어 있던 MCP 서버는 deprecated이고, Unity CLI의 `unity mcp`가 대체한다. CLI 자체는 deprecated가 아니다.
+- 에이전트가 셸 명령을 실행할 수 있으면 MCP보다 `unity command`·`unity eval`로 에디터를 직접 조작하는 쪽이 빠르고 토큰도 적게 든다고 공식 문서가 안내한다. 따라서 **Claude Code는 MCP가 아니라 CLI 직접 호출을 기본으로 한다.** MCP는 셸을 못 쓰는 환경용 대안이다.
+- 연결 절차(공식): CLI 설치 → `unity pipeline install` → (MCP가 필요하면) `unity mcp configure <client>` → `unity skill install <agent-name>`.
+- 실행 중인 에디터 조작은 Unity 6.0 LTS 이상 필요. 현재 6000.3.26f1은 해당된다. CLI는 무료이며 Unity AI 구독과 무관하다. 로컬 연결만 받는다(localhost).
+- 에디터 없이 헤드리스 빌드·테스트 실행도 가능하다. 이 저장소는 이미 `unity test . --mode EditMode`를 쓰고 있고, 로컬에 CLI `1.0.0-beta.13`이 설치돼 있다.
+- 아직 `unity pipeline install`은 하지 않았다(`Packages/manifest.json`에 파이프라인 패키지 없음). 설치하면 패키지가 추가되므로 PR로 변경을 확인한다.
+
+**확인하지 못한 것 (그대로 믿지 말 것)**
+- GPT가 적은 `winget install Unity.CLI` 패키지명과 `codex plugin marketplace add Unity-Technologies/unity-agent-plugin` 명령. 설치는 공식 Install Unity CLI 절차를 따른다.
+- `unity skill install`에서 쓸 에이전트 이름(`--help`로 확인).
+- `unity command`·`unity eval`이 실행 중인 에디터를 반드시 필요로 하는지. 문서의 "running Editor" 표현에서 추정한 것이다.
+- GPT가 전한 CoreCLR 로드맵(Unity 7.0에서 CoreCLR 에디터 도입 등). 공식 확인 전이다. 어느 쪽이든 WebGL 빌드는 IL2CPP라 6.3 LTS 유지 결정에는 영향이 없다고 본다.
+
+**병렬 에이전트 운영 규칙**
+- Unity 에디터는 프로젝트 폴더당 하나만 열 수 있다(`Library/`와 `Temp/UnityLockfile` 점유). 에디터가 열린 폴더에서는 batchmode 실행(컴파일 확인·테스트·빌드)이 실패한다.
+- 에디터 조작이 필요한 작업(씬 배치, 파티클, UI)은 에이전트 한 명이 순서대로 맡는다. 순수 C# 로직(`Domain`, `Content`, `Application`)과 `dotnet test`는 별도 worktree에서 병렬로 진행할 수 있다.
+- IDE(Rider·VS Code)는 에디터와 별개라서 에이전트 작업 중에도 같이 열어도 된다.
+- worktree를 새로 만들면 `Library/`를 다시 임포트하느라 첫 실행이 오래 걸린다.
+- `unity eval`은 에디터에서 임의 C#을 실행할 수 있다. 권한 허용 목록에는 필요한 명령만 넣는다.
+
 ### 새 에이전트 세션의 첫 작업
 
 이 문서를 **별도 세션(Opus 모델)** 에 전달해 작업을 시작한다.
