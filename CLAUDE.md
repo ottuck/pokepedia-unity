@@ -30,7 +30,10 @@ unity test . --mode EditMode          # Unity EditMode 테스트 (Unity CLI)
 ## CI
 
 - 워크플로는 `domain-tests` 하나(ubuntu, .NET 8, `dotnet test Tests.Dotnet`). **Unity 빌드·테스트는 CI에 없고** 로컬에서 확인한다.
+- **Actions 사용 시간은 최소로 쓴다**(비공개 저장소 무료 한도를 넘긴 적이 있다, 2026-10-17). 그래서 **PR에서만** 돌고(브랜치 push·main 병합 push에서는 안 돈다), 초안(draft) PR에서는 돌지 않으며, 같은 PR의 새 push는 이전 실행을 취소한다.
 - 경로 필터가 있어 `Domain`·`Content`·`Application`·`Assets/Tests/EditMode`·`Tests.Dotnet`·워크플로 파일이 바뀔 때만 돈다. **문서·에셋·화면 코드만 바꾼 PR에는 체크가 없는 게 정상**이다.
+- CI 경로 파일이 있는 작업은 **로컬에서 `dotnet test`가 통과한 뒤 문서까지 한 번에 push**하고, PR을 연 뒤의 추가 push를 줄인다(push마다 한 번씩 돈다).
+- 결제·한도 문제로 체크가 시작조차 안 되면(주석에 "spending limit" 등) 코드 실패가 아니다. 로컬 결과를 붙여 사용자에게 알리고 병합 여부를 묻는다.
 - 실패하면 원인을 고친다. CI를 통과시키려고 테스트를 약화하거나 삭제하지 않는다(불필요한 테스트 정리는 위 최소한 원칙에 따라 별도로 한다).
 
 ## Git·PR
