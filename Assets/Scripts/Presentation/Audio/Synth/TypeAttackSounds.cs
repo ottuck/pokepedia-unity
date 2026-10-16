@@ -7,7 +7,9 @@ namespace Pokepedia.Presentation.Audio.Synth
     public enum AttackElement { Electric, Water, Fire, Flying, Grass, Poison, Ghost, Psychic }
 
     /// <summary>
-    /// 속성 기반 공격음 합성기 (Tools/audio/type-attack-sounds-prototype.html v3 레시피의 오프라인 C# 이식).
+    /// 속성 기반 공격음 합성기. M0 시제품(Tools/audio/type-attack-sounds-prototype.html v3)을 C# 로 옮긴 뒤,
+    /// M3-3 에서 8속성 모두 다시 만들었다(사용자가 속성마다 2안 중 선택, 2026-10-17) — 지금 레시피는 C# 에만 있다.
+    /// 고르지 않은 안은 TypeAttackSounds.Alternates.cs 에 보관한다(두 번째 기술용).
     /// <b>기술을 쓸 때(공격 모션) 나는 소리다. 포켓몬 울음소리(등장 소리)가 아니다</b> (사용자 정정, 2026-10-17).
     /// 규칙: 주 속성 = 본체(세기 LOUD), 보조 속성 = 덧칠(세기 0.45×LOUD, 0.06×L 늦게, 길이 0.85×L),
     /// 출력 0.8 → 컴프레서(−12dB, 8:1) → 리미터. 같은 입력이면 같은 샘플을 낸다(시드 고정).
@@ -95,17 +97,14 @@ namespace Pokepedia.Presentation.Audio.Synth
             throw new ArgumentException($"속성 공격음 레시피가 없는 속성입니다: '{type}' (지원: electric, water, fire, flying, grass, poison, ghost, psychic)");
         }
 
-        /// <summary>속성별 체감 음량 보정 (시제품 LOUD 표, 없는 속성은 1).</summary>
+        /// <summary>속성별 체감 음량 보정(M3-3 레시피 기준, 렌더 RMS 가 대략 −15 ~ −21 dBFS 로 고르게). 없는 속성은 1.</summary>
         static double Loud(AttackElement e)
         {
             switch (e)
             {
-                case AttackElement.Water: return 1.0; // 물·불·풀은 M3-3 새 레시피 기준(다른 속성과 RMS −15~−19 dBFS 로 맞춤)
                 case AttackElement.Grass: return 2.2;
-                case AttackElement.Fire: return 1.0;
-                case AttackElement.Poison: return 2.0;
-                case AttackElement.Flying: return 2.5;
-                default: return 1.0; // electric 1.0, ghost·psychic 은 표에 없음
+                case AttackElement.Flying: return 1.6;
+                default: return 1.0;
             }
         }
 
@@ -127,80 +126,77 @@ namespace Pokepedia.Presentation.Audio.Synth
         // ===================================================================== 레시피
         // 인자: (버스, 출력, 시작 시각 t, 음높이 배수 p, 길이 배수 L, 세기 v). 난수 호출 순서는 시제품 JS 의 인자 평가 순서와 같다.
 
-        // 전기(라이트닝): 충전 "위이잉" → 낙뢰 크랙 → 전류 아크 "지지직" → 천둥 꼬리 "우르릉".
+        // 전기(낙뢰): 위이잉 충전(스파크가 촘촘해짐) → 콰직! 크랙(갈라지는 잔가지 크랙) → 찌지직 치지직 고역 아크 세 덩어리
+        // → 치리리릭 잦아드는 잔떨림 → 우르릉 천둥. 크랙은 소리 시작 0.22L 뒤(LeadSeconds). 사용자 요청으로 고역 지직임을 키웠다.
         static void Electric(SynthBus c, double[] d, double t, double p, double L, double v)
         {
-            var r = new Lcg(25);
-            double ch = 0.22 * L, T = 1.1 * L, s = t + ch;
+            var r = new Lcg(101);
+            double ch = 0.22 * L, s = t + ch, T = 1.25 * L;
 
-            // 1) 충전: 올라가는 톱니 + 28Hz 떨림 → 밴드패스, 스파크가 점점 촘촘해짐
-            c.Osc(d, Waveform.Sawtooth, t, s + 0.02,
-                new Automation(440).Set(200 * p, t).ExpTo(1700 * p, s),
-                SynthBus.Env(t, 0, (0, 0), (ch * 0.9, 0.14 * v), (ch, 0)),
-                freqLfo: new Lfo(28, 70 * p, t, s + 0.02),
-                filterType: FilterType.Bandpass, filterQ: 1.1, filterFreq: Automation.Constant(1400 * p));
-            for (int i = 0; i < 18; i++)
-            {
-                double gt = t + ch * Math.Sqrt(r.Next());
-                double dur = 0.002 + r.Next() * 0.005;
-                double pk = (0.06 + 0.2 * r.Next()) * v;
-                double f = 4000 + r.Next() * 3000;
-                double off = r.Next() * 2;
-                c.Grain(d, gt, dur, pk, FilterType.Highpass, f, 1, off);
-            }
+            c.Osc(d, Waveform.Sawtooth, t, s, // 1) 충전 위이잉
+                new Automation(300).Set(300 * p, t).ExpTo(2400 * p, s),
+                SynthBus.Env(t, 0, (0, 0), (ch * 0.9, 0.22 * v), (ch, 0)),
+                freqLfo: new Lfo(40, 90 * p, t, s),
+                filterType: FilterType.Bandpass, filterQ: 2, filterFreq: new Automation(800).Set(800, t).ExpTo(3000, s));
+            for (int i = 0; i < 22; i++)
+                c.Grain(d, t + ch * Math.Sqrt(r.Next()), 0.002 + r.Next() * 0.004, (0.08 + 0.25 * r.Next()) * v,
+                    FilterType.Highpass, 3500 + r.Next() * 3500, 1, r.Next() * 1.7);
 
-            // 2) 낙뢰 크랙
-            c.Grain(d, s, 0.07, 1.3 * v, FilterType.Highpass, 400, 1, 0.33);
-            c.Grain(d, s, 0.05, 1.0 * v, FilterType.Lowpass, 3500, 1, 1.2, c.Brown);
-            double[] cracks = { 0.03, 0.065, 0.11, 0.16 };
-            for (int i = 0; i < cracks.Length; i++)
-                c.Grain(d, s + cracks[i] * L, 0.025 + 0.01 * i, (0.75 - 0.15 * i) * v, FilterType.Highpass, 700 + i * 500, 1, 0.5 + i * 0.3);
+            c.Grain(d, s, 0.005, 1.5 * v, FilterType.Highpass, 150, 1, 0.33); // 2) 콰직
+            c.Grain(d, s, 0.07, 1.1 * v, FilterType.Bandpass, 2600, 0.6, 0.9);
+            c.Blip(d, s, 95 * p, 32, 0.32, 0.8 * v);
+            for (int i = 0; i < 5; i++)
+                c.Grain(d, s + (0.02 + 0.025 * i + 0.01 * r.Next()) * L * 1.25, 0.02, (0.8 - 0.13 * i) * v,
+                    FilterType.Highpass, 900 + 500 * i, 1, 0.4 + i * 0.27);
 
-            // 3) 전류 아크: tanh(30) 로 찌그러뜨린 저음 버즈를 10~35ms 켜짐 / 3~20ms 꺼짐으로 불규칙하게 끊음
-            double A = 0.45 * L;
-            var gate = new Automation(0).Set(0, t);
-            for (double tt = 0.02; tt < A;)
+            // 3) 찌지직 치지직: 고음 버즈(180 + 361Hz 를 tanh 로 찌그러뜨림)와 고역 노이즈를 4~12ms 조각으로 빠르게 끊는다.
+            //    밴드패스가 5200 → 2600Hz 로 내려가며, 세 덩어리(찌지직 / 치지직 / 지직)로 점점 약해진다.
+            double[] groups = { 0, 0.13, 0.27 }, sizes = { 0.12, 0.1, 0.08 }, amps = { 1, 0.8, 0.6 };
+            var gate = new Automation(0).Set(0, s);
+            for (int k = 0; k < groups.Length; k++)
+                for (double tt = groups[k] * L; tt < (groups[k] + sizes[k]) * L;)
+                {
+                    double on = 0.004 + r.Next() * 0.008, off = 0.002 + r.Next() * 0.006;
+                    gate.Set((0.55 + 0.45 * r.Next()) * amps[k] * v, s + tt);
+                    gate.Set(0, s + tt + on);
+                    tt += on + off;
+                }
             {
-                double on = 0.01 + r.Next() * 0.025;
-                double offT = 0.003 + r.Next() * 0.017;
-                double a = (0.4 + 0.6 * r.Next()) * 0.35 * v * Math.Pow(1 - tt / A, 1.5);
-                gate.Set(a, s + tt);
-                gate.Set(0, s + tt + on);
-                tt += on + offT;
-            }
-            {
-                double stop = s + A + 0.05;
+                double A = (groups[2] + sizes[2]) * L;
                 var saw = new Oscillator(Waveform.Sawtooth, c.SampleRate);
                 var sq = new Oscillator(Waveform.Square, c.SampleRate);
-                var lfo = new Lfo(53, 30 * p, s, stop);
-                var hp = new Biquad(FilterType.Highpass, 1, c.SampleRate);
-                double det20 = Math.Pow(2, 20.0 / 1200);
-                int a0 = c.IndexAtOrAfter(s), a1 = c.IndexAtOrAfter(stop);
+                var bp = new Biquad(FilterType.Bandpass, 1.5, c.SampleRate);
+                var nbp = new Biquad(FilterType.Bandpass, 1.2, c.SampleRate);
+                var bf = new Automation(5200).Set(5200, s).ExpTo(2600, s + A);
+                var white = c.White;
+                int a0 = c.IndexAtOrAfter(s), a1 = c.IndexAtOrAfter(s + A + 0.02);
                 for (int n = a0; n < a1; n++)
                 {
-                    double tn = c.TimeOf(n);
-                    double l = lfo.ValueAt(tn);
-                    double x = saw.Next(85 * p + l) + sq.Next((172 * p + l) * det20);
-                    double y = hp.Process(SynthBus.TanhShape(x, 30), 900);
-                    d[n] += y * gate.ValueAt(tn);
+                    double tn = c.TimeOf(n), g = gate.ValueAt(tn);
+                    double x = saw.Next(180 * p) + 0.7 * sq.Next(361 * p);
+                    double buzz = bp.Process(SynthBus.TanhShape(x, 25), bf.ValueAt(tn) * p);
+                    double hiss = nbp.Process(white[(n * 7) % white.Length], 6500);
+                    d[n] += (buzz * 1.8 + hiss * 0.9) * g;
                 }
             }
-            for (int i = 0; i < 30; i++)
-            {
-                double gt = s + Math.Pow(r.Next(), 1.6) * A;
-                double dur = 0.002 + r.Next() * 0.006;
-                double pk = (0.15 + 0.35 * r.Next()) * v;
-                double f = 2500 + r.Next() * 5000;
-                double off = r.Next() * 2;
-                c.Grain(d, gt, dur, pk, FilterType.Highpass, f, 1, off);
-            }
 
-            // 4) 천둥 꼬리: 저역 브라운 노이즈가 45ms 마다 일렁이며 지수적으로 사라짐
-            var fl = new Automation(0).Set(0, s);
-            for (double tt = 0.01; tt < T - ch; tt += 0.045)
-                fl.LinearTo((0.35 + 0.65 * r.Next()) * 1.1 * v * Math.Exp(-3 * tt / (T - ch)), s + tt);
-            fl.LinearTo(0, s + T - ch + 0.05);
-            c.Src(d, c.Brown, s, T - ch + 0.1, 0.9, FilterType.Lowpass, 0.7, Automation.Constant(240 * Math.Sqrt(p)), fl);
+            // 4) 치리리릭: 고역 미세 딸깍이 처음엔 5ms 간격으로 촘촘하다가 점점 성겨지며 사라진다.
+            {
+                double tt = 0.3 * L, gap = 0.005, end = 0.75 * L;
+                while (tt < end)
+                {
+                    double k = (tt - 0.3 * L) / (end - 0.3 * L);
+                    c.Grain(d, s + tt, 0.0015 + 0.002 * r.Next(), (0.25 + 0.3 * r.Next()) * v * (1 - 0.8 * k),
+                        FilterType.Highpass, 4200 + 3000 * r.Next(), 1, r.Next() * 1.7);
+                    gap *= 1.07;
+                    tt += gap * (0.7 + 0.6 * r.Next());
+                }
+            }
+            Crackle(c, d, r, s, s + 0.45 * L, 40, 0.4 * v, 1.3);
+
+            double rd = T - ch; // 5) 천둥(고역이 묻히지 않게 낮게)
+            c.Src(d, c.Brown, s + 0.02, rd, 0.9, FilterType.Lowpass, 1, Automation.Constant(190 * Math.Sqrt(p)),
+                Flutter(r, s + 0.02, rd, 0.045, tt => 0.8 * v * Math.Exp(-3.2 * tt / rd) * Math.Min(1, tt / 0.04), 0.6));
         }
 
         // 물·불·풀은 M3-3 에서 다시 만들었다(사용자가 2안 중 선택: 물대포, 파이어볼 + 활활, 덩굴 휘감기). 시제품 HTML 에는 없는 C# 전용 레시피다.
@@ -369,66 +365,127 @@ namespace Pokepedia.Presentation.Audio.Synth
                 if (tmp[i] != 0) d[i] += SynthBus.TanhShape(tmp[i] * drive, 1.6) * mix;
         }
 
-        // 비행: 날갯짓 "펄럭" 3번(점점 약해짐) + 돌풍 "휘익". 음정 있는 휘파람은 쓰지 않는다.
+        // 비행(칼바람): 날카로운 공기 베기 "쉭-쉭"(좁은 대역이 위로 빠르게) → 휘이잉 감기는 회오리(빈 관 울림) → 흩어짐.
         static void Flying(SynthBus c, double[] d, double t, double p, double L, double v)
         {
-            double T = 0.8 * L;
-            for (int i = 0; i < 3; i++)
-            {
-                double tt = t + i * 0.16 * L, a = (1.0 - 0.25 * i) * v;
-                c.Src(d, c.White, tt, 0.13 * L, 0.2 + i * 0.37, FilterType.Lowpass, 0.8,
-                    SynthBus.Env(tt, 700 * p, (0, 300 * p), (0.03 * L, 1100 * p), (0.12 * L, 350 * p)),
-                    SynthBus.Env(tt, 0, (0, 0), (0.025 * L, 0.55 * a), (0.12 * L, 0)));
-            }
-            c.Src(d, c.White, t, T, 1.4, FilterType.Bandpass, 0.9,
-                SynthBus.Env(t, 500, (0, 400 * p), (0.45 * L, 1700 * p), (T, 600 * p)),
-                SynthBus.Env(t, 0, (0, 0), (0.4 * L, 0.3 * v), (T, 0)));
+            var r = new Lcg(171);
+            double T = 1.0 * L;
+
+            Swish(c, d, t, 0.07, 1800 * p, 8500 * p, 0.8 * v, 0.2, 4); // 1) 쉭 쉭
+            Swish(c, d, t + 0.1 * L, 0.07, 2200 * p, 9500 * p, 0.85 * v, 0.9, 4);
+            c.Grain(d, t + 0.07, 0.01, 0.4 * v, FilterType.Highpass, 5000, 1, 0.3);
+            c.Grain(d, t + 0.1 * L + 0.07, 0.01, 0.45 * v, FilterType.Highpass, 5500, 1, 1.0);
+
+            double w0 = t + 0.12 * L, wd = T - 0.12 * L; // 2) 휘이잉 회오리: 공명 대역이 4.5Hz 로 감긴다 + 빈 관 울림
+            c.Src(d, c.White, w0, wd, 1.4, FilterType.Bandpass, 3,
+                new Automation(1500 * p).Set(1500 * p, w0).ExpTo(2600 * p, w0 + wd * 0.5).ExpTo(1100 * p, w0 + wd),
+                Flutter(r, w0, wd, 0.04, tt => 0.5 * v * Math.Min(1, tt / 0.08) * Math.Max(0, 1 - tt / wd), 0.3),
+                new Lfo(4.5, 700 * p, w0));
+            c.Src(d, c.White, w0, wd, 0.6, FilterType.Bandpass, 9, Automation.Constant(620 * p),
+                SynthBus.Env(w0, 0, (0, 0), (0.15 * L, 0.35 * v), (wd, 0)));
+            c.Src(d, c.Brown, w0, wd * 0.7, 1.7, FilterType.Lowpass, 1, Automation.Constant(300 * p),
+                SynthBus.Env(w0, 0, (0, 0.4 * v), (wd * 0.7, 0)));
         }
 
-        // 독: 13Hz 로 진폭이 떨리는(트레몰로) 탁한 사각파.
+        // 독(오물 폭탄): 뿌직 발사(공명이 내려가는 질척임) → 꿀렁이며 날아감(느린 거품) → 철퍽! → 치이익 녹아드는 산성 거품. 착탄 0.44L.
         static void Poison(SynthBus c, double[] d, double t, double p, double L, double v)
         {
-            double[] tmp = c.NewBuffer();
-            c.Voice(tmp, t, Waveform.Square,
-                new (double, double)[] { (0, 260 * p), (0.3 * L, 240 * p), (0.7 * L, 200 * p) },
-                new (double, double)[] { (0, 0), (0.06, 0.12 * v), (0.7 * L, 0) },
-                detuneCents: -30);
-            var trem = new Lfo(13, 0.5, t, t + 0.8 * L); // trem.gain = 0.5 + 0.5·sin
-            for (int n = 0; n < tmp.Length; n++)
-                if (tmp[n] != 0) d[n] += tmp[n] * (0.5 + trem.ValueAt(c.TimeOf(n)));
+            var r = new Lcg(191);
+            double hit = 0.44 * L, T = 1.2 * L;
+
+            c.Src(d, c.Brown, t, 0.12, 0.2, FilterType.Lowpass, 12, // 1) 뿌직: 공명 로우패스가 1600 → 250 으로
+                new Automation(1600).Set(1600 * p, t).ExpTo(250 * p, t + 0.11),
+                SynthBus.Env(t, 0, (0, 0), (0.01, 0.9 * v), (0.12, 0)));
+            c.Blip(d, t, 240 * p, 90 * p, 0.12, 0.45 * v);
+
+            c.Osc(d, Waveform.Sine, t + 0.05, t + hit, Automation.Constant(85 * p), // 2) 꿀렁
+                SynthBus.Env(t + 0.05, 0, (0, 0), (0.05, 0.4 * v), (hit - 0.05, 0.3 * v)), freqLfo: new Lfo(9, 25 * p, t + 0.05));
+            for (int i = 0; i < 14; i++)
+                Bubble(c, d, t + 0.05 + r.Next() * (hit - 0.08), (130 + 260 * r.Next()) * p, 1.3 + 0.4 * r.Next(), 0.05 + 0.05 * r.Next(), (0.12 + 0.12 * r.Next()) * v);
+
+            double h = t + hit; // 3) 철퍽
+            c.Src(d, c.Brown, h, 0.25, 0.7, FilterType.Lowpass, 6,
+                new Automation(2200).Set(2200 * p, h).ExpTo(400 * p, h + 0.2),
+                SynthBus.Env(h, 0, (0, 0), (0.006, 1.1 * v), (0.25, 0)));
+            c.Grain(d, h, 0.03, 0.6 * v, FilterType.Highpass, 1800, 1, 1.2);
+            c.Blip(d, h, 120 * p, 40 * p, 0.18, 0.6 * v);
+
+            double z0 = h + 0.05, zd = T - hit - 0.05; // 4) 치이익 + 산성 거품
+            c.Src(d, c.White, z0, zd, 1.5, FilterType.Highpass, 1, Automation.Constant(3800),
+                Flutter(r, z0, zd, 0.02, tt => 0.32 * v * Math.Max(0, 1 - tt / zd), 0.7));
+            Crackle(c, d, r, z0, z0 + zd * 0.8, 40, 0.25 * v, 1.3);
+            for (int i = 0; i < 18; i++)
+                Bubble(c, d, z0 + Math.Pow(r.Next(), 1.4) * zd * 0.85, (220 + 500 * r.Next()) * p, 1.4 + 0.4 * r.Next(), 0.03 + 0.04 * r.Next(), (0.07 + 0.1 * r.Next()) * v);
         }
 
-        // 고스트: 서로 ±14센트 어긋난 두 사인(맥놀이) + 오르내리는 음 + 6Hz 떨림, 아래에 삼각파.
+        // 고스트(원혼의 울음): "우우~" 하는 유령 목소리(포먼트 필터 톱니, 올라갔다 내려옴) + 속삭임 + 어긋난 종소리가 메아리친다. 착탄 0.62L.
         static void Ghost(SynthBus c, double[] d, double t, double p, double L, double v)
         {
-            foreach (double det in new[] { -14.0, 14.0 })
-                c.Voice(d, t, Waveform.Sine,
-                    new (double, double)[] { (0, 520 * p), (0.3 * L, 640 * p), (0.9 * L, 230 * p) },
-                    new (double, double)[] { (0, 0), (0.25 * L, 0.22 * v), (0.6 * L, 0.18 * v), (0.9 * L, 0) },
-                    6, 18 * p, det);
-            c.Voice(d, t, Waveform.Triangle,
-                new (double, double)[] { (0, 130 * p), (0.9 * L, 110 * p) },
-                new (double, double)[] { (0, 0), (0.3 * L, 0.12 * v), (0.9 * L, 0) });
+            var r = new Lcg(233);
+            double hit = 0.62 * L;
+
+            double[] mix = c.NewBuffer();
+            { // 1) 유령 목소리: 220 → 440 → 260Hz, 5Hz 떨림, 포먼트 "우"(350, 800) → "오"(500, 1000)
+                var osc = new Oscillator(Waveform.Sawtooth, c.SampleRate);
+                var f1 = new Biquad(FilterType.Bandpass, 6, c.SampleRate);
+                var f2 = new Biquad(FilterType.Bandpass, 8, c.SampleRate);
+                var pitch = new Automation(220).Set(220 * p, t).ExpTo(440 * p, t + 0.35 * L).ExpTo(260 * p, t + 0.95 * L);
+                var vib = new Lfo(5, 1, t + 0.05);
+                var fa = new Automation(350).Set(350, t).LinearTo(500, t + 0.95 * L);
+                var fb = new Automation(800).Set(800, t).LinearTo(1000, t + 0.95 * L);
+                var g = SynthBus.Env(t, 0, (0, 0), (0.15 * L, 0.55 * v), (0.7 * L, 0.45 * v), (0.95 * L, 0));
+                int a0 = c.IndexAtOrAfter(t), a1 = c.IndexAtOrAfter(t + 0.95 * L);
+                for (int n = a0; n < a1; n++)
+                {
+                    double tn = c.TimeOf(n);
+                    double x = osc.Next(pitch.ValueAt(tn) * (1 + 0.025 * vib.ValueAt(tn)));
+                    mix[n] += (f1.Process(x, fa.ValueAt(tn) * p) + 0.6 * f2.Process(x, fb.ValueAt(tn) * p)) * g.ValueAt(tn);
+                }
+            }
+            c.Src(mix, c.White, t + 0.05, 0.6 * L, 0.4, FilterType.Bandpass, 3, // 2) 속삭임
+                new Automation(3000).Set(3000, t),
+                Flutter(r, t + 0.05, 0.6 * L, 0.03, tt => 0.18 * v, 0.9), new Lfo(2.3, 1500, t));
+
+            double h = t + hit; // 3) 어긋난 종(비조화 배음 1, 2.76, 5.4)
+            double[] parts = { 1, 2.76, 5.4 };
+            for (int i = 0; i < parts.Length; i++)
+                c.Blip(mix, h, 330 * parts[i] * p, 330 * parts[i] * p * 0.985, 0.6 - 0.15 * i, (0.3 - 0.08 * i) * v);
+            c.Blip(d, h, 110 * p, 40 * p, 0.3, 0.6 * v);
+            c.FeedbackDelay(mix, 0.19, 0.42, d);
         }
 
-        // 에스퍼: FM(변조기 사인 → 반송파 주파수)으로 일렁이는 금속성 톤 + 메아리(0.13초, 피드백 0.35).
+        // 에스퍼(사이코 빔): 링 변조(두 사인의 곱)로 일렁이는 공상과학 광선 + 25Hz 떨림 + 피융 광선 세 발 → 착탄 웅 + 메아리. 착탄 0.62L.
         static void Psychic(SynthBus c, double[] d, double t, double p, double L, double v)
         {
+            double hit = 0.62 * L, T = 1.2 * L;
+
             double[] mix = c.NewBuffer();
-            var carF = SynthBus.Env(t, 440, (0, 480 * p), (0.3 * L, 720 * p), (0.95 * L, 420 * p));
-            var modF = SynthBus.Env(t, 440, (0, 240 * p), (0.95 * L, 360 * p));
-            var modDepth = SynthBus.Env(t, 1, (0, 0), (0.3 * L, 400 * p), (0.95 * L, 60 * p));
-            var g = SynthBus.Env(t, 0, (0, 0), (0.1 * L, 0.2 * v), (0.7 * L, 0.16 * v), (0.95 * L, 0));
-            var car = new Oscillator(Waveform.Sine, c.SampleRate);
-            var mod = new Oscillator(Waveform.Sine, c.SampleRate);
-            int a0 = c.IndexAtOrAfter(t), a1 = c.IndexAtOrAfter(t + 1.0 * L);
-            for (int n = a0; n < a1; n++)
-            {
-                double tn = c.TimeOf(n);
-                double m = mod.Next(modF.ValueAt(tn)) * modDepth.ValueAt(tn);
-                mix[n] += car.Next(carF.ValueAt(tn) + m) * g.ValueAt(tn);
+            { // 1) 링 변조 광선: 600Hz × (420 → 900Hz), 25Hz 떨림
+                var a = new Oscillator(Waveform.Sine, c.SampleRate);
+                var b = new Oscillator(Waveform.Sine, c.SampleRate);
+                var fb = new Automation(420).Set(420 * p, t).ExpTo(900 * p, t + hit);
+                var vib = new Lfo(25, 1, t);
+                var g = SynthBus.Env(t, 0, (0, 0), (0.06 * L, 0.45 * v), (hit, 0.4 * v), (hit + 0.15, 0));
+                int a0 = c.IndexAtOrAfter(t), a1 = c.IndexAtOrAfter(t + hit + 0.15);
+                for (int n = a0; n < a1; n++)
+                {
+                    double tn = c.TimeOf(n);
+                    double w = 1 + 0.03 * vib.ValueAt(tn);
+                    mix[n] += a.Next(600 * p * w) * b.Next(fb.ValueAt(tn) * w) * g.ValueAt(tn);
+                }
             }
-            c.FeedbackDelay(mix, 0.13, 0.35, d);
+            foreach (double det in new[] { -12.0, 0.0, 12.0 }) // 2) 위상이 어긋나 일렁이는 화음(코러스)
+                c.Osc(mix, Waveform.Triangle, t, t + hit, Automation.Constant(440 * p),
+                    SynthBus.Env(t, 0, (0, 0), (0.2 * L, 0.08 * v), (hit, 0)), det);
+            double[] zaps = { 0.05, 0.22, 0.4 }; // 3) 피융
+            foreach (double z in zaps)
+                c.Blip(mix, t + z * L, 2600 * p, 320 * p, 0.09, 0.35 * v, Waveform.Sine);
+
+            double h = t + hit; // 4) 착탄
+            c.Blip(d, h, 200 * p, 55 * p, 0.3, 0.6 * v);
+            c.Osc(mix, Waveform.Sine, h, t + T, new Automation(1200).Set(1200 * p, h).ExpTo(500 * p, t + T),
+                SynthBus.Env(h, 0, (0, 0.3 * v), (T - hit, 0)), freqLfo: new Lfo(12, 40 * p, h));
+            c.FeedbackDelay(mix, 0.11, 0.45, d);
         }
     }
 }

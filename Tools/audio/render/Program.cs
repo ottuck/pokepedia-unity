@@ -93,11 +93,6 @@ namespace Pokepedia.Tools.AudioRender
                 string a = id;
                 jobs.Add(new Job { Name = "alt_" + a, Render = () => TypeAttackSounds.RenderAlternate(a, 0, len, sr) });
             }
-            foreach (string name in TypeAttackSounds.CandidateNames) // M3-3 후보(고른 뒤 지운다)
-            {
-                string n = name;
-                jobs.Add(new Job { Name = "cand_" + n, Render = () => TypeAttackSounds.RenderCandidate(n, len, sr) });
-            }
             foreach (SfxKind k in Enum.GetValues(typeof(SfxKind)))
             {
                 SfxKind kind = k;
