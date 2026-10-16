@@ -82,7 +82,7 @@ namespace Pokepedia.EditorTools
             camGo.tag = "MainCamera";
             var cam = camGo.GetComponent<Camera>();
             cam.orthographic = true;
-            cam.orthographicSize = 4.5f; // 144px / 16PPU / 2
+            cam.orthographicSize = 4.5f; // 실제 크기는 배틀 화면의 PixelCamera 가 창 배율에 맞춰 바꾼다
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.06f, 0.22f, 0.06f);
             camGo.transform.position = new Vector3(0, 0, -10);
@@ -96,7 +96,7 @@ namespace Pokepedia.EditorTools
             bso.FindProperty("movesJson").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Data/moves.json");
             bso.FindProperty("rosterJson").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Data/roster.json");
             bso.FindProperty("animationJson").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Content/Data/animation.json");
-            bso.FindProperty("flashMaterial").objectReferenceValue = MaterialAsset("Assets/Content/VFX/UIFlash.mat", "Pokepedia/UI Flash");
+            bso.FindProperty("flashMaterial").objectReferenceValue = MaterialAsset("Assets/Content/VFX/SpriteFlash.mat", "Pokepedia/Sprite Flash");
             // 파티클: URP 2D 렌더러가 그리는 스프라이트 Unlit 셰이더. 텍스처 없이 정사각형 입자(도트 느낌)
             bso.FindProperty("particleMaterial").objectReferenceValue = MaterialAsset("Assets/Content/VFX/Particle.mat", "Universal Render Pipeline/2D/Sprite-Unlit-Default");
             bso.ApplyModifiedPropertiesWithoutUndo();

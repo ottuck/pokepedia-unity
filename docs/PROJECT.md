@@ -148,7 +148,7 @@ Pokepedia가 151마리를 지원한다고 해서 Unity 배틀도 151마리를 �
 - 포켓몬별 애니메이션을 따로 만들지 않는다. 움직임의 강도·속도·기준점 등을 **데이터로 조정**한다.
 - **구현 (M3-2):** `Assets/Content/Data/animation.json` → `AnimationCatalog`(순수 C#). 종 프로필(`animProfile` 키)마다 `windupSec`(기 모으기 시간), `lungePx`(돌진 거리), `hitShakePx`(맞을 때 흔들림), `knockbackPx`(넉백), `moveFx`(기술 id → 전용 이펙트 id) — 빠진 값은 `defaults`. 18타입마다 이펙트 색(primary·secondary).
   - `AnimationDirector`가 기본 타임라인(접촉 = 돌진+타격 / 발사 = 구체 / 효과 = 고리)을 돌리고, `moveFx`가 있으면 전용 이펙트로 바꾼다. 현재 전용 이펙트: 피카츄 10만볼트 `lightning_strike`(기 모으기 → 낙뢰 → 화면 번쩍임), 거북왕 하이드로펌프 `water_cannon`(반동 → 물줄기 → 물보라).
-  - 피격: `UIFlash` 셰이더로 하얗게 번쩍임 + 흔들림 + 넉백, 급소는 화면 번쩍임·흔들림, 빗나감은 회피 모션. 파티클은 Unity Particle System(텍스처 없는 정사각형 입자, 캔버스 픽셀 단위).
+  - 피격: `Pokepedia/Sprite Flash` 셰이더(본체 위에 겹친 렌더러, 알파가 번쩍임 세기)로 하얗게 번쩍임 + 흔들림 + 넉백, 급소는 화면 번쩍임·흔들림, 빗나감은 회피 모션. 파티클은 월드의 Unity Particle System(텍스처 없는 정사각형 입자, 월드 1 단위 = 화면 1픽셀).
 - 타입별 이펙트는 **공통 프리팹 하나 + 타입별 색·모양 파라미터**로 데이터화한다.
 - 모든 로스터 포켓몬은 블랙·화이트 애니메이션 스프라이트를 기본 대기·등장 모션으로 가진다 (8.2).
 - Showcase 완료 정의의 세부 항목과 **마일스톤별 시간 상한은 정하지 않는다** [확정].
@@ -230,11 +230,11 @@ Pokepedia가 151마리를 지원한다고 해서 Unity 배틀도 151마리를 �
 | 카메라 연출 | 공격 직전 줌, 피격 흔들림, 승리 패닝 |
 | 조명·빛 반사 | Light2D. 과장된 스타일(물 하이라이트, 전기 glow, 고스트·에스퍼 rim)이며 사실적 PBR은 아니다 |
 | 안개 | 반투명 오버레이 + 후처리 Volume(비네트·색 보정). 배경별 색(숲 초록, 동굴 파랑, 고스트 보라, 물 밝은 대기). 3D 볼류메트릭은 하지 않는다 |
-| 셰이더(Shader Graph) | 피격 하양 번쩍임(`UIFlash`는 구현됨), 타입별 glow·하이라이트 |
+| 셰이더(Shader Graph) | 피격 하양 번쩍임(`Sprite Flash`는 구현됨), 타입별 glow·하이라이트 |
 | 타입별 VFX | 공통 프리팹 + 타입별 색·모양 파라미터(5.2). 로스터 타입(전기·물·불꽃·비행·풀·독·고스트·에스퍼)만 |
 
 **구현 순서 [권장안]** (M3 안, 시간 상한 없음)
-1. **월드/HUD 분리**: 화면은 지금과 똑같이 보이게 이관한다. 스프라이트·발판·VFX·`UIFlash`·`AnimationDirector`의 이동을 월드로, HP 바·메뉴·메시지는 HUD에 남긴다.
+1. **월드/HUD 분리 — 완료(M3-4)**: 화면은 똑같이 보이게 이관했다. 스프라이트·발판·VFX·피격 번쩍임·`AnimationDirector`의 이동을 월드로, HP 바·메뉴·메시지는 HUD(Overlay 캔버스)에 남겼다. 월드는 `BattleWorld`(`SpriteRenderer`)와 `PixelCamera`, HUD 정렬은 `PixelAlign`이 맡는다.
 2. 그림자, 원근 바닥, 배경 레이어, 카메라 연출.
 3. 안개, Light2D, 후처리, 타입별 glow.
 4. 피카츄 vs 거북왕 대표 장면(예: 비 오는 배경, 약한 안개, 전기 글로우, 물대포 반사, 줌, 승리 연출). Standard는 공통 배경 1~2종 + 타입 파라미터.
@@ -244,7 +244,7 @@ Pokepedia가 151마리를 지원한다고 해서 Unity 배틀도 151마리를 �
 - **후처리와 HUD:** Screen Space Overlay 캔버스는 후처리를 받지 않고 Screen Space Camera 캔버스는 받는 것으로 알려져 있다(포럼·이슈 트래커 근거, 공식 URP 문서는 아님). HUD를 Overlay 캔버스로 둘지 UI 전용 카메라(카메라 스택)로 나눌지는 이관할 때 검증한다 [미확인]. 카메라가 늘면 오버헤드가 커질 수 있다. 월드의 정수 배율과 HUD의 `PixelCanvasScaler`가 같은 기준 해상도에서 어긋나지 않는지도 확인한다 [미확인].
 - **엔진·`BattleEvent`는 바꾸지 않는다.** 타입은 이벤트에 넣지 않고 `MoveUsed`의 기술 id로 기술 데이터(`type`, `animKind`)와 `animation.json`을 조회해 연출을 조합한다(7.3).
 - **성능:** 후처리를 쓰므로 `PostProcessData`를 다시 연결했다(5.4). 투명 오버레이와 후처리는 모바일 fill-rate 부담이 있어 모바일 30fps 기준(5.4)으로 측정한다. 화면을 읽는 왜곡(고스트 등) 셰이더는 별도 렌더 텍스처가 필요할 수 있어 [미확인] 필요성이 확인될 때만 한다.
-- **이관 범위가 크다.** 스프라이트(`Image` + `UiSpriteAnimator`), `UIFlash`, `VfxLayer`, `AnimationDirector`의 이동 코드(`AnimationDirector`·`VfxLayer`·`BattleSideView`·`UiSpriteAnimator` 약 670줄)가 uGUI 픽셀 기준이다.
+- **이관 결과 (M3-4):** `UiSpriteAnimator` → `SpriteAnimator`, `UIFlash` 셰이더 → `Sprite Flash`(URP 2D 언릿, 본체 위 겹침), `VfxLayer`의 번개·구체·고리는 `SpriteRenderer`, 월드 이펙트는 HUD(정보 상자·메시지) 뒤에 그려지고 화면 전체 번쩍임만 HUD 맨 위에 남는다. 월드 카메라는 창 크기에 맞춰 정수 배율로(`PixelCamera`), 창 크기가 홀수일 때의 반 픽셀은 월드와 HUD가 같이 옮겨 맞춘다. `Pixel Perfect Camera` 컴포넌트는 쓰지 않았다(직접 계산이 HUD 배율과 같은 식을 쓰기 쉬워서).
 
 ---
 

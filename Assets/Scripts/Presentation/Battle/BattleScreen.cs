@@ -32,8 +32,8 @@ namespace Pokepedia.Presentation.Battle
         [SerializeField] TextAsset localeKo;
         [SerializeField] TextAsset localeEn;
         [SerializeField] TextAsset localeJa;
-        [SerializeField] Material flashMaterial;     // Pokepedia/UI Flash (피격 번쩍임)
-        [SerializeField] Material particleMaterial;  // 파티클 (URP 2D Sprite-Unlit)
+        [SerializeField] Material flashMaterial;     // Pokepedia/Sprite Flash (피격 번쩍임, 본체 위에 겹치는 렌더러용)
+        [SerializeField] Material particleMaterial;  // 파티클·월드 스프라이트 (URP 2D Sprite-Unlit)
 
         const int DemoPlayer = 25; // 피카츄
         const int DemoNpc = 9;     // 거북왕
@@ -62,6 +62,7 @@ namespace Pokepedia.Presentation.Battle
 
         GameObject root;
         readonly BattleSideView[] sides = new BattleSideView[2];
+        BattleWorld world;
         VfxLayer vfx;
         AnimationDirector director;
         SoundBank sound;
@@ -91,6 +92,7 @@ namespace Pokepedia.Presentation.Battle
             names = new BattleNames(id => locale.Get(catalog.GetSpecies(id).NameKey), id => locale.Get(catalog.GetMove(id).NameKey));
             if (root == null) { Build(); Perf("build ui", sw); }
             root.SetActive(true);
+            world.Container.SetActive(true);
 
             var seed = (uint)Environment.TickCount | 1u;
             session = new BattleSession(catalog, BattleRules.Default, new SeededRandom(seed), BattleMode.Demo, DemoPlayer, () => DemoNpc);
@@ -107,31 +109,27 @@ namespace Pokepedia.Presentation.Battle
             var canvasGo = new GameObject("BattleCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(PixelCanvasScaler));
             canvasGo.transform.SetParent(transform, false);
             var canvas = canvasGo.GetComponent<Canvas>();
-            // 카메라 공간 캔버스: 파티클(월드 렌더러)이 UI 와 같은 평면에 그려지게 한다
-            canvas.renderMode = RenderMode.ScreenSpaceCamera;
-            canvas.worldCamera = Camera.main;
-            canvas.planeDistance = 1;
+            // HUD(HP 바·메뉴·메시지)는 Overlay 캔버스: 월드 카메라의 후처리(PROJECT.md 5.5)를 받지 않고 항상 월드 위에 그려진다
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = CanvasOrder;
             root = canvasGo;
             sound = new SoundBank(gameObject);
 
-            // 240×216 화면을 캔버스 가운데에 둔다 (정수 배율은 PixelCanvasScaler)
-            var screen = new GameObject("Screen", typeof(RectTransform), typeof(Image));
+            // 월드(배경·발판·포켓몬·이펙트)는 SpriteRenderer 와 카메라로 그린다. 머티리얼은 URP 2D 언릿 스프라이트 셰이더다.
+            world = new BattleWorld(transform, Camera.main, particleMaterial);
+
+            // 240×216 HUD 영역을 캔버스 가운데에 둔다 (정수 배율은 PixelCanvasScaler, 홀수 창의 반 픽셀은 PixelAlign)
+            var screen = new GameObject("Screen", typeof(RectTransform), typeof(PixelAlign));
             screen.transform.SetParent(canvasGo.transform, false);
             var srt = (RectTransform)screen.transform;
             srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0.5f, 0.5f);
             srt.sizeDelta = new Vector2(PixelCanvasScaler.BaseWidth, PixelCanvasScaler.BaseHeight);
-            screen.GetComponent<Image>().color = Ui.Background;
-            screen.AddComponent<RectMask2D>(); // 등장 슬라이드·이펙트가 화면 밖에 그려지지 않게 (UIFlash 셰이더도 클립 지원)
 
-            // 발판 → 포켓몬 → 이펙트 → 정보 상자·메시지 순으로 그린다 (나중에 만든 것이 위)
-            Ui.Ellipse(srt, "NpcPlatform", 178, 82, 104, 18, Ui.Platform);
-            Ui.Ellipse(srt, "PlayerPlatform", 66, 150, 108, 18, Ui.Platform);
-            var npcSprite = MakeSprite(srt, "NpcSprite");
-            var playerSprite = MakeSprite(srt, "PlayerSprite");
-            vfx = new VfxLayer(srt, particleMaterial, CanvasOrder);
-            sides[BattleState.Npc] = MakeSide(srt, "Npc", npcSprite, new Vector2(178, 86), 6, 6, 116, 32, false);
-            sides[BattleState.Player] = MakeSide(srt, "Player", playerSprite, new Vector2(66, 154), 122, 100, 112, 46, true);
+            world.Platform("NpcPlatform", new Vector2(178, 82), 104, 18);
+            world.Platform("PlayerPlatform", new Vector2(66, 150), 108, 18);
+            sides[BattleState.Npc] = MakeSide(srt, "Npc", new Vector2(178, 86), 6, 6, 116, 32, false);
+            sides[BattleState.Player] = MakeSide(srt, "Player", new Vector2(66, 154), 122, 100, 112, 46, true);
+            vfx = new VfxLayer(world, srt, particleMaterial);
             director = new AnimationDirector(this, sides, vfx, sound, animation, catalog);
 
             var msgInner = Ui.Box(srt, "MessageBox", 2, 156, 236, 58);
@@ -171,24 +169,13 @@ namespace Pokepedia.Presentation.Battle
             moveMenu.Cancelled += () => sound.Play(SfxKind.Cancel);
         }
 
-        static (RectTransform rt, Image image, UiSpriteAnimator animator) MakeSprite(RectTransform screen, string name)
-        {
-            var rt = Ui.Rect(screen, name, 0, 0, 1, 1);
-            rt.pivot = new Vector2(0.5f, 0f); // 발 위치 = 바닥 중앙
-            var image = rt.gameObject.AddComponent<Image>();
-            image.raycastTarget = false;
-            var animator = rt.gameObject.AddComponent<UiSpriteAnimator>();
-            return (rt, image, animator);
-        }
-
-        BattleSideView MakeSide(RectTransform screen, string name, (RectTransform rt, Image image, UiSpriteAnimator animator) sprite,
-                                Vector2 feet, float bx, float by, float bw, float bh, bool player)
+        BattleSideView MakeSide(RectTransform screen, string name, Vector2 feet, float bx, float by, float bw, float bh, bool player)
         {
             var inner = Ui.Box(screen, name + "Info", bx, by, bw, bh);
             var nameLabel = Ui.Label(inner, "Name", font, 4, 2, bw - 50, 14);
             Ui.Label(inner, "Level", font, bw - 42, 2, 36, 14, TextAlignmentOptions.TopRight).text = ":L50";
             var hp = new HpBar(inner, font, 6, 18, bw - 34, player);
-            var view = new BattleSideView(sprite.rt, sprite.image, sprite.animator, feet, inner.parent.gameObject, nameLabel, hp, flashMaterial);
+            var view = new BattleSideView(world, name, feet, particleMaterial, flashMaterial, inner.parent.gameObject, nameLabel, hp);
             view.Reset();
             return view;
         }
@@ -280,6 +267,7 @@ namespace Pokepedia.Presentation.Battle
             {
                 sound.StopMusic();
                 root.SetActive(false);
+                world.Container.SetActive(false);
                 onExit?.Invoke();
                 return;
             }

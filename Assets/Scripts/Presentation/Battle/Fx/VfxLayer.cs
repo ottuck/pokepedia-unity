@@ -7,42 +7,40 @@ using UnityEngine.UI;
 namespace Pokepedia.Presentation.Battle.Fx
 {
     /// <summary>
-    /// 배틀 화면 위 이펙트 계층. 좌표는 Ui 와 같은 "화면 픽셀, 좌상단 원점, y 아래로" 를 쓴다.
-    /// - 파티클: Unity Particle System. 캔버스(Screen Space - Camera) 안 자식이고 scalingMode = Hierarchy 라서 크기·속도 단위도 화면 픽셀이다.
-    ///   텍스처 없이 정사각형 입자로 그려 도트 느낌을 낸다. 정렬 순서를 캔버스보다 높여 UI 위에 그린다.
-    /// - 도형: 번개 선분·구체·고리는 uGUI Image 로 그린다 (픽셀 정렬이 쉽다).
+    /// 배틀 화면 이펙트 계층 (PROJECT.md 5.5). 이펙트는 월드(BattleWorld)에서 그려지고, 화면 전체 번쩍임만 HUD 맨 위 Image 로 그린다.
+    /// 좌표는 HUD 와 같은 "화면 픽셀, 좌상단 원점, y 아래로" 를 받아 BattleWorld.ToLocal 로 바꾼다.
+    /// - 파티클: Unity Particle System. 월드 1 단위 = 1 화면 픽셀(기준 해상도)이라 크기·속도 단위도 화면 픽셀이다.
+    ///   텍스처 없이 정사각형 입자로 그려 도트 느낌을 낸다.
+    /// - 도형: 번개 선분·구체·고리는 SpriteRenderer 로 그린다 (정수 픽셀 정렬이 쉽다).
+    /// 월드 이펙트는 HUD(정보 상자·메시지) 뒤에 그려진다.
     /// Java 비교: 코루틴(IEnumerator + yield)은 프레임 단위로 나눠 실행되는 협력적 작업이다 (스레드가 아님).
     /// </summary>
     public sealed class VfxLayer
     {
-        public const int ParticleSortingOrder = 20;
-
-        readonly RectTransform screen;
-        readonly RectTransform overlay;
+        readonly BattleWorld world;
+        readonly RectTransform hudScreen;
+        readonly Transform fx;
         readonly Material particleMaterial;
         readonly Image flash;
         readonly List<ParticleSystem> pool = new List<ParticleSystem>();
-        readonly Sprite square, circle, ring;
+        readonly Sprite circle, ring;
         int poolIndex;
 
-        public VfxLayer(RectTransform screen, Material particleMaterial, int canvasSortingOrder)
+        public VfxLayer(BattleWorld world, RectTransform hudScreen, Material particleMaterial)
         {
-            this.screen = screen;
+            this.world = world;
+            this.hudScreen = hudScreen;
             this.particleMaterial = particleMaterial;
-            overlay = Ui.Rect(screen, "Fx", 0, 0, PixelCanvasScaler.BaseWidth, PixelCanvasScaler.BaseHeight);
-            flash = Ui.Fill(screen, "ScreenFlash", 0, 0, PixelCanvasScaler.BaseWidth, PixelCanvasScaler.BaseHeight, new Color(1, 1, 1, 0));
-            square = MakeSprite(4, (x, y) => true);
+            fx = new GameObject("Fx").transform;
+            fx.SetParent(world.Root, false);
+            flash = Ui.Fill(hudScreen, "ScreenFlash", 0, 0, PixelCanvasScaler.BaseWidth, PixelCanvasScaler.BaseHeight, new Color(1, 1, 1, 0));
             circle = MakeSprite(16, (x, y) => Dist(x, y, 16) <= 1f);
             ring = MakeSprite(32, (x, y) => { var d = Dist(x, y, 32); return d <= 1f && d >= 0.8f; });
-            for (int i = 0; i < 4; i++) pool.Add(CreateEmitter("Particles" + i, canvasSortingOrder));
+            for (int i = 0; i < 4; i++) pool.Add(CreateEmitter("Particles" + i));
         }
 
-        /// <summary>오버레이 레이어를 맨 위로 (스프라이트·정보 상자보다 위)</summary>
-        public void BringToFront()
-        {
-            overlay.SetAsLastSibling();
-            flash.transform.SetAsLastSibling();
-        }
+        /// <summary>화면 번쩍임을 HUD 맨 위로 (정보 상자·메시지보다 위)</summary>
+        public void BringToFront() => flash.transform.SetAsLastSibling();
 
         static float Dist(int x, int y, int n)
         {
@@ -58,11 +56,10 @@ namespace Pokepedia.Presentation.Battle.Fx
             return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 1f);
         }
 
-        ParticleSystem CreateEmitter(string name, int canvasSortingOrder)
+        ParticleSystem CreateEmitter(string name)
         {
-            var go = new GameObject(name, typeof(RectTransform), typeof(ParticleSystem));
-            go.transform.SetParent(screen, false);
-            go.layer = screen.gameObject.layer;
+            var go = new GameObject(name, typeof(ParticleSystem));
+            go.transform.SetParent(fx, false);
             var ps = go.GetComponent<ParticleSystem>();
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             var main = ps.main;
@@ -70,7 +67,7 @@ namespace Pokepedia.Presentation.Battle.Fx
             main.loop = false;
             main.maxParticles = 600;
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            main.scalingMode = ParticleSystemScalingMode.Hierarchy; // 캔버스 배율을 따라간다 → 단위 = 화면 픽셀
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
             var emission = ps.emission; emission.enabled = false; // Emit() 으로만 낸다
             var shape = ps.shape; shape.enabled = false;
             var col = ps.colorOverLifetime;
@@ -81,14 +78,14 @@ namespace Pokepedia.Presentation.Battle.Fx
             col.color = g;
             var renderer = go.GetComponent<ParticleSystemRenderer>();
             renderer.sharedMaterial = particleMaterial;
-            renderer.sortingOrder = canvasSortingOrder + ParticleSortingOrder;
+            renderer.sortingOrder = BattleWorld.SortFx;
             renderer.renderMode = ParticleSystemRenderMode.Billboard;
             ps.Play();
             return ps;
         }
 
-        /// <summary>화면 픽셀 좌표(좌상단 원점) → 화면 RectTransform 의 로컬 좌표(가운데 원점, y 위로)</summary>
-        public static Vector3 ToLocal(Vector2 px) => new Vector3(px.x - PixelCanvasScaler.BaseWidth / 2f, PixelCanvasScaler.BaseHeight / 2f - px.y, 0);
+        /// <summary>화면 픽셀 좌표(좌상단 원점) → 월드 로컬 좌표(가운데 원점, y 위로)</summary>
+        public static Vector3 ToLocal(Vector2 px) => BattleWorld.ToLocal(px);
 
         ParticleSystem Next()
         {
@@ -131,7 +128,7 @@ namespace Pokepedia.Presentation.Battle.Fx
             var dir = (to - from).normalized;
             var flight = (to - from).magnitude / speed;
             var local = ToLocal(from);
-            var vel = new Vector3(dir.x, -dir.y, 0) * speed; // 화면 좌표는 y 아래, 로컬은 y 위
+            var vel = new Vector3(dir.x, -dir.y, 0) * speed; // 화면 좌표는 y 아래, 월드는 y 위
             for (float t = 0; t < seconds; t += Time.deltaTime)
             {
                 for (int i = 0; i < perFrame; i++)
@@ -150,12 +147,11 @@ namespace Pokepedia.Presentation.Battle.Fx
             }
         }
 
-        /// <summary>지그재그 번개 (위 → 아래). 선분 Image 를 만들고 깜빡인 뒤 지운다.</summary>
+        /// <summary>지그재그 번개 (위 → 아래). 선분을 만들고 깜빡인 뒤 지운다.</summary>
         public IEnumerator Bolt(Vector2 top, Vector2 bottom, Color core, Color glow, int flickers, float seconds)
         {
-            // 부모를 화면과 같은 크기·원점으로 둬야 선분 좌표가 화면 픽셀과 맞는다
-            // (new GameObject 의 RectTransform 기본값은 가운데 정렬 100×100 이라 그대로 쓰면 어긋난다)
-            var root = Ui.Rect(overlay, "Bolt", 0, 0, PixelCanvasScaler.BaseWidth, PixelCanvasScaler.BaseHeight).gameObject;
+            var root = new GameObject("Bolt").transform;
+            root.SetParent(fx, false);
             var points = new List<Vector2> { top };
             int segments = 7;
             for (int i = 1; i < segments; i++)
@@ -167,44 +163,44 @@ namespace Pokepedia.Presentation.Battle.Fx
             points.Add(bottom);
             for (int i = 0; i < points.Count - 1; i++)
             {
-                Segment(root.transform, points[i], points[i + 1], 5, glow);
-                Segment(root.transform, points[i], points[i + 1], 2, core);
+                Segment(root, points[i], points[i + 1], 5, glow, BattleWorld.SortFx);
+                Segment(root, points[i], points[i + 1], 2, core, BattleWorld.SortFx + 1);
             }
             float each = seconds / Mathf.Max(1, flickers * 2);
             for (int f = 0; f < flickers; f++)
             {
-                root.SetActive(true); yield return Wait(each);
-                root.SetActive(false); yield return Wait(each * 0.6f);
+                root.gameObject.SetActive(true); yield return Wait(each);
+                root.gameObject.SetActive(false); yield return Wait(each * 0.6f);
             }
-            Object.Destroy(root);
+            Object.Destroy(root.gameObject);
         }
 
-        static void Segment(Transform parent, Vector2 a, Vector2 b, float thickness, Color color)
+        void Segment(Transform parent, Vector2 a, Vector2 b, float thickness, Color color, int order)
         {
             var len = Vector2.Distance(a, b);
-            var img = Ui.Fill(parent, "Seg", a.x, a.y, len, thickness, color);
-            var rt = img.rectTransform;
-            rt.pivot = new Vector2(0, 0.5f);
-            rt.anchoredPosition = new Vector2(a.x, -a.y);
-            var angle = Mathf.Atan2(-(b.y - a.y), b.x - a.x) * Mathf.Rad2Deg;
-            rt.localEulerAngles = new Vector3(0, 0, angle);
+            var sr = world.NewRenderer(parent, "Seg", BattleWorld.PixelLeft, order);
+            sr.color = color;
+            var t = sr.transform;
+            t.localPosition = ToLocal(a);
+            t.localScale = new Vector3(len, thickness, 1);
+            t.localEulerAngles = new Vector3(0, 0, Mathf.Atan2(-(b.y - a.y), b.x - a.x) * Mathf.Rad2Deg);
         }
 
         /// <summary>구체가 from → to 로 날아간다 (발사형 기술). 도착하면 사라진다.</summary>
         public IEnumerator Orb(Vector2 from, Vector2 to, Color color, int sizePx, float seconds, Color trail)
         {
-            var img = Ui.Fill(overlay, "Orb", 0, 0, sizePx, sizePx, color);
-            img.sprite = circle;
-            img.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            var sr = world.NewRenderer(fx, "Orb", circle, BattleWorld.SortFx);
+            sr.color = color;
+            sr.transform.localScale = new Vector3(sizePx / 16f, sizePx / 16f, 1);
             for (float t = 0; t < seconds; t += Time.deltaTime)
             {
                 var p = Vector2.Lerp(from, to, t / seconds);
                 p.y -= Mathf.Sin(t / seconds * Mathf.PI) * 14; // 살짝 포물선
-                img.rectTransform.anchoredPosition = new Vector2(Mathf.Round(p.x), -Mathf.Round(p.y));
+                sr.transform.localPosition = ToLocal(new Vector2(Mathf.Round(p.x), Mathf.Round(p.y)));
                 Burst(p, trail, color, 1, 0, 6, 0.25f, 2);
                 yield return null;
             }
-            Object.Destroy(img.gameObject);
+            Object.Destroy(sr.gameObject);
         }
 
         /// <summary>대상 위치에서 퍼지는 고리 (효과형 기술)</summary>
@@ -212,24 +208,22 @@ namespace Pokepedia.Presentation.Battle.Fx
         {
             for (int i = 0; i < count; i++)
             {
-                var img = Ui.Fill(overlay, "Ring", 0, 0, 8, 8, color);
-                img.sprite = ring;
-                img.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-                img.rectTransform.anchoredPosition = new Vector2(at.x, -at.y);
+                var sr = world.NewRenderer(fx, "Ring", ring, BattleWorld.SortFx);
+                sr.transform.localPosition = ToLocal(at);
                 float each = seconds / count;
                 for (float t = 0; t < each; t += Time.deltaTime)
                 {
                     float k = t / each;
                     float s = Mathf.Round(Mathf.Lerp(8, 64, k) / 2) * 2;
-                    img.rectTransform.sizeDelta = new Vector2(s, s);
-                    var c = color; c.a = 1 - k; img.color = c;
+                    sr.transform.localScale = new Vector3(s / 32f, s / 32f, 1);
+                    var c = color; c.a = 1 - k; sr.color = c;
                     yield return null;
                 }
-                Object.Destroy(img.gameObject);
+                Object.Destroy(sr.gameObject);
             }
         }
 
-        /// <summary>화면 전체 번쩍임 (급소 등)</summary>
+        /// <summary>화면 전체 번쩍임 (급소 등). HUD 맨 위 Image 라서 글자까지 덮는다.</summary>
         public IEnumerator ScreenFlash(Color color, float seconds)
         {
             for (float t = 0; t < seconds; t += Time.deltaTime)
@@ -241,17 +235,21 @@ namespace Pokepedia.Presentation.Battle.Fx
             flash.color = new Color(1, 1, 1, 0);
         }
 
-        /// <summary>화면 흔들림 (정수 픽셀)</summary>
+        /// <summary>화면 흔들림 (정수 픽셀). 월드 루트와 HUD 영역을 같은 만큼 움직인다.</summary>
         public IEnumerator Shake(int amplitude, float seconds)
         {
-            var home = screen.anchoredPosition;
+            var worldHome = world.Root.localPosition;
+            var hudHome = hudScreen.anchoredPosition;
             for (float t = 0; t < seconds; t += Time.deltaTime)
             {
                 float k = 1 - t / seconds;
-                screen.anchoredPosition = home + new Vector2(Mathf.Round(Random.Range(-1f, 1f) * amplitude * k), Mathf.Round(Random.Range(-1f, 1f) * amplitude * k));
+                var o = new Vector2(Mathf.Round(Random.Range(-1f, 1f) * amplitude * k), Mathf.Round(Random.Range(-1f, 1f) * amplitude * k));
+                world.Root.localPosition = worldHome + (Vector3)o;
+                hudScreen.anchoredPosition = hudHome + o;
                 yield return null;
             }
-            screen.anchoredPosition = home;
+            world.Root.localPosition = worldHome;
+            hudScreen.anchoredPosition = hudHome;
         }
 
         public static IEnumerator Wait(float seconds)
