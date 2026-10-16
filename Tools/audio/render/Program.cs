@@ -88,6 +88,11 @@ namespace Pokepedia.Tools.AudioRender
                 AttackElement el = e;
                 jobs.Add(new Job { Name = "type_" + el.ToString().ToLowerInvariant(), Render = () => TypeAttackSounds.Render(el, null, 0, len, sr) });
             }
+            foreach (string id in TypeAttackSounds.AlternateIds) // 보관한 공격음(두 번째 기술용)
+            {
+                string a = id;
+                jobs.Add(new Job { Name = "alt_" + a, Render = () => TypeAttackSounds.RenderAlternate(a, 0, len, sr) });
+            }
             foreach (string name in TypeAttackSounds.CandidateNames) // M3-3 후보(고른 뒤 지운다)
             {
                 string n = name;
