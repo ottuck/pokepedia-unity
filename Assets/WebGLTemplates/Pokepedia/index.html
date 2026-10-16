@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>{{{ PRODUCT_NAME }}}</title>
+    <style>
+      html, body { margin: 0; padding: 0; height: 100%; background: #0f380f; overflow: hidden; overscroll-behavior: none; touch-action: none; }
+      /* 게임보이 비율(10:9)을 유지하며 가용 영역(안전 영역 제외)에 맞춘다 */
+      #stage { position: fixed; inset: 0;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        display: flex; align-items: center; justify-content: center; }
+      #frame { aspect-ratio: 10 / 9; width: min(100%, calc((100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 10 / 9)); }
+      #unity-canvas { width: 100%; height: 100%; display: block; background: #0f380f; outline: none; image-rendering: pixelated; }
+      #loading { position: fixed; left: 0; right: 0; bottom: 8px; text-align: center; color: #9bbc0f; font: 12px monospace; }
+    </style>
+  </head>
+  <body>
+    <div id="stage"><div id="frame"><canvas id="unity-canvas" tabindex="0"></canvas></div></div>
+    <div id="loading">loading 0%</div>
+    <script src="Build/{{{ LOADER_FILENAME }}}"></script>
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+      var loading = document.querySelector("#loading");
+
+      // 호스트(Pokepedia) origin 허용 목록. init 수신 검증과 jslib 의 postMessage 대상에 함께 쓴다.
+      // 규약: docs/bridge-protocol.md
+      window.pokeHost = {
+        instance: null,
+        pending: [],
+        allowedOrigins: ["https://pokepedia.dev", "https://www.pokepedia.dev", "http://localhost:3000", "http://localhost:8000"]
+      };
+
+      // iframe 안에서 방향키·스페이스가 부모 페이지를 스크롤하지 않도록 막는다
+      var BLOCKED = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"];
+      window.addEventListener("keydown", function (e) { if (BLOCKED.indexOf(e.code) >= 0) e.preventDefault(); }, { passive: false });
+      // 클릭/터치 시 캔버스에 포커스를 줘야 키 입력이 iframe 안에서 Unity 로 전달된다
+      ["pointerdown", "touchstart"].forEach(function (ev) { document.addEventListener(ev, function () { canvas.focus(); window.focus(); }, { passive: true }); });
+
+      // 호스트 → Unity: origin 검증 후 전달. Unity 로딩 전에 오면 보관했다가 전달한다.
+      window.addEventListener("message", function (e) {
+        if (window.pokeHost.allowedOrigins.indexOf(e.origin) < 0) return;
+        var d = e.data;
+        if (!d || typeof d !== "object" || d.type !== "init") return;
+        var json = JSON.stringify(d);
+        if (window.pokeHost.instance) window.pokeHost.instance.SendMessage("HostBridge", "OnHostInit", json);
+        else window.pokeHost.pending.push(json);
+      });
+
+      createUnityInstance(canvas, {
+        arguments: [],
+        dataUrl: "Build/{{{ DATA_FILENAME }}}",
+        frameworkUrl: "Build/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_THREADS
+        workerUrl: "Build/{{{ WORKER_FILENAME }}}",
+#endif
+#if USE_WASM
+        codeUrl: "Build/{{{ CODE_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+        symbolsUrl: "Build/{{{ SYMBOLS_FILENAME }}}",
+#endif
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+        productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+        productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+      }, function (p) { loading.textContent = "loading " + Math.round(p * 100) + "%"; })
+      .then(function (instance) {
+        window.pokeHost.instance = instance;
+        loading.style.display = "none";
+        window.pokeHost.pending.splice(0).forEach(function (j) { instance.SendMessage("HostBridge", "OnHostInit", j); });
+      }).catch(function (m) { loading.textContent = "load failed: " + m; });
+    </script>
+  </body>
+</html>

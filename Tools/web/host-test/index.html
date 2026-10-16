@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>host-test (Pokepedia 모의 호스트)</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 12px; background: #111; color: #ddd; }
+  #wrap { max-width: 720px; margin: 0 auto; }
+  iframe { width: 100%; aspect-ratio: 10 / 9; border: 2px solid #444; background: #000; }
+  pre { background: #000; padding: 8px; height: 160px; overflow: auto; font-size: 12px; }
+  .spacer { height: 1200px; } /* 페이지 스크롤 가능 상태에서 방향키/스페이스 간섭 확인용 */
+  button { margin-right: 6px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h3>host-test (모의 Pokepedia)</h3>
+  <div>
+    <button id="reload">iframe 다시 로드(?host=pokepedia)</button>
+    <button id="reloadDemo">iframe 다시 로드(host 파라미터 없음)</button>
+    <label><input type="checkbox" id="mute"> init 보내지 않기(타임아웃/재시도 테스트)</label>
+    <span id="scrollY"></span>
+  </div>
+  <iframe id="game" allow="autoplay"></iframe>
+  <pre id="log"></pre>
+  <div class="spacer">↓ 스크롤 가능한 긴 페이지 (iframe 에 포커스 후 방향키/스페이스를 눌러 이 페이지가 스크롤되는지 확인)</div>
+</div>
+<script>
+  const GAME_ORIGIN = new URLSearchParams(location.search).get("game") || "http://localhost:8001";
+  const frame = document.getElementById("game");
+  const logEl = document.getElementById("log");
+  const log = (s) => { logEl.textContent = new Date().toISOString().slice(11, 23) + " " + s + "\n" + logEl.textContent; };
+  window.__hostLog = [];
+
+  function load(host) {
+    frame.src = GAME_ORIGIN + "/index.html" + (host ? "?host=pokepedia" : "");
+    log("iframe load " + frame.src);
+  }
+  document.getElementById("reload").onclick = () => load(true);
+  document.getElementById("reloadDemo").onclick = () => load(false);
+
+  window.addEventListener("message", (e) => {
+    if (e.origin !== GAME_ORIGIN) { log("무시: 알 수 없는 origin " + e.origin); return; }
+    const d = e.data;
+    window.__hostLog.push(d);
+    log("<- " + JSON.stringify(d));
+    if (d && d.type === "ready" && !document.getElementById("mute").checked) {
+      // 보유 포켓몬 전체를 한 번 전달 (실제로는 Supabase user_sticker 조회 결과)
+      const msg = { type: "init", v: 1, locale: "ko", owned: [{ id: 25, shiny: false }, { id: 9, shiny: true }, { id: 6, shiny: false }, { id: 1, shiny: false }] };
+      frame.contentWindow.postMessage(msg, GAME_ORIGIN);
+      log("-> init " + JSON.stringify(msg));
+    }
+  });
+  setInterval(() => { document.getElementById("scrollY").textContent = " pageScrollY=" + Math.round(window.scrollY); }, 200);
+  load(true);
+</script>
+</body>
+</html>

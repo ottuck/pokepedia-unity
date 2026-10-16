@@ -1,0 +1,199 @@
+{
+  "repo": "PokeAPI/sprites",
+  "commit": "6e7928dcbd547d50b5c644fe76e093e8da98ac3f",
+  "fetchedAt": "2026-10-16",
+  "files": [
+    {
+      "id": 25,
+      "side": "front",
+      "variant": "normal",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/25.gif",
+      "sha256": "0ddc94c6f8cd432e3fd8972b4eca2a7b72fbfaf130c1970726089feb6fdbacc0",
+      "bytes": 23958
+    },
+    {
+      "id": 25,
+      "side": "front",
+      "variant": "shiny",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/shiny/25.gif",
+      "sha256": "7408fcf6fb66d741391537a0ee4dd8115d1edb1bb5eacb68874ee58424fe81ad",
+      "bytes": 23958
+    },
+    {
+      "id": 25,
+      "side": "back",
+      "variant": "normal",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/back/25.gif",
+      "sha256": "77887c71619da561ebdd50208892e1e323298c305f06c50c42a63c3e94b2152c",
+      "bytes": 21063
+    },
+    {
+      "id": 25,
+      "side": "back",
+      "variant": "shiny",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/back/shiny/25.gif",
+      "sha256": "a76bb459deeb293d4b60ff665b015e3bf2028d7cbdb8e2ad355dc0179388e57e",
+      "bytes": 21058
+    },
+    {
+      "id": 9,
+      "side": "front",
+      "variant": "normal",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/9.gif",
+      "sha256": "e162c02d4df892f8f659bf31b1dc442facbb1ba5ddc94f24093b6b4af9a1eddd",
+      "bytes": 121970
+    },
+    {
+      "id": 9,
+      "side": "front",
+      "variant": "shiny",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/shiny/9.gif",
+      "sha256": "8ca84dc36bc4dce9ef7e46b6a440ae7bedbd77fd68710f8c2406bdef4982a3b2",
+      "bytes": 121970
+    },
+    {
+      "id": 9,
+      "side": "back",
+      "variant": "normal",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/back/9.gif",
+      "sha256": "95e32e3fc0562efab9ec25cee489b0c44b579ab290f1f9fe65d0da1975f15d12",
+      "bytes": 122458
+    },
+    {
+      "id": 9,
+      "side": "back",
+      "variant": "shiny",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/back/shiny/9.gif",
+      "sha256": "b2317ba457c73bda80215c234edb5d0b7fd22379ffb17b100b755dcf10080699",
+      "bytes": 122449
+    },
+    {
+      "id": 6,
+      "side": "front",
+      "variant": "normal",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/6.gif",
+      "sha256": "249c2b1d43cd5e3a00e7029b007aabef7559065c84ae8826a775614c42356c6a",
+      "bytes": 82587
+    },
+    {
+      "id": 6,
+      "side": "front",
+      "variant": "shiny",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/shiny/6.gif",
+      "sha256": "4155eb3a4f235a97858634a3b4be4fc4533ca24433d8787cda967d3aaf39a369",
+      "bytes": 82587
+    },
+    {
+      "id": 6,
+      "side": "back",
+      "variant": "normal",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/back/6.gif",
+      "sha256": "31de9aab005b590aa72eefef2c861049df1eb2f74a95a333aa5a95c29c8f64f8",
+      "bytes": 79077
+    },
+    {
+      "id": 6,
+      "side": "back",
+      "variant": "shiny",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/back/shiny/6.gif",
+      "sha256": "edffb2f6a75ddb3dd5820ba6bd5be113e44c5f239e723251edbb27ad098ca66e",
+      "bytes": 79080
+    },
+    {
+      "id": 3,
+      "side": "front",
+      "variant": "normal",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/3.gif",
+      "sha256": "a93402714a0e8f5ee92a1b995c5e9f3a02034037efebc9c99b2f2b18cc03a4a3",
+      "bytes": 125309
+    },
+    {
+      "id": 3,
+      "side": "front",
+      "variant": "shiny",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/shiny/3.gif",
+      "sha256": "caf0cc091db48dd032affa2e6ad8c4bb6951f9f08847c20cd9f287cc1ff8acc1",
+      "bytes": 125309
+    },
+    {
+      "id": 3,
+      "side": "back",
+      "variant": "normal",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/back/3.gif",
+      "sha256": "c1adfd7f5bc66ad460a642f0e16708b3575945275878a1dd4036bd167333602b",
+      "bytes": 104004
+    },
+    {
+      "id": 3,
+      "side": "back",
+      "variant": "shiny",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/back/shiny/3.gif",
+      "sha256": "e147f2735e407032a1e361cb7ae542b1fe2a629d054755c2051a0af62f38e923",
+      "bytes": 103995
+    },
+    {
+      "id": 94,
+      "side": "front",
+      "variant": "normal",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/94.gif",
+      "sha256": "a6abb74d994fbc18581c519bfe047743c9523c3a30898c48d3536c3f3f0683ad",
+      "bytes": 24933
+    },
+    {
+      "id": 94,
+      "side": "front",
+      "variant": "shiny",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/shiny/94.gif",
+      "sha256": "19489c3ccb1c2de62dcba14f4abb63af3075f620d6da39f0ae3c563e19cd8ef0",
+      "bytes": 24933
+    },
+    {
+      "id": 94,
+      "side": "back",
+      "variant": "normal",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/back/94.gif",
+      "sha256": "b6beedab45699d9677bd498fc87d1bedc4a0c37fe1a2ac64d211082f192c7eb4",
+      "bytes": 32708
+    },
+    {
+      "id": 94,
+      "side": "back",
+      "variant": "shiny",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/back/shiny/94.gif",
+      "sha256": "673efd775ac854a9ce6353b463a1d412103750859db30786b805466d9f58a49f",
+      "bytes": 32708
+    },
+    {
+      "id": 150,
+      "side": "front",
+      "variant": "normal",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/150.gif",
+      "sha256": "2c3040b479aa48dfcac4bec578ce06ebdd63123f0a4307de8267e77fab85bd32",
+      "bytes": 46133
+    },
+    {
+      "id": 150,
+      "side": "front",
+      "variant": "shiny",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/shiny/150.gif",
+      "sha256": "eeefab5cbb85d9cfc436b60910872bd1a0e4e17d60854cf3390cd97f99020e66",
+      "bytes": 46133
+    },
+    {
+      "id": 150,
+      "side": "back",
+      "variant": "normal",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/back/150.gif",
+      "sha256": "e31fb2b128d10b6d7ebb4074122ddc7608261006d6f8214b2c3844cfd8f4a09d",
+      "bytes": 48197
+    },
+    {
+      "id": 150,
+      "side": "back",
+      "variant": "shiny",
+      "path": "sprites/pokemon/versions/generation-v/black-white/animated/back/shiny/150.gif",
+      "sha256": "faa455e7d0cea07fa00ffbfc8cf11fe8b2bb3f177ff78e1532348f4baa427f2f",
+      "bytes": 48192
+    }
+  ]
+}

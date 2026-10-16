@@ -1,0 +1,46 @@
+# --- Unity ---
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+crashlytics-build.properties
+*.apk
+*.aab
+*.unitypackage
+!/Tools/**/*.unitypackage
+
+# IDE / 생성 파일
+.vs/
+.idea/
+.vscode/
+*.csproj
+!/Tests.Dotnet/*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+
+# --- 순수 C# 테스트 (dotnet) ---
+/Tests.Dotnet/bin/
+/Tests.Dotnet/obj/
+
+# --- 스프라이트: 저장소에 커밋하지 않음 (Tools/sprites/build_sprites.py 로 재현) ---
+/Assets/Content/Sprites/
+/Assets/Content/Sprites.meta
+/Tools/sprites/.venv/
+/Tools/sprites/_work/
+
+# --- 기타 ---
+__pycache__/
+.DS_Store
+Thumbs.db

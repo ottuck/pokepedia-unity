@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Unity 없이 순수 C# 도메인 테스트를 돌리는 프로젝트 (설계 문서 10.5).
+    Assets/ 의 소스를 복사하지 않고 링크만 한다. UnityEngine 참조가 없으므로
+    링크된 파일이 UnityEngine 을 쓰면 여기서 빌드가 깨진다.
+    Assets 밖에 두어 Unity 가 이 폴더를 임포트하지 않게 한다.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- 로컬에 .NET 8 런타임이 없고 더 새 런타임만 있어도 실행되게 한다 (CI 는 8.0 설치). -->
+    <RollForward>Major</RollForward>
+    <!-- Unity 6 의 C# 수준에 맞춘다: Unity 에서 컴파일 안 되는 문법을 CI 에서 걸러낸다. -->
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>Pokepedia.Tests</RootNamespace>
+    <!-- SDK 기본 글롭은 이 폴더만 보므로 끄고 아래에서 명시적으로 링크한다. -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Assets\Scripts\Domain\**\*.cs" Link="Domain\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Assets\Scripts\Content\**\*.cs" Link="Content\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Assets\Scripts\Application\**\*.cs" Link="Application\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Assets\Tests\EditMode\**\*.cs" Link="Tests\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Unity Test Framework 가 NUnit 3 계열이므로 3.x 로 고정 (NUnit 4 는 Assert.AreEqual 등 클래식 API 가 분리됨). -->
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="6.3.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+  </ItemGroup>
+
+</Project>

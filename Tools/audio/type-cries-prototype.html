@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>속성 기반 울음소리 시제품</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #111; color: #ddd; margin: 0; padding: 16px; }
+  .wrap { max-width: 760px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border-bottom: 1px solid #333; padding: 8px; text-align: left; vertical-align: middle; }
+  button { background: #8bac0f; color: #0f380f; border: 0; padding: 6px 12px; font-weight: 600; cursor: pointer; border-radius: 3px; }
+  button.sub { background: #306230; color: #9bbc0f; }
+  input[type=range] { width: 120px; vertical-align: middle; }
+  small, .muted { color: #999; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 8px; margin-right: 3px; color: #111; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h3>속성 기반 울음소리 (새로 합성)</h3>
+<p><small>원본 음원을 쓰지 않고 브라우저에서 즉석 합성합니다. 규칙은 "주 속성이 소리의 성격, 보조 속성이 덧칠, 종족별 음높이·길이는 데이터"입니다. 같은 규칙을 Unity에서 그대로 생성하거나 WAV로 구워 쓸 수 있습니다. 버튼을 누를 때마다 같은 소리가 납니다(시드 고정).<br>
+v3: 전기·물·불꽃·풀·비행은 <b>노이즈 가공(실제 소리 흉내)</b> 방식입니다 — 전기 = 충전 → 낙뢰 크랙 → 전류 아크 → 천둥 꼬리(라이트닝 스킬), 물 = 물살 + 거품 + 마법 반짝임, 불꽃 = 화악 발사 + 화염 + 착탄 폭발(파이어볼), 풀 = 바람 + 잎사귀 + 덩굴 채찍, 비행 = 날갯짓 3번 + 돌풍(휘파람 제거).</small></p>
+
+<h4>포켓몬별</h4>
+<table>
+  <thead><tr><th>포켓몬</th><th>속성</th><th>재생</th><th>음높이</th><th>길이</th></tr></thead>
+  <tbody id="mons"></tbody>
+</table>
+
+<h4>속성 단독 (보조 속성 없이, 기본 음높이)</h4>
+<div id="types"></div>
+<p class="muted"><small>로스터에 쓰이는 속성만 만들었습니다: 전기, 물, 불꽃, 비행, 풀, 독, 고스트, 에스퍼.</small></p>
+</div>
+
+<script>
+const TYPE_COLOR = { electric: "#f8d030", water: "#6890f0", fire: "#f08030", flying: "#a890f0", grass: "#78c850", poison: "#a040a0", ghost: "#705898", psychic: "#f85888" };
+const TYPE_KO = { electric: "전기", water: "물", fire: "불꽃", flying: "비행", grass: "풀", poison: "독", ghost: "고스트", psychic: "에스퍼" };
+
+// 종족 데이터: 엔진/연출은 이 값만 본다. pitch = 반음 단위 오프셋(체급이 클수록 낮게), len = 길이 배수
+const MONS = [
+  { id: 25,  name: "피카츄",   types: ["electric"],          pitch: 4,  len: 0.9 },
+  { id: 9,   name: "거북왕",   types: ["water"],             pitch: -5, len: 1.15 },
+  { id: 6,   name: "리자몽",   types: ["fire", "flying"],    pitch: -3, len: 1.2 },
+  { id: 3,   name: "이상해꽃", types: ["grass", "poison"],   pitch: -4, len: 1.1 },
+  { id: 94,  name: "팬텀",     types: ["ghost", "poison"],   pitch: 0,  len: 1.1 },
+  { id: 150, name: "뮤츠",     types: ["psychic"],           pitch: -2, len: 1.3 },
+];
+
+let ctx;
+function ac() { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === "suspended") ctx.resume(); return ctx; }
+
+// --- 합성 도구 ------------------------------------------------------------
+function env(param, t0, points) { // points: [[시간(초), 값], ...] 선형 보간
+  param.cancelScheduledValues(t0);
+  param.setValueAtTime(points[0][1], t0 + points[0][0]);
+  for (let i = 1; i < points.length; i++) param.linearRampToValueAtTime(points[i][1], t0 + points[i][0]);
+}
+function scalePts(points, k, m) { return points.map(([t, v]) => [t * k, v * m]); }
+function voice(c, dest, t0, { wave = "square", freq, gain, vibHz = 0, vibDepth = 0, detune = 0 }) {
+  const o = c.createOscillator(); o.type = wave; o.detune.value = detune;
+  const g = c.createGain(); g.gain.value = 0;
+  env(o.frequency, t0, freq); env(g.gain, t0, gain);
+  if (vibHz) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = vibHz; lg.gain.value = vibDepth; l.connect(lg).connect(o.frequency); l.start(t0); l.stop(t0 + gain[gain.length - 1][0] + 0.05); }
+  o.connect(g).connect(dest); o.start(t0); o.stop(t0 + gain[gain.length - 1][0] + 0.05);
+  return g;
+}
+let noiseBuf;
+function noise(c, dest, t0, { gain, type = "bandpass", f = 2000, q = 1, fEnv = null }) {
+  if (!noiseBuf) { noiseBuf = c.createBuffer(1, c.sampleRate, c.sampleRate); const d = noiseBuf.getChannelData(0); let s = 12345; for (let i = 0; i < d.length; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; d[i] = s / 0x3fffffff - 1; } }
+  const n = c.createBufferSource(); n.buffer = noiseBuf; n.loop = true;
+  const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q;
+  if (fEnv) env(fl.frequency, t0, fEnv);
+  const g = c.createGain(); g.gain.value = 0; env(g.gain, t0, gain);
+  n.connect(fl).connect(g).connect(dest); n.start(t0); n.stop(t0 + gain[gain.length - 1][0] + 0.05);
+}
+
+// --- 노이즈·그레인 도구 (물·불·풀·전기는 "실제 소리"에 가깝게 노이즈 가공으로 만든다) ------------
+function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+let white, brown;
+function buffers(c) {
+  if (white) return;
+  const n = c.sampleRate * 2, r = rng(7);
+  white = c.createBuffer(1, n, c.sampleRate); brown = c.createBuffer(1, n, c.sampleRate);
+  const w = white.getChannelData(0), b = brown.getChannelData(0); let last = 0;
+  for (let i = 0; i < n; i++) { const x = r() * 2 - 1; w[i] = x; last = (last + 0.02 * x) / 1.02; b[i] = last * 3.5; } // 브라운 노이즈 = 저역이 두터운 "우르릉"
+}
+function src(c, buf, t, dur, offset = 0) { const n = c.createBufferSource(); n.buffer = buf; n.loop = true; n.start(t, offset % 1.8); n.stop(t + dur + 0.05); return n; }
+function filt(c, type, f, q = 1) { const x = c.createBiquadFilter(); x.type = type; x.frequency.value = f; x.Q.value = q; return x; }
+function gainEnv(c, t, pts) { const g = c.createGain(); g.gain.value = 0; env(g.gain, t, pts); return g; }
+function expRamp(param, t0, a, t1, b) { param.setValueAtTime(a, t0); param.exponentialRampToValueAtTime(b, t1); }
+// 짧은 소리 알갱이: 노이즈 → 필터 → 빠른 어택, 지수 감쇠
+function grain(c, d, t, { buf = white, dur, peak, type = "bandpass", f = 2000, q = 1, off = 0 }) {
+  const n = c.createBufferSource(); n.buffer = buf; const fl = filt(c, type, f, q); const g = c.createGain();
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + Math.min(0.002, dur * 0.3)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  n.connect(fl).connect(g).connect(d); n.start(t, off % 1.8); n.stop(t + dur + 0.02);
+}
+// 짧은 사인/삼각 "톡" (지수 피치 이동)
+function blip(c, d, t, { wave = "sine", f0, f1, dur, peak }) {
+  const o = c.createOscillator(); o.type = wave; expRamp(o.frequency, t, f0, t + dur, f1);
+  const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(d); o.start(t); o.stop(t + dur + 0.02);
+}
+function clipCurve(k) { const a = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; a[i] = Math.tanh(k * x) / Math.tanh(k); } return a; }
+
+// --- 속성별 레시피: (ctx, 출력, 시작시각, 음높이 배수 p, 길이 배수 L, 세기 v) ----------------
+const RECIPES = {
+  // 전기(라이트닝 스킬): 충전 "위이잉" → 낙뢰 "콰직!"(전대역 크랙 + 잔 크랙) → 전류 "지지직"(찌그러진 버즈를
+  //       불규칙하게 끊은 아크) → 천둥 "우르릉"(저역 브라운 노이즈 꼬리).
+  electric(c, d, t, p, L, v) {
+    buffers(c);
+    const r = rng(25), ch = 0.22 * L, T = 1.1 * L, s = t + ch; // s = 낙뢰 시점
+    // 1) 충전: 올라가는 톱니 + 빠른 떨림, 스파크가 점점 촘촘해짐
+    const co = c.createOscillator(); co.type = "sawtooth"; expRamp(co.frequency, t, 200 * p, s, 1700 * p);
+    const cl = c.createOscillator(), clg = c.createGain(); cl.frequency.value = 28; clg.gain.value = 70 * p; cl.connect(clg).connect(co.frequency);
+    co.connect(filt(c, "bandpass", 1400 * p, 1.1)).connect(gainEnv(c, t, [[0, 0], [ch * 0.9, 0.14 * v], [ch, 0]])).connect(d);
+    for (const x of [co, cl]) { x.start(t); x.stop(s + 0.02); }
+    for (let i = 0; i < 18; i++) grain(c, d, t + ch * Math.sqrt(r()), { dur: 0.002 + r() * 0.005, peak: (0.06 + 0.2 * r()) * v, type: "highpass", f: 4000 + r() * 3000, off: r() * 2 });
+    // 2) 낙뢰 크랙
+    grain(c, d, s, { dur: 0.07, peak: 1.3 * v, type: "highpass", f: 400, off: 0.33 });
+    grain(c, d, s, { buf: brown, dur: 0.05, peak: 1.0 * v, type: "lowpass", f: 3500, off: 1.2 });
+    [0.03, 0.065, 0.11, 0.16].forEach((o, i) => grain(c, d, s + o * L, { dur: 0.025 + 0.01 * i, peak: (0.75 - 0.15 * i) * v, type: "highpass", f: 700 + i * 500, off: 0.5 + i * 0.3 }));
+    // 3) 전류 아크: 찌그러진 저음 버즈를 10~35ms 켜짐 / 3~20ms 꺼짐으로 불규칙하게 끊음
+    const A = 0.45 * L;
+    const shaper = c.createWaveShaper(); shaper.curve = clipCurve(30);
+    const gate = c.createGain(); gate.gain.setValueAtTime(0, t);
+    for (let tt = 0.02; tt < A;) {
+      const on = 0.01 + r() * 0.025, off = 0.003 + r() * 0.017, a = (0.4 + 0.6 * r()) * 0.35 * v * Math.pow(1 - tt / A, 1.5);
+      gate.gain.setValueAtTime(a, s + tt); gate.gain.setValueAtTime(0, s + tt + on); tt += on + off;
+    }
+    for (const [w, f, det] of [["sawtooth", 85, 0], ["square", 172, 20]]) {
+      const o = c.createOscillator(); o.type = w; o.frequency.value = f * p; o.detune.value = det;
+      const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = 53; lg.gain.value = 30 * p; l.connect(lg).connect(o.frequency);
+      o.connect(shaper); for (const x of [o, l]) { x.start(s); x.stop(s + A + 0.05); }
+    }
+    shaper.connect(filt(c, "highpass", 900)).connect(gate).connect(d);
+    for (let i = 0; i < 30; i++) grain(c, d, s + Math.pow(r(), 1.6) * A, { dur: 0.002 + r() * 0.006, peak: (0.15 + 0.35 * r()) * v, type: "highpass", f: 2500 + r() * 5000, off: r() * 2 });
+    // 4) 천둥 꼬리: 저역 브라운 노이즈가 일렁이며 길게 사라짐
+    const b = src(c, brown, s, T - ch + 0.1, 0.9), blp = filt(c, "lowpass", 240 * Math.sqrt(p), 0.7), fl = c.createGain();
+    fl.gain.setValueAtTime(0, s);
+    for (let tt = 0.01; tt < T - ch; tt += 0.045) fl.gain.linearRampToValueAtTime((0.35 + 0.65 * r()) * 1.1 * v * Math.exp(-3 * tt / (T - ch)), s + tt);
+    fl.gain.linearRampToValueAtTime(0, s + T - ch + 0.05);
+    b.connect(blp).connect(fl).connect(d);
+  },
+  // 물(물 마법): 차오르는 물살(노이즈 밴드패스가 출렁이며 이동) + 거품 "뽀글"(위로 미끄러지는 짧은 사인)
+  //       + 첨벙 + 마법 반짝임(맑은 아르페지오와 메아리)
+  water(c, d, t, p, L, v) {
+    buffers(c);
+    const r = rng(9), T = 0.95 * L;
+    const n = src(c, white, t, T, 0.3), bp = filt(c, "bandpass", 500 * p, 2.2);
+    env(bp.frequency, t, [[0, 300 * p], [0.35 * L, 1300 * p], [0.95 * L, 450 * p]]);
+    const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = 6; lg.gain.value = 180 * p; l.connect(lg).connect(bp.frequency); l.start(t); l.stop(t + T + 0.05);
+    n.connect(bp).connect(gainEnv(c, t, [[0, 0], [0.25 * L, 0.5 * v], [0.6 * L, 0.35 * v], [T, 0]])).connect(d);
+    for (let i = 0; i < 18; i++) { // 거품
+      const f0 = (450 + r() * 900) * p, dur = 0.025 + r() * 0.05;
+      blip(c, d, t + 0.04 + r() * (T - 0.15), { f0, f1: f0 * (1.7 + r() * 0.8), dur, peak: (0.08 + 0.12 * r()) * v });
+    }
+    grain(c, d, t, { dur: 0.22, peak: 0.3 * v, type: "highpass", f: 1500, off: 0.7 }); // 첨벙
+    const echo = c.createDelay(); echo.delayTime.value = 0.12; const fb = c.createGain(); fb.gain.value = 0.35;
+    const mix = c.createGain(); mix.gain.value = 1; mix.connect(d); mix.connect(echo); echo.connect(fb).connect(echo); echo.connect(d);
+    [1, 1.26, 1.5, 2].forEach((k, i) => blip(c, mix, t + 0.1 * L + i * 0.07 * L, { wave: "triangle", f0: 1046 * k * p, f1: 1046 * k * p * 1.01, dur: 0.18, peak: 0.06 * v }));
+  },
+  // 불꽃(파이어볼): 점화·발사 "화악"(로우패스가 확 열리는 노이즈) + 화염 몸통(일렁이는 브라운 노이즈)
+  //       + 타닥거림 + 중간에 착탄 폭발 "쾅"(저음 낙하 + 노이즈 버스트)
+  fire(c, d, t, p, L, v) {
+    buffers(c);
+    const r = rng(6), T = 1.0 * L, hit = 0.5 * L;
+    const w = src(c, white, t, hit, 0.1), lp = filt(c, "lowpass", 300, 1.2);
+    env(lp.frequency, t, [[0, 250], [0.1 * L, 3800 * p], [hit, 900 * p]]);
+    w.connect(lp).connect(gainEnv(c, t, [[0, 0], [0.06 * L, 0.45 * v], [0.38 * L, 0.2 * v], [hit, 0.05 * v]])).connect(d);
+    const b = src(c, brown, t, T, 0.5), blp = filt(c, "lowpass", 800 * p, 0.8), fl = c.createGain(); fl.gain.setValueAtTime(0, t);
+    for (let tt = 0; tt < T; tt += 0.03) fl.gain.linearRampToValueAtTime((0.25 + 0.45 * r()) * v * (tt < 0.05 ? tt / 0.05 : 1) * (1 - 0.7 * tt / T), t + tt);
+    fl.gain.linearRampToValueAtTime(0, t + T);
+    b.connect(blp).connect(fl).connect(d);
+    for (let i = 0; i < 45; i++) grain(c, d, t + 0.03 + r() * (T - 0.05), { dur: 0.002 + r() * 0.005, peak: (0.1 + 0.3 * r()) * v, f: 1500 + r() * 4000, q: 2, off: r() * 2 });
+    blip(c, d, t + hit, { f0: 150 * p, f1: 32, dur: 0.4 * L, peak: 0.6 * v }); // 착탄 "쿵"
+    grain(c, d, t + hit, { buf: brown, dur: 0.45 * L, peak: 0.9 * v, type: "lowpass", f: 1200 * p, off: 1.1 }); // 폭발 "콰"
+    grain(c, d, t + hit, { dur: 0.25 * L, peak: 0.25 * v, type: "bandpass", f: 2500, q: 0.7, off: 0.9 });
+  },
+  // 풀(자연의 공격): 휘몰아치는 바람 + 잎사귀 "사각사각"(고역 노이즈 미세 알갱이 다수)
+  //       + 덩굴 채찍 "휙-착"(빠른 스윕 후 공명하는 스냅) + 나무 울림 "똑"
+  grass(c, d, t, p, L, v) {
+    buffers(c);
+    const r = rng(3), T = 0.95 * L, snap = 0.58 * L;
+    const w = src(c, white, t, T, 0.4), bp = filt(c, "bandpass", 600 * p, 1.2);
+    env(bp.frequency, t, [[0, 450 * p], [0.35 * L, 2000 * p], [0.85 * L, 650 * p]]);
+    w.connect(bp).connect(gainEnv(c, t, [[0, 0], [0.3 * L, 0.3 * v], [0.85 * L, 0]])).connect(d);
+    for (let i = 0; i < 80; i++) grain(c, d, t + r() * 0.8 * L, { dur: 0.006 + r() * 0.018, peak: (0.05 + 0.15 * r()) * v, f: 3000 + r() * 5000, q: 1.5, off: r() * 2 });
+    const wh = src(c, white, t + snap - 0.13 * L, 0.13 * L, 1.3), whf = filt(c, "bandpass", 600, 2);
+    env(whf.frequency, t + snap - 0.13 * L, [[0, 500], [0.13 * L, 6000]]);
+    wh.connect(whf).connect(gainEnv(c, t + snap - 0.13 * L, [[0, 0], [0.1 * L, 0.35 * v], [0.13 * L, 0]])).connect(d);
+    grain(c, d, t + snap, { dur: 0.012, peak: 0.6 * v, type: "highpass", f: 2000, off: 0.2 });
+    grain(c, d, t + snap, { dur: 0.14, peak: 2.2 * v, f: 1100 * p, q: 14, off: 0.6 });
+    blip(c, d, t + snap, { wave: "triangle", f0: 330 * p, f1: 210 * p, dur: 0.12, peak: 0.25 * v });
+  },
+  // 비행: 날갯짓 "펄럭"(공기를 치는 저중역 노이즈 덩어리, 점점 약해짐) + 돌풍 "휘익"(위로 쓸려 올라가는 노이즈)
+  //       음정이 있는 휘파람은 쓰지 않는다 — 다른 속성 위에 섞어도 튀지 않게.
+  flying(c, d, t, p, L, v) {
+    buffers(c);
+    const T = 0.8 * L;
+    for (let i = 0; i < 3; i++) {
+      const tt = t + i * 0.16 * L, a = (1.0 - 0.25 * i) * v;
+      const n = src(c, white, tt, 0.13 * L, 0.2 + i * 0.37), lp = filt(c, "lowpass", 700 * p, 0.8);
+      env(lp.frequency, tt, [[0, 300 * p], [0.03 * L, 1100 * p], [0.12 * L, 350 * p]]);
+      n.connect(lp).connect(gainEnv(c, tt, [[0, 0], [0.025 * L, 0.55 * a], [0.12 * L, 0]])).connect(d);
+    }
+    const w = src(c, white, t, T, 1.4), bp = filt(c, "bandpass", 500, 0.9);
+    env(bp.frequency, t, [[0, 400 * p], [0.45 * L, 1700 * p], [T, 600 * p]]);
+    w.connect(bp).connect(gainEnv(c, t, [[0, 0], [0.4 * L, 0.3 * v], [T, 0]])).connect(d);
+  },
+  // 독: 빠르게 꿀렁이는(진폭이 떨리는) 탁한 사각파
+  poison(c, d, t, p, L, v) {
+    const trem = c.createGain(); trem.gain.value = 0.5; trem.connect(d);
+    const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = 13; lg.gain.value = 0.5; l.connect(lg).connect(trem.gain); l.start(t); l.stop(t + 0.8 * L);
+    voice(c, trem, t, { wave: "square", freq: [[0, 260 * p], [0.3 * L, 240 * p], [0.7 * L, 200 * p]],
+      gain: [[0, 0], [0.06, 0.12 * v], [0.7 * L, 0]], detune: -30 });
+  },
+  // 고스트: 서로 조금 어긋난 두 사인파(맥놀이) + 천천히 내려가는 음 + 떨림
+  ghost(c, d, t, p, L, v) {
+    for (const det of [-14, 14]) voice(c, d, t, { wave: "sine", detune: det, freq: [[0, 520 * p], [0.3 * L, 640 * p], [0.9 * L, 230 * p]],
+      gain: [[0, 0], [0.25 * L, 0.22 * v], [0.6 * L, 0.18 * v], [0.9 * L, 0]], vibHz: 6, vibDepth: 18 * p });
+    voice(c, d, t, { wave: "triangle", freq: [[0, 130 * p], [0.9 * L, 110 * p]], gain: [[0, 0], [0.3 * L, 0.12 * v], [0.9 * L, 0]] });
+  },
+  // 에스퍼: FM 합성으로 일렁이는 금속성 톤 + 메아리
+  psychic(c, d, t, p, L, v) {
+    const echo = c.createDelay(); echo.delayTime.value = 0.13; const fb = c.createGain(); fb.gain.value = 0.35;
+    const mix = c.createGain(); mix.connect(d); mix.connect(echo); echo.connect(fb).connect(echo); echo.connect(d);
+    const car = c.createOscillator(); car.type = "sine";
+    const mod = c.createOscillator(); mod.type = "sine"; const mg = c.createGain();
+    env(car.frequency, t, [[0, 480 * p], [0.3 * L, 720 * p], [0.95 * L, 420 * p]]);
+    env(mod.frequency, t, [[0, 240 * p], [0.95 * L, 360 * p]]);
+    env(mg.gain, t, [[0, 0], [0.3 * L, 400 * p], [0.95 * L, 60 * p]]);
+    mod.connect(mg).connect(car.frequency);
+    const g = c.createGain(); g.gain.value = 0; env(g.gain, t, [[0, 0], [0.1 * L, 0.2 * v], [0.7 * L, 0.16 * v], [0.95 * L, 0]]);
+    car.connect(g).connect(mix);
+    for (const o of [car, mod]) { o.start(t); o.stop(t + 1.0 * L); }
+  },
+};
+
+// 속성별 체감 음량 보정 (오프라인 렌더 RMS 측정값 기준으로 맞춤)
+const LOUD = { electric: 1.0, water: 2.2, grass: 2.0, fire: 1.3, poison: 2, flying: 2.5 };
+// 주 속성 = 본체(세기 1), 보조 속성 = 덧칠(세기 0.45, 약간 늦게)
+function playCry(types, semis = 0, len = 1) {
+  const c = ac(); buffers(c);
+  const comp = c.createDynamicsCompressor(); comp.threshold.value = -12; comp.ratio.value = 8; comp.attack.value = 0.001; comp.knee.value = 6; comp.connect(c.destination); // 겹친 층이 찢어지지 않게
+  const out = c.createGain(); out.gain.value = 0.8; out.connect(comp);
+  const p = Math.pow(2, semis / 12), t = c.currentTime + 0.03;
+  RECIPES[types[0]](c, out, t, p, len, LOUD[types[0]] || 1);
+  if (types[1]) RECIPES[types[1]](c, out, t + 0.06 * len, p, len * 0.85, 0.45 * (LOUD[types[1]] || 1));
+}
+
+const tag = (ty) => `<span class="tag" style="background:${TYPE_COLOR[ty]}">${TYPE_KO[ty]}</span>`;
+document.getElementById("mons").innerHTML = MONS.map((m, i) => `<tr>
+  <td>#${String(m.id).padStart(3, "0")} ${m.name}</td>
+  <td>${m.types.map(tag).join("")}</td>
+  <td><button data-i="${i}">▶ 재생</button></td>
+  <td><input type="range" min="-12" max="12" step="1" value="${m.pitch}" data-p="${i}"> <span id="pv${i}">${m.pitch}</span></td>
+  <td><input type="range" min="0.6" max="1.8" step="0.05" value="${m.len}" data-l="${i}"> <span id="lv${i}">${m.len}</span></td>
+</tr>`).join("");
+document.getElementById("types").innerHTML = Object.keys(RECIPES).map(ty => `<button class="sub" data-t="${ty}">${TYPE_KO[ty]}</button>`).join(" ");
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.i) { const m = MONS[+b.dataset.i]; playCry(m.types, m.pitch, m.len); }
+  if (b.dataset.t) playCry([b.dataset.t], 0, 1);
+});
+document.addEventListener("input", (e) => {
+  const el = e.target;
+  if (el.dataset.p) { MONS[+el.dataset.p].pitch = +el.value; document.getElementById("pv" + el.dataset.p).textContent = el.value; }
+  if (el.dataset.l) { MONS[+el.dataset.l].len = +el.value; document.getElementById("lv" + el.dataset.l).textContent = el.value; }
+});
+</script>
+</body>
+</html>

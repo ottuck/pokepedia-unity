@@ -1,0 +1,12 @@
+{
+  "title": {
+    "name": "POKEPEDIA BATTLE",
+    "start": "START",
+    "retry": "Retry",
+    "try_demo": "Try Demo",
+    "demo_mode": "DEMO MODE\nPikachu vs Blastoise",
+    "connecting": "Connecting to Pokepedia…",
+    "connect_failed": "Could not connect.",
+    "connected": "Connected! {0} Pokémon owned"
+  }
+}

@@ -1,0 +1,13 @@
+# 줄바꿈은 저장소에 LF 로 저장한다 (Windows 작업 사본은 git 설정에 따름)
+* text=auto
+*.cs text diff=csharp
+*.sh text eol=lf
+
+# 바이너리
+*.png binary
+*.gif binary
+*.ttf binary
+*.otf binary
+*.wav binary
+*.ogg binary
+*.unitypackage binary

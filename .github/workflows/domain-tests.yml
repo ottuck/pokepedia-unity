@@ -1,0 +1,33 @@
+# 순수 C# 도메인 테스트 (설계 문서 10.5)
+# Unity 에디터·라이선스 없이 Assets/Scripts/{Domain,Content,Application} 과
+# Assets/Tests/EditMode 를 링크한 Tests.Dotnet 프로젝트를 dotnet test 로 돌린다.
+name: domain-tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: domain-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: dotnet test
+        run: dotnet test Tests.Dotnet --configuration Release --logger "console;verbosity=normal"
