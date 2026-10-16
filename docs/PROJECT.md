@@ -4,6 +4,7 @@
 
 > 이 문서는 논의를 거쳐 **확정된 사항 위주**로 정리한 최신본이다. 이전 버전과 논의 기록은 남기지 않는다.
 > **[확정]** 은 합의된 사항, **[위임]** 은 에이전트가 알아서 정하고 나중에 정리하기로 한 사항, **[권장안]** 은 제안, **[미정]** 은 결정 전 항목이다. 에이전트는 [미정]을 임의로 확정하지 않는다.
+> **문서 구성:** 이 문서(기획·설계·연동 규약) · [ROADMAP.md](ROADMAP.md)(단계별 진행 기록, M0 결과) · [CLAUDE.md](../CLAUDE.md)(에이전트 안내).
 
 ## 요약
 
@@ -64,7 +65,7 @@ Pokepedia에서 모은 띠부띠부씰 포켓몬 중 배틀 지원 포켓몬으�
 | 퀴즈 출제 | `features/quiz/rules.ts`의 `pickNextPokemon(pool, seen, random)`가 이번 run에서 나오지 않은 포켓몬 중 **균등 확률**로 고름 (코드 일부 확인) |
 | 에셋 | 레포에 이미지 없음. 아트워크·실루엣은 Supabase Storage. 트레이너 도트·타이틀·효과음은 SVG·CSS·Web Audio로 직접 제작 |
 | 환경 | Supabase remote 프로젝트 하나를 **Prod와 Preview가 공유**. migration은 main 머지 시 자동 적용 |
-| 정책 | 구조 변경은 `docs/system_design.md`를 먼저 수정. 머지 정책은 `CLAUDE.md` |
+| 정책 | 구조 변경은 `docs/system_design.md`를 먼저 수정. 머지 정책은 pokepedia 저장소의 `CLAUDE.md` |
 
 ---
 
@@ -478,24 +479,35 @@ pokepedia-unity/
 - Origin 검증 필수. Pokepedia CSP(`frame-src`)와 Unity 호스트의 `frame-ancestors`를 확인한다.
 - 별도 도메인에 호스팅해도 `postMessage`로 충분하다 (쿠키를 쓰지 않음).
 
-### 9.2 메시지 규약 (초안)
+### 9.2 메시지 규약 (v1) [확정]
 
-| 방향 | 메시지 | 내용 |
-|---|---|---|
-| Unity → React | `ready` | `{ v: 1 }` — 로딩 완료. **React는 이 메시지를 받은 뒤에만 `init`을 보낸다** |
-| React → Unity | `init` | `{ v: 1, locale, owned: [{ id, shiny: bool }] }` — **보유 포켓몬 전체**를 한 번 전달 |
-| Unity → React | `battleEnded` (선택) | `{ result }` — 표시용, 저장하지 않음 |
-| Unity → React | `resize` (필요 시) | 높이 조정 |
+이 절이 Pokepedia ↔ Unity 규약의 **단일 출처**다. Pokepedia(React) 쪽 구현은 이 절을 따른다.
 
+#### 구성
+
+```text
+Pokepedia 페이지 (/[locale]/battle)
+  └─ <iframe src="https://battle.pokepedia.dev/?host=pokepedia" allow="autoplay">
+        Unity Web 빌드 (index.html 템플릿 + HostBridge.jslib + HostBridge.cs)
+```
+
+- 방향은 **단방향**이다. React가 보유 목록을 한 번 넘기고, Unity는 결과를 저장하지 않는다.
+- 쿠키·인증을 쓰지 않으므로 다른 도메인에 호스팅해도 `postMessage`로 충분하다.
 - 컬렉션 조회는 인증된 React(서버/RLS)가 수행한다. Unity는 인증·DB를 다루지 않는다.
 - **지원 포켓몬 필터는 Unity가 처리한다.** React는 보유 목록 전체를 보내고 Unity가 로스터와의 교집합(보유 ∩ 지원)을 계산한다. 로스터가 늘어도 규약이 바뀌지 않는다.
-- Unity로 전달된 보유 목록은 조작될 수 있으나 보상·랭킹에 영향이 없으므로 문제없다.
-- 메시지에 **프로토콜 버전 `v`** 를 넣는다. 요청 ID는 현재 필요하지 않다 [위임].
-- React가 `init`을 먼저 보내면 Unity 로딩 전에 사라질 수 있으므로 반드시 `ready` 이후에 보낸다. Unity가 재로딩되면 `ready`를 다시 보내고 React는 `init`을 다시 전송한다.
+- Unity로 전달된 보유 목록은 조작될 수 있으나 보상·랭킹에 영향이 없으므로 검증하지 않는다.
 
-**로딩 순서:** Unity Web Build 로딩 → Unity → React `ready` → React → Unity `init` → Unity가 보유 ∩ 지원을 계산하고 게임 시작.
+#### 모드 판별 [확정]
 
-**실행 모드 [확정]**
+| iframe 주소 | 동작 |
+|---|---|
+| `?host=pokepedia` 없음 | 즉시 **Demo** 모드(피카츄 vs 거북왕). 대기하지 않는다 |
+| `?host=pokepedia` 있음 | START 후 `ready`를 보내고 `init`을 **5초** 기다린다 |
+
+- 5초 안에 `init`이 오지 않으면 "연결하지 못했습니다" + **[다시 시도] / [데모 체험]**을 보여 준다. **자동으로 Demo로 바꾸지 않으며** Demo는 [데모 체험] 버튼으로 사용자가 명시적으로 선택할 때만 시작한다.
+- [다시 시도]를 누르면 `ready`를 다시 보낸다.
+- iframe 여부(`window.parent !== window`)로는 판별하지 않는다. 포트폴리오 허브도 iframe으로 임베드할 수 있기 때문이다.
+- 쿼리는 jslib로 `location.search`를 읽어 판별한다(iframe에서 `Application.absoluteURL`의 의미가 불명확해 쓰지 않는다. M0 확인).
 
 | 모드 | 포켓몬 선택 | 사용처 |
 |---|---|---|
@@ -503,8 +515,71 @@ pokepedia-unity/
 | **Collection Mode** | Pokepedia가 `init`으로 전달한 **보유 포켓몬 ∩ 지원 포켓몬** | Pokepedia iframe |
 
 - 별도 엔진을 두 개 만드는 것이 아니라 포켓몬 선택(로스터) 데이터만 다르다.
-- **모드 판별: URL 쿼리 파라미터 + `init` 대기** [확정]. Pokepedia가 iframe 주소에 `?host=pokepedia`를 붙이고, 파라미터가 **없으면 즉시 Demo Mode**(대기 없음), **있으면** `ready` 후 `init`을 기다린다. 제한 시간(예: 5초) 안에 오지 않으면 **연결 실패 안내와 [다시 시도] 버튼**을 보여 준다(다시 시도하면 `ready` 재전송). **자동으로 Demo로 전환하지 않으며** Demo는 [데모 체험] 버튼으로 사용자가 명시적으로 선택할 때만 시작한다. iframe 여부(`window.parent !== window`)로는 판별하지 않는다(포트폴리오 허브가 iframe으로 임베드할 수 있음). `init` 수신 시 `event.origin`을 허용 목록과 대조한다. Unity WebGL에서는 `Application.absoluteURL`로 쿼리를 읽을 수 있다 (구현 시 확인).
 - Collection 선택 화면: 지원 포켓몬 목록을 보여 주고 **보유한 포켓몬만 선택 가능, 미보유는 잠금**("퀴즈로 획득"). 보유했지만 지원하지 않는 포켓몬은 "배틀 지원 N종 준비 중" 같은 한 줄로 안내한다. 보유 ∩ 지원이 비어 있으면 안내와 [데모 체험] 버튼을 보여 준다.
+
+#### 메시지
+
+모든 메시지는 `postMessage`로 보내는 **객체**이며 `type`과 프로토콜 버전 `v`를 가진다. 요청 ID는 현재 필요하지 않다 [위임].
+
+**로딩 순서:** Unity Web Build 로딩 → Unity → React `ready` → React → Unity `init` → Unity가 보유 ∩ 지원을 계산하고 게임 시작.
+
+**Unity → React: `ready`**
+
+```json
+{ "type": "ready", "v": 1 }
+```
+
+- Unity 로딩과 START가 끝났다는 뜻이다. **React는 이 메시지를 받은 뒤에만 `init`을 보낸다.** React가 `init`을 먼저 보내면 Unity 로딩 전에 사라질 수 있다.
+- Unity가 재로딩되면 `ready`가 다시 온다. 그때 React는 `init`을 다시 보낸다.
+
+**React → Unity: `init`**
+
+```json
+{ "type": "init", "v": 1, "locale": "ko", "owned": [ { "id": 25, "shiny": false }, { "id": 9, "shiny": true } ] }
+```
+
+| 필드 | 설명 |
+|---|---|
+| `locale` | `ko` / `en` / `ja`. 그 밖의 값은 `ko`로 처리 |
+| `owned` | 사용자가 가진 **스티커 전체**. 배틀 지원 여부는 Unity가 로스터와 교집합으로 판단한다 |
+
+- `v`가 1이 아니면 Unity는 무시한다.
+
+**Unity → React: `battleEnded` (예정, M6)**
+
+```json
+{ "type": "battleEnded", "v": 1, "result": "win" }
+```
+
+표시용이다. 저장하지 않는다.
+
+**Unity → React: `resize` (필요 시)** — 높이 조정. 아직 정의하지 않았다.
+
+#### 보안
+
+| 위치 | 규칙 |
+|---|---|
+| Unity 템플릿 `message` 리스너 | `event.origin`이 허용 목록(`window.pokeHost.allowedOrigins`)에 있을 때만 `init`을 Unity로 전달 |
+| Unity → React 전송(jslib) | `targetOrigin`을 `'*'`로 쓰지 않고 허용 목록의 각 origin으로 보낸다(일치하는 곳에만 도착) |
+| React 쪽 | `event.origin`이 Unity 호스트(`NEXT_PUBLIC_BATTLE_URL`의 origin)일 때만 `ready`를 처리 |
+| Unity 호스트 응답 헤더 | `Content-Security-Policy: frame-ancestors`에 Pokepedia·포트폴리오 허브만 허용 |
+
+허용 목록은 `Assets/WebGLTemplates/Pokepedia/index.html`에 있다. 현재 값: `https://pokepedia.dev`, `https://www.pokepedia.dev`, `http://localhost:3000`(Pokepedia 개발 서버), `http://localhost:8000`(로컬 테스트 페이지). Vercel Preview 도메인은 M6에서 정한다. 또 Pokepedia CSP의 `frame-src`도 확인한다(9.1).
+
+#### 입력
+
+- iframe 안에서는 방향키·Space의 기본 동작(부모 스크롤)을 막는다.
+- 클릭·터치 시 캔버스에 포커스를 준다.
+- React 쪽 iframe에는 `allow="autoplay"`를 준다. 첫 소리는 Unity 안의 START 버튼에서 낸다.
+
+#### 로컬 테스트
+
+```bash
+python -I Tools/web/serve.py --dir Builds/Web --port 8001 --ancestors http://localhost:8000
+python -I Tools/web/serve.py --dir Tools/web/host-test --port 8000
+```
+
+`http://localhost:8000/`를 열면 모의 Pokepedia 페이지가 게임을 iframe으로 띄운다. 이 페이지에서 `ready` → `init` 왕복, 타임아웃(init 보내지 않기 체크), 스크롤 간섭을 확인할 수 있다.
 
 ### 9.3 DB 정책 [확정]
 
@@ -515,7 +590,7 @@ pokepedia-unity/
 
 - 내비게이션 "배틀" 항목, 임베드 페이지(`/[locale]/battle`), 메시지 핸들러.
 - 문구는 `messages/ko·en·ja.json` 세 곳에 모두 추가 (언어별 키 일치 테스트가 있음).
-- 새 라우트는 구조 변경이므로 `docs/system_design.md`를 먼저 수정하고 `CLAUDE.md` 머지 정책을 따른다.
+- 새 라우트는 구조 변경이므로 `docs/system_design.md`를 먼저 수정하고 pokepedia 저장소 `CLAUDE.md`의 머지 정책을 따른다.
 - 기존 퀴즈 코드는 삭제·수정하지 않는다. (예외: 9.7의 우선 출제 — `pickNextPokemon` 확장, 게임 완성 후 별도 PR)
 
 ### 9.5 조작 가능성
@@ -626,18 +701,7 @@ ottuck/pokepedia-unity    # Unity / C# [확정]
 
 ## 12. 로드맵
 
-| Milestone | 내용 | 완료 기준 |
-|---|---|---|
-| M0 | 검증용 최소 Unity 프로젝트 + PoC 9가지 (5.4) | 9가지 항목 결론 (PoC 프로젝트는 폐기하거나 필요한 부분만 M1로 이관) |
-| M1 | **정식** Unity 프로젝트·저장소 초기화 (M0 결과 반영), asmdef, 테스트 환경 | 정식 프로젝트가 웹에서 실행 |
-| M2 | 순수 C# 엔진 (포켓몬 2마리): 타입 상성(18×18), 데미지, 명중·급소, 턴 순서, 승패, NPC AI, 시드 고정 시뮬레이션으로 수치 조정 | UI 없이 1:1 전투를 테스트로 검증 |
-| M3 | **Vertical Slice — 피카츄 vs 거북왕**: 콘텐츠 로딩(로스터 2마리, 기술 약 9개), 5.3의 전투 흐름과 화면, 이벤트 재생, 공격·피격·급소·빗나감 연출, 사운드 (Showcase 품질) | 실제 엔진을 쓰는 한 판이 처음부터 끝까지 플레이됨 (Showcase 연출 적용) |
-| M4 | 웹 배포, 최적화, 포트폴리오 소개 (**Demo Mode**) | 외부 사용자가 로그인 없이 단독 플레이 가능 |
-| M5 | 로스터 확장(4마리) + **Standard 연출**, 체형별 표시 확인, 밸런스 조정 | 추가 포켓몬이 엔진 수정 없이 데이터만으로 플레이됨 |
-| M6 | Pokepedia 연동 (**Collection Mode**): 내비게이션, iframe, `ready` → `init`, 보유 ∩ 지원 선택 화면 | Pokepedia에서 보유 포켓몬으로 배틀 |
-| 이후 | 게임 완성 후: 퀴즈 우선 출제(9.7), "배틀 가능" 필터(9.6), 보상 화면 연동, 로스터 추가 등 | |
-
-마일스톤별 시간 상한은 두지 않는다 [확정].
+마일스톤 표, 현재 상태, 진행 기록은 [ROADMAP.md](ROADMAP.md)가 단일 출처다. 개발 단계는 그 문서에 기록하며 진행한다. 범위와 단계 구분의 근거는 5.4를 따른다.
 
 ---
 
@@ -699,7 +763,7 @@ ottuck/pokepedia-unity    # Unity / C# [확정]
 4. 규칙은 **테스트를 먼저** 작성한다.
 5. 불필요한 프레임워크·인프라를 추가하지 않는다. 과한 추상화를 피한다.
 6. 초기부터 웹 빌드 가능성을 유지하고 정기적으로 WebGL 빌드를 확인한다.
-7. **Pokepedia 코드·DB는 함부로 수정하지 않는다.** 수정 전 해당 소스, `docs/system_design.md`, `CLAUDE.md` 머지 정책을 확인한다. DB 변경이 꼭 필요하면 additive만 허용하고 Prod/Preview가 같은 DB임을 기억한다.
+7. **Pokepedia 코드·DB는 함부로 수정하지 않는다.** 수정 전 해당 소스, `docs/system_design.md`, pokepedia 저장소 `CLAUDE.md`의 머지 정책을 확인한다. DB 변경이 꼭 필요하면 additive만 허용하고 Prod/Preview가 같은 DB임을 기억한다.
 8. 엔진 코드에 포켓몬 이름·스프라이트·문자열을 넣지 않는다. 포켓몬별 코드를 만들지 않는다. **엔진은 로스터 크기를 알지 못한다.**
 9. 기능 개발과 에셋 제작을 분리한다. 엔진은 에셋 없이 동작해야 한다.
 10. **Showcase 데모도 실제 엔진을 사용해야 한다.** 가짜 전투 로직이나 미리 만든 연출만 재생하지 않는다. Standard와 Showcase를 별도 시스템으로 만들지 않는다.

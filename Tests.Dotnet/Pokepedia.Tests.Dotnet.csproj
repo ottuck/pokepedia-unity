@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Unity 없이 순수 C# 도메인 테스트를 돌리는 프로젝트 (설계 문서 10.5).
+    Unity 없이 순수 C# 도메인 테스트를 돌리는 프로젝트 (docs/PROJECT.md 10.5).
     Assets/ 의 소스를 복사하지 않고 링크만 한다. UnityEngine 참조가 없으므로
     링크된 파일이 UnityEngine 을 쓰면 여기서 빌드가 깨진다.
     Assets 밖에 두어 Unity 가 이 폴더를 임포트하지 않게 한다.

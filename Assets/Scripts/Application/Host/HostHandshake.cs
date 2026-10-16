@@ -17,7 +17,7 @@ namespace Pokepedia.App.Host
     }
 
     /// <summary>
-    /// 모드 판별과 ready → init 왕복 (설계 문서 9.2).
+    /// 모드 판별과 ready → init 왕복 (docs/PROJECT.md 9.2).
     /// 시간은 호출자가 넘겨 준다(Unity 의 Time 에 의존하지 않아 테스트가 쉽다).
     /// </summary>
     public sealed class HostHandshake

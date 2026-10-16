@@ -1,4 +1,4 @@
-# 순수 C# 도메인 테스트 (설계 문서 10.5)
+# 순수 C# 도메인 테스트 (docs/PROJECT.md 10.5)
 # Unity 에디터·라이선스 없이 Assets/Scripts/{Domain,Content,Application} 과
 # Assets/Tests/EditMode 를 링크한 Tests.Dotnet 프로젝트를 dotnet test 로 돌린다.
 name: domain-tests
