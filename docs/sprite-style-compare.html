@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스프라이트 스타일 비교</title>
+<style>
+  :root { --bg:#f4f1e4; --ink:#1f2a1f; --card:#ffffff; --line:#d7d2bf; --muted:#667066; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161a16; --ink:#e8eee8; --card:#20261f; --line:#3a443a; --muted:#9aa89a; } }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px 16px 48px; background:var(--bg); color:var(--ink); font-family:system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif; line-height:1.5; }
+  h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:18px; margin:36px 0 8px; }
+  p.note { color:var(--muted); margin:0 0 16px; font-size:14px; max-width:880px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(500px,1fr)); gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; overflow-x:auto; }
+  .card h3 { margin:0 0 8px; font-size:15px; }
+  .mock { position:relative; width:480px; height:432px; margin:0 auto; background:#eef0d8; border:2px solid #333; overflow:hidden; border-radius:4px; }
+  .mock .ground { position:absolute; border-radius:50%; background:#c9d6a0; }
+  .mock .g1 { width:46%; height:9%; right:3%; top:44%; }
+  .mock .g2 { width:52%; height:10%; left:-2%; bottom:3%; }
+  .mock img { position:absolute; image-rendering:pixelated; }
+  .mock .enemy { right:6%; top:6%; } .mock .player { left:4%; bottom:6%; }
+  .mult { mix-blend-mode:multiply; }
+  table { border-collapse:collapse; width:100%; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  th, td { border:1px solid var(--line); padding:8px; text-align:center; vertical-align:middle; font-size:13px; }
+  th { background:rgba(128,128,128,.12); }
+  td img { image-rendering:pixelated; margin:0 2px; }
+  .row { display:flex; justify-content:center; align-items:flex-end; gap:4px; }
+  .pill { display:inline-block; background:rgba(128,128,128,.15); border-radius:999px; padding:1px 8px; font-size:12px; color:var(--muted); }
+  .wrap { overflow-x:auto; }
+</style>
+</head>
+<body>
+<h1>스프라이트 스타일 비교</h1>
+<p class="note">PokeAPI 스프라이트(1~151번)를 같은 배경에 올려 비교한 페이지입니다. 이미지는 저장소에서 직접 불러오므로 인터넷 연결이 필요합니다. 크기가 서로 달라 <b>정수 배율(Point 필터)</b>로 비슷한 크기가 되도록 확대했고, 원본 해상도는 각 카드의 표시를 참고하세요.</p>
+
+<h2>1. 배틀 화면 목업: 피카츄(뒷모습) vs 거북왕(앞모습)</h2>
+<p class="note">배틀 화면 배치(NPC 오른쪽 위, 플레이어 왼쪽 아래)에 올린 모습입니다. 실제 UI는 포함하지 않았습니다.</p>
+<div class="grid" id="mocks"></div>
+
+<h2>2. 로스터 6마리: 앞/뒤 비교</h2>
+<p class="note">피카츄, 거북왕, 리자몽, 이상해꽃, 팬텀, 뮤츠. 각 칸의 왼쪽이 앞모습, 오른쪽이 뒷모습입니다.</p>
+<div class="wrap"><table id="sheet"></table></div>
+
+<h2>3. 색이 다른 포켓몬(shiny) 확인: 크리스탈 / 기본</h2>
+<p class="note">1세대에는 shiny가 없어서 2세대 이후 세트에서만 제공됩니다. 왼쪽부터 일반 앞, shiny 앞, 일반 뒤, shiny 뒤.</p>
+<div class="wrap"><table id="shiny"></table></div>
+
+<h2>4. 애니메이션 스프라이트(GIF) 샘플</h2>
+<p class="note">크리스탈 animated(앞모습만 조사)와 블랙·화이트 animated(앞/뒤). Unity는 GIF를 직접 임포트하지 못하므로 변환이 필요합니다.</p>
+<div class="wrap"><table id="anim"></table></div>
+
+<script>
+const BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/";
+const V = "versions/";
+const STYLES = [
+  { key:"rbgray",  name:"1세대 레드·블루 (그레이)", note:"4단계 회색 / 원본 앞 56, 뒤 32 안팎",
+    front:i=>`${V}generation-i/red-blue/transparent/gray/${i}.png`, back:i=>`${V}generation-i/red-blue/transparent/back/gray/${i}.png` },
+  { key:"rbcolor", name:"1세대 레드·블루 (컬러)", note:"PokeAPI 기본 컬러 버전",
+    front:i=>`${V}generation-i/red-blue/transparent/${i}.png`, back:i=>`${V}generation-i/red-blue/transparent/back/${i}.png` },
+  { key:"ygbc",    name:"옐로 (GBC 컬러)", note:"게임보이 컬러 느낌 / 흰 배경을 곱하기 합성으로 처리",
+    front:i=>`${V}generation-i/yellow/gbc/${i}.png`, back:i=>`${V}generation-i/yellow/back/gbc/${i}.png`, mult:true },
+  { key:"crystal", name:"2세대 크리스탈 (컬러)", note:"컬러, shiny 있음 / 뒤 48×48",
+    front:i=>`${V}generation-ii/crystal/transparent/${i}.png`, back:i=>`${V}generation-ii/crystal/transparent/back/${i}.png` },
+  { key:"default", name:"기본 96×96", note:"크고 부드러운 도트",
+    front:i=>`${i}.png`, back:i=>`back/${i}.png` },
+  { key:"bw",      name:"5세대 블랙·화이트 (애니메이션)", note:"앞/뒤 모두 움직임 있음",
+    front:i=>`${V}generation-v/black-white/animated/${i}.gif`, back:i=>`${V}generation-v/black-white/animated/back/${i}.gif` },
+];
+const ROSTER = [[25,"피카츄"],[9,"거북왕"],[6,"리자몽"],[3,"이상해꽃"],[94,"팬텀"],[150,"뮤츠"]];
+
+function img(src, cls, target, mult) {
+  const el = new Image();
+  el.src = BASE + src;
+  el.loading = "lazy";
+  el.alt = src;
+  if (cls) el.className = cls;
+  if (mult) el.classList.add("mult");
+  el.addEventListener("load", () => {
+    const s = Math.max(1, Math.round(target / el.naturalWidth));
+    el.style.width = (el.naturalWidth * s) + "px";
+    el.title = `원본 ${el.naturalWidth}×${el.naturalHeight}, ×${s}`;
+  });
+  el.addEventListener("error", () => { el.alt = "(이미지 없음)"; el.style.width = "40px"; });
+  return el;
+}
+
+// 1. mocks
+const mocks = document.getElementById("mocks");
+for (const st of STYLES) {
+  const card = document.createElement("div"); card.className = "card";
+  card.innerHTML = `<h3>${st.name}</h3><div class="mock"><div class="ground g1"></div><div class="ground g2"></div></div><p class="note" style="margin:8px 0 0">${st.note}</p>`;
+  const mock = card.querySelector(".mock");
+  const target = 170; // 목업 폭 480px 기준
+  const enemy = img(st.front(9), "enemy", target, st.mult);
+  const player = img(st.back(25), "player", target + 20, st.mult);
+  mock.append(enemy, player);
+  mocks.append(card);
+}
+
+// 2. sheet
+const sheet = document.getElementById("sheet");
+sheet.innerHTML = "<tr><th></th>" + STYLES.map(s => `<th>${s.name}</th>`).join("") + "</tr>";
+for (const [id, name] of ROSTER) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<th>${name}<br><span class="pill">#${String(id).padStart(3,"0")}</span></th>`;
+  for (const st of STYLES) {
+    const td = document.createElement("td");
+    const row = document.createElement("div"); row.className = "row";
+    row.append(img(st.front(id), "", 110, st.mult), img(st.back(id), "", 110, st.mult));
+    td.append(row); tr.append(td);
+  }
+  sheet.append(tr);
+}
+
+// 3. shiny
+const shiny = document.getElementById("shiny");
+const SH = [
+  { name:"크리스탈", f:i=>`${V}generation-ii/crystal/transparent/${i}.png`, fs:i=>`${V}generation-ii/crystal/transparent/shiny/${i}.png`,
+    b:i=>`${V}generation-ii/crystal/transparent/back/${i}.png`, bs:i=>`${V}generation-ii/crystal/transparent/back/shiny/${i}.png` },
+  { name:"기본 96×96", f:i=>`${i}.png`, fs:i=>`shiny/${i}.png`, b:i=>`back/${i}.png`, bs:i=>`back/shiny/${i}.png` },
+];
+shiny.innerHTML = "<tr><th></th>" + SH.map(s => `<th>${s.name}</th>`).join("") + "</tr>";
+for (const [id, name] of ROSTER) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<th>${name}</th>`;
+  for (const s of SH) {
+    const td = document.createElement("td"); const row = document.createElement("div"); row.className = "row";
+    row.append(img(s.f(id),"",96), img(s.fs(id),"",96), img(s.b(id),"",96), img(s.bs(id),"",96));
+    td.append(row); tr.append(td);
+  }
+  shiny.append(tr);
+}
+
+// 4. animated
+const anim = document.getElementById("anim");
+anim.innerHTML = "<tr><th></th><th>크리스탈 animated (앞)</th><th>블랙·화이트 animated (앞)</th><th>블랙·화이트 animated (뒤)</th></tr>";
+for (const [id, name] of ROSTER) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<th>${name}</th>`;
+  const cells = [`${V}generation-ii/crystal/animated/${id}.gif`, `${V}generation-v/black-white/animated/${id}.gif`, `${V}generation-v/black-white/animated/back/${id}.gif`];
+  for (const c of cells) { const td = document.createElement("td"); td.append(img(c,"",110)); tr.append(td); }
+  anim.append(tr);
+}
+</script>
+</body>
+</html>

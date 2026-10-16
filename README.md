@@ -7,6 +7,7 @@
 - Unity 6.3 LTS (6000.3.26f1), C#, uGUI + TextMesh Pro, URP 2D
 - 웹(WebGL) 빌드, Pokepedia에서는 iframe으로 접속하고 단독으로도 플레이할 수 있습니다(Demo 모드).
 - 서버·DB가 없습니다. 보유 포켓몬 목록은 Pokepedia(React)가 `postMessage`로 한 번 넘깁니다 → [docs/bridge-protocol.md](docs/bridge-protocol.md)
+- 기획·설계 전체: [docs/design.md](docs/design.md) (확정/위임/미정 사항, 로드맵)
 
 ## 진행 상태
 
@@ -33,7 +34,7 @@ Assets/
   WebGLTemplates/Pokepedia/  웹 템플릿 (10:9 화면, 키 입력 차단, origin 검증)
 Tests.Dotnet/      Unity 없이 순수 C# 테스트를 돌리는 프로젝트 (소스 링크)
 Tools/             sprites(스프라이트 재현), web(로컬 서버·모의 호스트), audio(울음소리 시제품), unity
-docs/              M0 결과, 브리지 규약
+docs/              설계 문서(design.md), M0 결과, 브리지 규약, 스프라이트 스타일 비교 페이지
 ```
 
 의존 방향: `Presentation → Application → Domain`, `Bridge → Application`(인터페이스 구현), `Application → Content → Domain`.
