@@ -63,7 +63,7 @@ unity test . --mode EditMode
 ## 웹 빌드와 로컬 실행
 
 ```sh
-# Release (Brotli, Disk Size + LTO). Dev 는 WebBuild.Dev
+# Release (Brotli, Runtime Speed, LTO 없음). Dev 는 WebBuild.Dev
 "C:\Program Files\Unity\Hub\Editor\6000.3.26f1\Editor\Unity.exe" -batchmode -quit -projectPath . -executeMethod Pokepedia.EditorTools.WebBuild.Release -logFile Logs/build-web.log
 # 사전 압축 파일(.br)에 맞는 헤더로 서빙
 python -I Tools/web/serve.py --dir Builds/Web --port 8001 --ancestors http://localhost:8000

@@ -204,7 +204,7 @@ Pokepedia가 151마리를 지원한다고 해서 Unity 배틀도 151마리를 �
 
 - 측정: Chrome 개발자 도구 Network 탭(캐시 비활성화, Fast 4G 스로틀링), Chrome 작업 관리자 또는 Unity Profiler.
 - Unity 6 문서의 WebGL 힙 기본값은 초기 32 MB, 최대 2048 MB, 증가 단위 상한 기본 96 MB다. 이 게임의 실제 메모리는 아직 측정하지 않았다.
-- 기준을 넘으면 (1) 최적화(스트리핑 강화, `Disk Size with LTO`, 불필요한 패키지 제거, 텍스처 압축) → (2) 지연 로딩·범위 축소 → (3) 플랫폼 우선순위 재검토 순으로 대응한다. Cloudflare의 단일 파일 25 MiB 한도(10.2)도 함께 확인한다.
+- 기준을 넘으면 (1) 최적화(불필요한 패키지 제거, 텍스처 압축. 스트리핑 High·Disk Size LTO는 문제 가능성 때문에 2026-10-17에 되돌렸다) → (2) 지연 로딩·범위 축소 → (3) 플랫폼 우선순위 재검토 순으로 대응한다. Cloudflare의 단일 파일 25 MiB 한도(10.2)도 함께 확인한다.
 
 **이후 / 향후 확장.** 1순위는 1:1 배틀의 완성도이며, 그 이후에 다음을 확장한다.
 - **3:3 배틀**, **포켓몬 교체 메뉴와 가방 메뉴** (3:3과 함께 추가) [확정: 향후 확장 계획, 시점·규칙은 미정]. 엔진은 처음부터 여러 포켓몬(파티)을 지원하는 구조로 설계해 둔다 (7.2).
@@ -621,7 +621,7 @@ Unity는 규칙이 클라이언트에 있으므로 결과를 서버에서 검증
 
 ### 10.3 호스팅 설정
 
-- Unity Web 빌드는 압축 형식에 맞는 `Content-Encoding`(`br` 또는 `gzip`)과 **`.wasm`의 `application/wasm` MIME**이 필요하다 (스트리밍 컴파일). Brotli는 Chrome·Firefox에서 HTTPS에서만 기본 지원한다. 압축을 끄면(Disabled) 파일이 25 MiB 한도를 넘을 수 있으므로 Brotli를 쓴다(현재 전송 약 9.4MB, ROADMAP M0 결과).
+- Unity Web 빌드는 압축 형식에 맞는 `Content-Encoding`(`br` 또는 `gzip`)과 **`.wasm`의 `application/wasm` MIME**이 필요하다 (스트리밍 컴파일). Brotli는 Chrome·Firefox에서 HTTPS에서만 기본 지원한다. 압축을 끄면(Disabled) 파일이 25 MiB 한도를 넘을 수 있으므로 Brotli를 쓴다(M0 PoC 기준 약 9.4MB, 스트리핑 High·LTO를 되돌리기 전 수치).
 - 서버에 이미 자동 압축이 있으면 이중 압축이 될 수 있으므로 실제 응답 헤더를 확인한다. **Vercel은 `wasm`·`javascript` MIME을 자동 압축**하므로(문서 기준) Unity 압축을 Disabled로 두는 방법이 있다 (`.data` 같은 `application/octet-stream`은 자동 압축 대상 아님). Cloudflare의 자동 압축 대상과 사전 압축(`.br`) 파일에 `Content-Encoding`을 직접 지정하는 방식은 확인하지 못했다. 로컬 모의 서버(`Tools/web/serve.py`)로만 확인했고 Cloudflare 실배포 검증은 M4에서 한다.
 - `Content-Security-Policy: frame-ancestors`로 임베드를 허용할 도메인(Pokepedia, 포트폴리오 허브)만 지정한다. `roster.json`을 Pokepedia가 읽는다면 CORS 헤더를 설정한다.
 - 캐시: 로더·`index.html`은 재검증, 해시 파일명(`Name files as hashes`, 구현 시 확인)을 쓰면 빌드 산출물은 장기 캐시.
