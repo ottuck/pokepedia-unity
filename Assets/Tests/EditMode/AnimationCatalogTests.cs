@@ -17,7 +17,7 @@ namespace Pokepedia.Tests
         // JSON 안의 큰따옴표를 ' 로 적고 Q() 로 바꿔 읽기 쉽게 한다.
         static string Q(string s) => s.Replace('\'', '"');
 
-        const string DefaultsJson = "{ 'cry': { 'semitones': 0, 'length': 1.0 }, 'windupSec': 0.15, 'lungePx': 10, 'hitShakePx': 2, 'knockbackPx': 0 }";
+        const string DefaultsJson = "{ 'windupSec': 0.15, 'lungePx': 10, 'hitShakePx': 2, 'knockbackPx': 0 }";
 
         static string TypesJson(string skip = null, string waterColor = "'#6890F0'", string extra = "")
         {
@@ -53,7 +53,6 @@ namespace Pokepedia.Tests
         public void Defaults_AreRead()
         {
             var d = Parse().Defaults;
-            Assert.AreEqual(new CryParams(0, 1.0), d.Cry);
             Assert.AreEqual(0.15, d.WindupSec);
             Assert.AreEqual(10, d.LungePx);
             Assert.AreEqual(2, d.HitShakePx);
@@ -64,10 +63,9 @@ namespace Pokepedia.Tests
         [Test]
         public void Profile_WithAllFields_UsesItsOwnValues()
         {
-            var c = Parse("{ 'blastoise': { 'cry': { 'semitones': -5, 'length': 1.15 }, 'windupSec': 0.35, 'lungePx': 4, 'hitShakePx': 3, 'knockbackPx': 10, 'moveFx': { 'hydro_pump': 'water_cannon' } } }");
+            var c = Parse("{ 'blastoise': { 'windupSec': 0.35, 'lungePx': 4, 'hitShakePx': 3, 'knockbackPx': 10, 'moveFx': { 'hydro_pump': 'water_cannon' } } }");
             var p = c.ProfileFor("blastoise");
             Assert.AreEqual("blastoise", p.Key);
-            Assert.AreEqual(new CryParams(-5, 1.15), p.Cry);
             Assert.AreEqual(0.35, p.WindupSec);
             Assert.AreEqual(4, p.LungePx);
             Assert.AreEqual(3, p.HitShakePx);
@@ -78,10 +76,9 @@ namespace Pokepedia.Tests
         [Test]
         public void Profile_PartialFields_AreMergedWithDefaults()
         {
-            var c = Parse("{ 'venusaur': { 'cry': { 'semitones': -4, 'length': 1.1 }, 'knockbackPx': 6 } }");
+            var c = Parse("{ 'venusaur': { 'knockbackPx': 6 } }");
             var p = c.ProfileFor("venusaur");
             Assert.AreEqual("venusaur", p.Key);
-            Assert.AreEqual(new CryParams(-4, 1.1), p.Cry);
             Assert.AreEqual(6, p.KnockbackPx);
             Assert.AreEqual(0.15, p.WindupSec);
             Assert.AreEqual(10, p.LungePx);
@@ -90,20 +87,12 @@ namespace Pokepedia.Tests
         }
 
         [Test]
-        public void Profile_PartialCry_IsMergedFieldByField()
-        {
-            var c = Parse("{ 'a': { 'cry': { 'semitones': 7 } }, 'b': { 'cry': { 'length': 2 } } }");
-            Assert.AreEqual(new CryParams(7, 1.0), c.ProfileFor("a").Cry);
-            Assert.AreEqual(new CryParams(0, 2.0), c.ProfileFor("b").Cry);
-        }
-
-        [Test]
         public void Profile_Empty_EqualsDefaultsWithItsKey()
         {
             var c = Parse("{ 'gengar': {} }");
             var p = c.ProfileFor("gengar");
             Assert.AreEqual("gengar", p.Key);
-            Assert.AreEqual(c.Defaults.Cry, p.Cry);
+            Assert.AreEqual(c.Defaults.WindupSec, p.WindupSec);
             Assert.AreEqual(c.Defaults.LungePx, p.LungePx);
         }
 
@@ -113,7 +102,6 @@ namespace Pokepedia.Tests
             var c = Parse("{ 'pikachu': { 'lungePx': 6 } }");
             var p = c.ProfileFor("missingno");
             Assert.AreEqual("missingno", p.Key);
-            Assert.AreEqual(c.Defaults.Cry, p.Cry);
             Assert.AreEqual(c.Defaults.WindupSec, p.WindupSec);
             Assert.AreEqual(10, p.LungePx);
             Assert.AreEqual(c.Defaults.HitShakePx, p.HitShakePx);
@@ -188,9 +176,10 @@ namespace Pokepedia.Tests
         [Test]
         public void BoundaryValues_AreAccepted()
         {
-            var c = Parse("{ 'lo': { 'cry': { 'semitones': -24, 'length': 0.3 }, 'windupSec': 0, 'lungePx': 0, 'hitShakePx': 0, 'knockbackPx': 0 }," +
-                          "  'hi': { 'cry': { 'semitones': 24, 'length': 3 }, 'windupSec': 2, 'lungePx': 64, 'hitShakePx': 64, 'knockbackPx': 64 } }");
-            Assert.AreEqual(new CryParams(-24, 0.3), c.ProfileFor("lo").Cry);
+            var c = Parse("{ 'lo': { 'windupSec': 0, 'lungePx': 0, 'hitShakePx': 0, 'knockbackPx': 0 }," +
+                          "  'hi': { 'windupSec': 2, 'lungePx': 64, 'hitShakePx': 64, 'knockbackPx': 64 } }");
+            Assert.AreEqual(0.0, c.ProfileFor("lo").WindupSec);
+            Assert.AreEqual(0, c.ProfileFor("lo").LungePx);
             Assert.AreEqual(64, c.ProfileFor("hi").KnockbackPx);
             Assert.AreEqual(2.0, c.ProfileFor("hi").WindupSec);
         }
@@ -203,10 +192,6 @@ namespace Pokepedia.Tests
         [TestCase("'lungePx': 1.5", "lungePx")]
         [TestCase("'hitShakePx': -1", "hitShakePx")]
         [TestCase("'knockbackPx': 100", "knockbackPx")]
-        [TestCase("'cry': { 'length': 0.2 }", "length")]
-        [TestCase("'cry': { 'length': 3.5 }", "length")]
-        [TestCase("'cry': { 'semitones': 25 }", "semitones")]
-        [TestCase("'cry': { 'semitones': -25 }", "semitones")]
         [TestCase("'windupSec': '0.5'", "windupSec")]
         [TestCase("'lungePx': null", "lungePx")]
         public void Profile_BadValue_NamesProfileAndField(string field, string fieldName)
@@ -216,11 +201,10 @@ namespace Pokepedia.Tests
 
         [TestCase("'windupSec': 3", "windupSec")]
         [TestCase("'lungePx': -1", "lungePx")]
-        [TestCase("'cry': { 'semitones': 0, 'length': 0 }", "length")]
         public void Defaults_BadValue_NamesDefaultsAndField(string replacement, string fieldName)
         {
             // 같은 키가 두 번 나오면 JsonReader 가 거부하므로 해당 필드를 빼고 다시 넣는다.
-            var defaults = DefaultsWithout(fieldName == "length" ? "cry" : fieldName, replacement);
+            var defaults = DefaultsWithout(fieldName, replacement);
             FailsWith(Json(defaults: defaults), "defaults", fieldName);
         }
 
@@ -228,14 +212,13 @@ namespace Pokepedia.Tests
         {
             var parts = new List<string>
             {
-                "'cry': { 'semitones': 0, 'length': 1.0 }", "'windupSec': 0.15", "'lungePx': 10", "'hitShakePx': 2", "'knockbackPx': 0",
+                "'windupSec': 0.15", "'lungePx': 10", "'hitShakePx': 2", "'knockbackPx': 0",
             };
             parts.RemoveAll(p => p.StartsWith("'" + field + "'", StringComparison.Ordinal));
             if (replacement != null) parts.Add(replacement);
             return "{ " + string.Join(", ", parts) + " }";
         }
 
-        [TestCase("cry")]
         [TestCase("windupSec")]
         [TestCase("lungePx")]
         [TestCase("hitShakePx")]
@@ -243,14 +226,6 @@ namespace Pokepedia.Tests
         public void Defaults_MissingField_IsRejected(string field)
         {
             FailsWith(Json(defaults: DefaultsWithout(field, null)), "defaults", field);
-        }
-
-        [TestCase("semitones")]
-        [TestCase("length")]
-        public void Defaults_CryMissingField_IsRejected(string field)
-        {
-            var cry = field == "semitones" ? "'cry': { 'length': 1.0 }" : "'cry': { 'semitones': 0 }";
-            FailsWith(Json(defaults: DefaultsWithout("cry", cry)), "defaults", field);
         }
 
         [Test]
@@ -266,9 +241,11 @@ namespace Pokepedia.Tests
         }
 
         [Test]
-        public void UnknownField_InCry_IsRejected()
+        public void Cry_IsRejectedAsUnknownField()
         {
-            FailsWith(Json("{ 'pikachu': { 'cry': { 'pitch': 4 } } }"), "pikachu", "pitch");
+            // 속성 합성음은 울음소리가 아니라 공격 모션 소리라 cry 를 뺐다(진짜 울음소리 설계는 미정).
+            FailsWith(Json("{ 'pikachu': { 'cry': { 'semitones': 4, 'length': 0.9 } } }"), "pikachu", "unknown field 'cry'");
+            FailsWith(Json(defaults: DefaultsWithout("x", "'cry': { 'semitones': 0, 'length': 1.0 }")), "defaults", "unknown field 'cry'");
         }
 
         [Test]
@@ -441,18 +418,6 @@ namespace Pokepedia.Tests
             var c = RealCatalog();
             Assert.AreEqual("lightning_strike", c.MoveFxFor("pikachu", "thunderbolt"));
             Assert.AreEqual("water_cannon", c.MoveFxFor("blastoise", "hydro_pump"));
-        }
-
-        [TestCase("pikachu", 4, 0.9)]
-        [TestCase("blastoise", -5, 1.15)]
-        [TestCase("charizard", -3, 1.2)]
-        [TestCase("venusaur", -4, 1.1)]
-        [TestCase("gengar", 0, 1.1)]
-        [TestCase("mewtwo", -2, 1.3)]
-        public void RealFile_CryParams_MatchApprovedPrototype(string key, double semitones, double length)
-        {
-            // 사용자가 Tools/audio/type-cries-prototype.html 로 청취해 승인한 값 (PROJECT.md 8.3)
-            Assert.AreEqual(new CryParams(semitones, length), RealCatalog().ProfileFor(key).Cry);
         }
     }
 }
