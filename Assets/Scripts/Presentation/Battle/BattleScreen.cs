@@ -238,6 +238,7 @@ namespace Pokepedia.Presentation.Battle
         {
             hud.Message.Clear();
             SetMenu(hud.MoveMenu);
+            hud.SetMoveTypes(ctx.Session.PlayerMoveInfos.Select(m => m.Move.Type).ToArray());
             hud.MoveMenu.Show(ctx.Session.PlayerMoveInfos.Select(m => ctx.Locale.Get(m.NameKey)).ToArray(), lastMoveIndex);
         }
 
@@ -246,7 +247,7 @@ namespace Pokepedia.Presentation.Battle
             var infos = ctx.Session.PlayerMoveInfos;
             if (i < 0 || i >= infos.Count) return;
             var m = infos[i].Move;
-            hud.MoveInfo.text = $"{ctx.Locale.Get(Keys.Type(m.Type))}\n{ctx.Locale.Get(Keys.InfoPower)} {m.Power}\n{ctx.Locale.Get(Keys.InfoAccuracy)} {m.Accuracy}";
+            hud.ShowMoveInfo(m.Type, ctx.Locale.Get(Keys.Type(m.Type)), ctx.Locale.Get(Keys.InfoPower), m.Power, ctx.Locale.Get(Keys.InfoAccuracy), m.Accuracy);
         }
 
         void OnMove(int i)

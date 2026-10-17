@@ -69,7 +69,22 @@ namespace Pokepedia.Presentation.Audio.Synth
             }
             Dynamics.NormalizePeak(d, peak);
             Dynamics.Limit(d, sampleRate);
-            return Dynamics.TrimToFloat(d, sampleRate, 1e-4, 0.004);
+            return PadTo(Dynamics.TrimToFloat(d, sampleRate, 1e-4, 0.004), sampleRate, MinSeconds);
+        }
+
+        /// <summary>
+        /// 구운 효과음의 최소 길이. 웹 빌드는 소리를 압축해 넣는데, 아이폰 사파리는 0.05초 남짓한 소리(커서·HP 틱)를
+        /// 풀지 못해 "EncodingError: Decoding failed" 를 낸다(2026-10-17 실기기). 뒤에 무음을 붙여 이 길이를 채운다.
+        /// </summary>
+        public const double MinSeconds = 0.25;
+
+        static float[] PadTo(float[] samples, int sampleRate, double seconds)
+        {
+            int n = (int)Math.Ceiling(seconds * sampleRate);
+            if (samples.Length >= n) return samples;
+            var padded = new float[n];
+            Array.Copy(samples, padded, samples.Length);
+            return padded;
         }
 
         /// <summary>종류별 렌더 길이(초). 실제 결과는 꼬리 무음을 잘라 이보다 짧을 수 있다.</summary>

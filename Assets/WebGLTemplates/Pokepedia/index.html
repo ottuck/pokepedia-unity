@@ -97,6 +97,12 @@
         companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
         productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
         productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+        // Unity 는 처리되지 않은 오류를 alert 로 띄운다. 소리 하나를 풀지 못한 오류(게임은 계속 돈다)는 콘솔에만 남긴다.
+        // true 를 돌려주면 기본 alert 를 건너뛴다. 그 밖의 오류는 기본 동작 그대로.
+        errorHandler: function (message) {
+          if (/EncodingError|Decoding failed|decodeAudioData/.test(String(message))) { console.warn("[audio] " + message); return true; }
+          return false;
+        },
       }, function (p) {
         // 0~0.9 는 내려받기, 그 뒤는 엔진 초기화
         loadingFill.style.width = Math.round(p * 100) + "%";
