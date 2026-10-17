@@ -94,7 +94,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                 world.Backdrop.SetWeather(0, 1.4f);
                 host.StartCoroutine(lighting.FadeAmbient(world.Backdrop.Theme.ClearAmbient, 1.4f));
             }
-            host.StartCoroutine(world.PanTo(side == BattleState.Player ? -8 : 8, 0.7f));
+            host.StartCoroutine(world.CameraTo(BattleWorld.Toward(view.Center, 0.3f), 1.1f, 0.7f));   // 이긴 쪽으로 다가가며 살짝 확대
             host.StartCoroutine(lighting.Pulse(view.Center, gold, 150, 1.9f, 1.3f));
             host.StartCoroutine(vfx.Rings(view.Center, gold, 2, 0.7f));
             vfx.Burst(view.Center, gold, Color.white, 46, 30, 110, 1.0f, 3, 150, 16);
@@ -106,7 +106,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                 yield return Move(view, new Vector2(0, -h), Vector2.zero, 0.13f, true);
             }
             yield return VfxLayer.Wait(0.4f);
-            host.StartCoroutine(world.PanTo(0, 0.9f));
+            host.StartCoroutine(world.CameraTo(Vector2.zero, 1, 0.9f));
         }
 
         // ------------------------------------------------------------------ 기술
@@ -114,17 +114,15 @@ namespace Pokepedia.Presentation.Battle.Fx
         /// <param name="hpAnimation">HP 바를 줄이는 코루틴 (화면이 넘긴다)</param>
         public IEnumerator UseMove(int side, int attackerSpeciesId, int targetSpeciesId, MoveInfo move, DamageDealt hit, Func<IEnumerator> hpAnimation)
         {
-            // 카메라가 공격하는 쪽으로 살짝 움직였다가 돌아온다 (배경 레이어가 다르게 따라가 깊이가 보인다)
-            host.StartCoroutine(world.PanTo(side == BattleState.Player ? 5 : -5, 0.12f));
+            // 카메라는 UseMoveCore 안에서 공격자 → 상대로 움직이고(AttackCamera), 끝나면 가운데·1배로 돌아온다
             yield return UseMoveCore(side, attackerSpeciesId, targetSpeciesId, move, hit, hpAnimation, null);
-            host.StartCoroutine(world.PanTo(0, 0.25f));
+            host.StartCoroutine(world.CameraTo(Vector2.zero, 1, 0.3f));
         }
 
         /// <summary>연출 실험실(?lab): 전용 연출 fx 를 강제로 지정해 재생한다. HP 는 바꾸지 않는다.</summary>
         public IEnumerator PlayLab(string fx, int side, int attackerSpeciesId, int targetSpeciesId, MoveInfo move, bool missed, bool critical)
         {
             var hit = missed ? null : new DamageDealt(BattleState.Opponent(side), 1, 0, 2.0, critical);
-            host.StartCoroutine(world.PanTo(side == BattleState.Player ? 5 : -5, 0.12f));
             yield return UseMoveCore(side, attackerSpeciesId, targetSpeciesId, move, hit, null, fx);
             host.StartCoroutine(world.PanTo(0, 0.25f));
         }
@@ -149,6 +147,7 @@ namespace Pokepedia.Presentation.Battle.Fx
             };
 
             ScheduleMoveSounds(fx, typeName, prof.WindupSec);
+            host.StartCoroutine(AttackCamera(attacker, target, (float)ReleaseSec(fx, prof.WindupSec)));
 
             Vector2 toTarget = (target.Feet - attacker.Feet).normalized;
             switch (fx)
@@ -380,10 +379,25 @@ namespace Pokepedia.Presentation.Battle.Fx
         /// 발사 순간 = 준비 동작이 끝나는 시각. 공격음은 그보다 MoveLead 만큼 먼저 틀어 "터지는 순간"을 발사에 맞추고,
         /// 준비가 길면 그 앞을 기 모으기 소리로 채운 뒤 공격음이 시작될 때 끊는다. 물 기술은 반동이 준비 동작이라 기 모으기 소리가 없다.
         /// </summary>
+        /// <summary>발사 순간 = 준비 동작이 끝나는 시각(돌진은 절반, 물 기술은 반동 7할). 소리와 카메라가 같이 쓴다.</summary>
+        static double ReleaseSec(string fx, double windupSec)
+            => fx == "contact" ? windupSec * 0.5 : IsWaterFx(fx) ? windupSec * 0.7 : windupSec;
+
+        /// <summary>
+        /// 공격 카메라 (M5, 2.5D): 준비 동작 동안 공격자 쪽으로 다가가며 확대하고, 발사 순간 상대 쪽으로 빠르게 넘어간다.
+        /// 맞는 순간의 당김(Punch)은 HitReaction 이 따로 건다. 끝나면 UseMove 가 가운데·1배로 되돌린다.
+        /// </summary>
+        IEnumerator AttackCamera(BattleSideView attacker, BattleSideView target, float release)
+        {
+            host.StartCoroutine(world.CameraTo(BattleWorld.Toward(attacker.Center, 0.35f), 1.12f, Mathf.Clamp(release, 0.15f, 0.4f)));
+            yield return VfxLayer.Wait(release);
+            host.StartCoroutine(world.CameraTo(BattleWorld.Toward(target.Center, 0.3f), 1.08f, 0.16f));
+        }
+
         void ScheduleMoveSounds(string fx, string typeName, double windupSec)
         {
             bool water = IsWaterFx(fx);
-            double release = fx == "contact" ? windupSec * 0.5 : water ? windupSec * 0.7 : windupSec;
+            double release = ReleaseSec(fx, windupSec);
             bool charge = fx != "contact" && !water && windupSec >= ChargeSoundMinSec;
             bool hasMove = SoundBank.HasMoveSound(typeName);
             float cue = Mathf.Max(0, (float)release - (hasMove ? SoundBank.MoveLead(typeName) : 0));
@@ -412,6 +426,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                 yield break;
             }
             sound.Play(hit.Critical ? SfxKind.CriticalHit : SfxKind.Hit);
+            host.StartCoroutine(world.Punch(hit.Critical ? 0.08f : 0.04f, hit.Critical ? 0.3f : 0.2f));
             if (hit.Critical)
             {
                 host.StartCoroutine(vfx.ScreenFlash(new Color(1, 1, 1, 0.9f), 0.25f));
