@@ -53,10 +53,12 @@ namespace Pokepedia.Presentation.Battle.Fx
         static bool IsWaterFx(string fx) => fx.StartsWith("hydro_", StringComparison.Ordinal);
 
         // ------------------------------------------------------------------ 등장 · 기절 · 승리
-        public IEnumerator SendOut(int side, SpeciesInfo info)
+        /// <param name="shiny">색이 다른 스티커로 들어온 플레이어 포켓몬 (Collection, 외형만)</param>
+        public IEnumerator SendOut(int side, SpeciesInfo info, bool shiny = false)
         {
             var view = sides[side];
-            view.Play(SpriteSheet.Load(side == BattleState.Player ? info.Sprites.Back : info.Sprites.Front));
+            var sprites = info.Sprites;
+            view.Play(SpriteSheet.Load(side == BattleState.Player ? (shiny ? sprites.BackShiny : sprites.Back) : (shiny ? sprites.FrontShiny : sprites.Front)));
             view.SetAlpha(1);
             view.SetFlash(0);
             // NPC 는 오른쪽에서, 플레이어는 왼쪽에서 미끄러져 들어온다. 등장음의 "뿅"은 번쩍이는 순간(BattleSfx.SendOutPopAt)에 맞춰져 있다.

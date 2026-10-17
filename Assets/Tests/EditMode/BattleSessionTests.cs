@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Pokepedia.App.Battle;
+using Pokepedia.App.Host;
 using Pokepedia.Content;
 using Pokepedia.Domain;
 using Pokepedia.Domain.Battle;
@@ -206,6 +207,28 @@ namespace Pokepedia.Tests
         }
 
         [Test]
+        public void TryRun_Collection_WithOnlyOneOpponent_CannotEscape()
+        {
+            // 상대 후보가 1마리면 도망쳐도 같은 상대가 HP 가득으로 다시 나와, 지는 판을 되돌리는 수단이 된다 (9.2)
+            var s = new BattleSession(Catalog(), Rules, new SeededRandom(3), BattleMode.Collection, 25, () => 9, canEscape: false);
+            s.Start();
+            Assert.AreEqual(RunOutcome.CannotEscape, s.TryRun());
+            Assert.IsFalse(s.IsOver);
+        }
+
+        [Test]
+        public void CollectionPlayers_AreOwnedAndPlayable_ShinyIfAnyShinyOwned()
+        {
+            // 보유 ∩ 플레이어 가능 (9.2): 9 는 가졌어도 playable 이 아니라 상대로만 나온다. 로스터에 없는 151 은 무시.
+            var c = Catalog(Q("[ { 'id': 25, 'tier': 'showcase', 'npcWeight': 10, 'playable': true }, { 'id': 9, 'tier': 'showcase', 'npcWeight': 10 }, " +
+                              "{ 'id': 26, 'tier': 'standard', 'npcWeight': 0, 'playable': true } ]"));
+            var owned = new[] { new OwnedSticker { id = 9 }, new OwnedSticker { id = 25 }, new OwnedSticker { id = 25, shiny = true }, new OwnedSticker { id = 151 } };
+
+            CollectionAssert.AreEqual(new[] { new PlayerChoice(25, Shiny: true) }, CollectionLineup.Players(c, owned));
+            CollectionAssert.IsEmpty(CollectionLineup.Players(c, null));
+        }
+
+        [Test]
         public void SameSeed_ReproducesWholeSession()
         {
             static List<BattleEvent> Script(uint seed)
@@ -242,6 +265,7 @@ namespace Pokepedia.Tests
             var c = Catalog(); // 150 은 가중치 0
             var pick = OpponentPicker.Weighted(c, new SeededRandom(9), excludeId: 25);
             CollectionAssert.AreEqual(new[] { 7, 9 }, Enumerable.Range(0, 2000).Select(_ => pick()).Distinct().OrderBy(x => x).ToArray());
+            Assert.AreEqual(2, OpponentPicker.CandidateCount(c, excludeId: 25));
 
             var onlyExcluded = Q("[ { 'id': 25, 'tier': 'showcase', 'npcWeight': 5 }, { 'id': 150, 'tier': 'standard', 'npcWeight': 0 } ]");
             Assert.Throws<InvalidOperationException>(() => OpponentPicker.Weighted(Catalog(onlyExcluded), new SeededRandom(1), excludeId: 25));

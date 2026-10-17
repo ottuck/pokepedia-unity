@@ -40,5 +40,8 @@ namespace Pokepedia.App.Host
     {
         public const int Version = 1;
         public const string ReadyJson = "{\"type\":\"ready\",\"v\":1}";
+
+        /// <summary>Collection 모드 한 판의 승패 (표시용, React 는 저장하지 않는다)</summary>
+        public static string BattleEndedJson(bool win) => "{\"type\":\"battleEnded\",\"v\":1,\"result\":\"" + (win ? "win" : "lose") + "\"}";
     }
 }

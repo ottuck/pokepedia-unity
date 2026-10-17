@@ -12,16 +12,38 @@
         display: flex; align-items: center; justify-content: center; }
       #frame { aspect-ratio: 10 / 9; width: min(100%, calc((100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 10 / 9)); }
       #unity-canvas { width: 100%; height: 100%; display: block; background: #0f380f; outline: none; image-rendering: pixelated; }
-      #loading { position: fixed; left: 0; right: 0; bottom: 8px; text-align: center; color: #9bbc0f; font: 12px monospace; }
+      /* 로딩 화면: 첫 방문은 4G 에서 10초 넘게 걸리므로(PROJECT.md 10.3) 진행 막대와 안내를 보여 준다 */
+      #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+        background: #0f380f; color: #9bbc0f; font: bold 12px/1.4 monospace; text-align: center; padding: 16px; }
+      #loading-title { font-size: 18px; letter-spacing: 2px; color: #8bac0f; }
+      #loading-bar { width: min(200px, 70vw); height: 10px; border: 2px solid #8bac0f; padding: 2px; box-sizing: content-box; }
+      #loading-fill { height: 100%; width: 0; background: #9bbc0f; image-rendering: pixelated; }
+      #loading-tip { font-weight: normal; opacity: 0.8; max-width: 260px; }
     </style>
   </head>
   <body>
     <div id="stage"><div id="frame"><canvas id="unity-canvas" tabindex="0"></canvas></div></div>
-    <div id="loading">loading 0%</div>
+    <div id="loading">
+      <div id="loading-title">POKEPEDIA BATTLE</div>
+      <div id="loading-bar"><div id="loading-fill"></div></div>
+      <div id="loading-text">0%</div>
+      <div id="loading-tip"></div>
+    </div>
     <script src="Build/{{{ LOADER_FILENAME }}}"></script>
     <script>
       var canvas = document.querySelector("#unity-canvas");
       var loading = document.querySelector("#loading");
+      var loadingFill = document.querySelector("#loading-fill");
+      var loadingText = document.querySelector("#loading-text");
+      // 안내 문구 언어: Pokepedia 는 ?lang= 을 붙여 띄우고, 없으면 브라우저 언어
+      var lang = (new URLSearchParams(location.search).get("lang") || navigator.language || "ko").slice(0, 2);
+      var TEXT = {
+        ko: { tip: "처음 불러올 때는 조금 걸려요. 다음부터는 빨라요.", ready: "준비 중…", failed: "불러오지 못했어요. 새로고침해 주세요." },
+        en: { tip: "The first load takes a moment. It is faster next time.", ready: "Getting ready…", failed: "Could not load. Please refresh." },
+        ja: { tip: "はじめての よみこみは すこし じかんが かかります。", ready: "じゅんびちゅう…", failed: "よみこめませんでした。 リロードしてください。" }
+      }[lang] || null;
+      if (!TEXT) TEXT = { tip: "The first load takes a moment. It is faster next time.", ready: "Getting ready…", failed: "Could not load. Please refresh." };
+      document.querySelector("#loading-tip").textContent = TEXT.tip;
 
       // 호스트(Pokepedia) origin 허용 목록. init 수신 검증과 jslib 의 postMessage 대상에 함께 쓴다.
       // 규약: docs/PROJECT.md 9.2
@@ -30,6 +52,15 @@
         pending: [],
         allowedOrigins: ["https://pokepedia.dev", "https://www.pokepedia.dev", "http://localhost:3000", "http://localhost:8000"]
       };
+      // Pokepedia 의 Vercel Preview 는 PR 마다 주소가 달라 목록에 미리 넣을 수 없다. 부모 페이지 origin 이
+      // 이 계정의 Pokepedia Preview 형식이면 목록에 더한다(9.2). ancestorOrigins 가 없는 브라우저(Firefox)는 referrer 로 본다.
+      (function () {
+        var PREVIEW = /^https:\/\/pokepedia-[a-z0-9-]+-vison901-gmailcoms-projects\.vercel\.app$/;
+        try {
+          var parent = (location.ancestorOrigins && location.ancestorOrigins[0]) || (document.referrer && new URL(document.referrer).origin);
+          if (parent && PREVIEW.test(parent)) window.pokeHost.allowedOrigins.push(parent);
+        } catch (e) {}
+      })();
 
       // iframe 안에서 방향키·스페이스가 부모 페이지를 스크롤하지 않도록 막는다
       var BLOCKED = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"];
@@ -66,12 +97,16 @@
         companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
         productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
         productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
-      }, function (p) { loading.textContent = "loading " + Math.round(p * 100) + "%"; })
+      }, function (p) {
+        // 0~0.9 는 내려받기, 그 뒤는 엔진 초기화
+        loadingFill.style.width = Math.round(p * 100) + "%";
+        loadingText.textContent = p >= 0.9 ? TEXT.ready : Math.round(p * 100) + "%";
+      })
       .then(function (instance) {
         window.pokeHost.instance = instance;
         loading.style.display = "none";
         window.pokeHost.pending.splice(0).forEach(function (j) { instance.SendMessage("HostBridge", "OnHostInit", j); });
-      }).catch(function (m) { loading.textContent = "load failed: " + m; });
+      }).catch(function (m) { loadingText.textContent = TEXT.failed; console.error(m); });
     </script>
   </body>
 </html>

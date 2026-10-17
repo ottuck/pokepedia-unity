@@ -70,6 +70,14 @@ namespace Pokepedia.Tests
         }
 
         [Test]
+        public void BattleEndedJson_MatchesProtocol()
+        {
+            // 9.2 규약: React 가 이 문자열 그대로 type·result 를 읽는다
+            Assert.AreEqual("{\"type\":\"battleEnded\",\"v\":1,\"result\":\"win\"}", HostProtocol.BattleEndedJson(true));
+            Assert.AreEqual("{\"type\":\"battleEnded\",\"v\":1,\"result\":\"lose\"}", HostProtocol.BattleEndedJson(false));
+        }
+
+        [Test]
         public void InitWithOtherProtocolVersion_IsIgnored()
         {
             var b = new FakeBridge { IsHostMode = true };
