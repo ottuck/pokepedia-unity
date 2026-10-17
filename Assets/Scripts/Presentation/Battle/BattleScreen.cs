@@ -256,9 +256,16 @@ namespace Pokepedia.Presentation.Battle
             if (State != BattleViewState.Command) return;
             State = BattleViewState.Animating;
             lastMoveIndex = i;
+            StartCoroutine(PressThenUse(i));
+        }
+
+        /// <summary>누른 기술 버튼이 살짝 눌렸다 튀어 오른 뒤 메뉴를 닫고 턴을 진행한다</summary>
+        IEnumerator PressThenUse(int i)
+        {
+            yield return hud.Moves.Press(i);
             SetMenu(null);
             hud.Message.Clear();
-            StartCoroutine(PlayThenPrompt(ctx.Session.UseMove(i)));
+            yield return PlayThenPrompt(ctx.Session.UseMove(i));
         }
 
         void ShowResultMenu()
