@@ -72,6 +72,10 @@ namespace Pokepedia.App.Battle
         public const string ResultRematch = "battle.result.rematch";
         public const string ResultRetry = "battle.result.retry";
         public const string ResultTitle = "battle.result.title";
+        /// <summary>도망칠 수 없는 배틀에서 "도망"을 두 번 눌렀을 때: 그만둘지 묻는다 (5.3)</summary>
+        public const string QuitAsk = "battle.quit.ask";
+        public const string QuitYes = "battle.quit.yes";
+        public const string QuitNo = "battle.quit.no";
         public const string InfoType = "battle.info.type";
         public const string InfoPower = "battle.info.power";
         public const string InfoAccuracy = "battle.info.accuracy";
@@ -89,7 +93,7 @@ namespace Pokepedia.App.Battle
         /// <summary>메뉴·결과·기술 정보 라벨과 18개 타입 이름</summary>
         public static IReadOnlyList<string> UiKeys { get; } = new[]
             {
-                PromptWhatToDo, MenuFight, MenuRun, ResultNextOpponent, ResultRematch, ResultRetry, ResultTitle, InfoType, InfoPower, InfoAccuracy,
+                PromptWhatToDo, MenuFight, MenuRun, ResultNextOpponent, ResultRematch, ResultRetry, ResultTitle, QuitAsk, QuitYes, QuitNo, InfoType, InfoPower, InfoAccuracy,
             }
             .Concat(((PokemonType[])Enum.GetValues(typeof(PokemonType))).Select(TypeName))
             .ToArray();

@@ -25,11 +25,13 @@ macOS/Linux에서는 `py -3` 대신 `python3`, `.venv/Scripts/python` 대신 `.v
 
 ## 매니페스트 갱신
 
+지금 매니페스트에는 공개 중인 피카츄(25)·거북왕(9)만 있습니다(2026-10-17, 빌드 용량 때문에 Standard 4종 리자몽 6·이상해꽃 3·팬텀 94·뮤츠 150을 뺌). 다시 넣으려면 `--ids 25,9,6,3,94,150`으로 갱신합니다.
+
 로스터를 바꾸거나 원본 저장소의 새 커밋으로 올릴 때 실행합니다.
 
 ```sh
 # master 의 현재 커밋으로 고정
-Tools/sprites/.venv/Scripts/python -I Tools/sprites/fetch_sprites.py --update-manifest --ids 25,9,6,3,94,150
+Tools/sprites/.venv/Scripts/python -I Tools/sprites/fetch_sprites.py --update-manifest --ids 25,9
 # 특정 커밋으로 고정
 Tools/sprites/.venv/Scripts/python -I Tools/sprites/fetch_sprites.py --update-manifest --ids 25,9,6,3,94,150 --commit <40자리 SHA>
 ```

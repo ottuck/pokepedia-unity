@@ -56,6 +56,11 @@
       "fight": "FIGHT",
       "run": "RUN"
     },
+    "quit": {
+      "ask": "Really run away?\nThe battle ends and you go back to the title.",
+      "yes": "Quit",
+      "no": "Keep fighting"
+    },
     "result": {
       "next_opponent": "Next opponent",
       "rematch": "Battle again",

@@ -34,6 +34,8 @@ namespace Pokepedia.Presentation.Battle
         public ChoiceMenu ActionMenu { get; }
         public ChoiceMenu MoveMenu { get; }
         public ChoiceMenu ResultMenu { get; }
+        /// <summary>"정말 도망칠까?" [그만둔다 / 계속 싸운다] (결과 메뉴와 같은 자리)</summary>
+        public ChoiceMenu QuitMenu { get; }
         public MoveCards Moves { get; }
 
         public BattleHud(MonoBehaviour host, TMP_FontAsset font, Material flashMaterial, Material particleMaterial, Material litMaterial,
@@ -91,8 +93,13 @@ namespace Pokepedia.Presentation.Battle
                 new[] { new Vector3(6, 6, 128), new Vector3(6, 24, 128) }, 1);
             ResultMenu.Hide();
 
+            var quitInner = Ui.Box(srt, "QuitMenu", 96, 108, 142, 46);
+            QuitMenu = new ChoiceMenu(quitInner.parent.gameObject, quitInner, font,
+                new[] { new Vector3(6, 6, 128), new Vector3(6, 24, 128) }, 1);
+            QuitMenu.Hide();
+
             Vfx.BringToFront(); // 화면 번쩍임이 모든 것 위에 오도록
-            foreach (var m in new[] { ActionMenu, MoveMenu, ResultMenu }) WireSounds(m);
+            foreach (var m in new[] { ActionMenu, MoveMenu, ResultMenu, QuitMenu }) WireSounds(m);
             MoveMenu.Cancelled += () => Sound.Play(SfxKind.Cancel);
         }
 

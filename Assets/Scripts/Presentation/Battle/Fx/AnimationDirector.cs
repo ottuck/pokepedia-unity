@@ -114,33 +114,42 @@ namespace Pokepedia.Presentation.Battle.Fx
         }
 
         /// <summary>
-        /// 응원 부활 (PROJECT.md 5.3): 금빛이 번지고 반짝임이 피어오르는 가운데, 쓰러졌던 포켓몬이 아래에서 떠오르며 다시 나타나고
-        /// 번쩍인 뒤 HP 가 다시 찬다(hpAnimation, 화면이 넘긴다).
+        /// 응원 부활 (PROJECT.md 5.3): 카메라가 쓰러진 쪽으로 다가가고, 하늘에서 금빛 빛기둥이 내려오며 화면 전체에 성스러운 깃털이
+        /// 흩날린다. 빛 속에서 포켓몬이 아래에서 떠오르며 다시 나타나고, 금빛으로 화면이 번쩍인 뒤 HP 가 다시 찬다(hpAnimation).
         /// </summary>
         public IEnumerator Revive(int side, Func<IEnumerator> hpAnimation)
         {
             var view = sides[side];
             var gold = new Color(1f, 0.86f, 0.42f);
+            var holy = new Color(1f, 0.95f, 0.75f, 0.9f);
             sound.Play(SfxKind.Charge);
-            host.StartCoroutine(lighting.Pulse(view.Center, gold, 160, 2.2f, 1.5f));
-            host.StartCoroutine(vfx.Rings(view.Center, gold, 3, 0.8f));
-            vfx.Burst(view.Center, gold, Color.white, 50, 20, 90, 1.1f, 3, -40, 18);
+            host.StartCoroutine(world.CameraTo(BattleWorld.Toward(view.Center, 0.25f), 1.08f, 0.8f));
+            host.StartCoroutine(vfx.LightShaft(view.Feet, 46, holy, 2.6f));
+            host.StartCoroutine(vfx.Feathers(26, 3.2f, gold));
+            host.StartCoroutine(lighting.Pulse(view.Center, gold, 170, 2.0f, 2.4f));
+            yield return VfxLayer.Wait(0.55f);
+
             view.SetVisible(true);
-            const float rise = 0.6f, from = 24;
+            vfx.Burst(view.Feet, gold, Color.white, 40, 15, 70, 1.2f, 2, -50, 20);   // 발밑에서 피어오르는 반짝임
+            const float rise = 0.7f, from = 26;
             for (float t = 0; t < rise; t += Time.deltaTime)
             {
                 float k = t / rise, e = 1 - (1 - k) * (1 - k);
                 view.SetOffset(new Vector2(0, Mathf.Round(from * (1 - e))));
                 view.SetAlpha(e);
-                view.SetFlash(1 - 0.7f * k);
+                view.SetFlash(1 - 0.6f * k);
                 yield return null;
             }
             view.SetOffset(Vector2.zero);
             view.SetAlpha(1);
             sound.Play(SfxKind.SendOut);
-            view.SetFlash(0.9f); yield return VfxLayer.Wait(0.08f); view.SetFlash(0);
-            vfx.Burst(view.Center, gold, Color.white, 24, 30, 110, 0.7f, 2, 120, 10);
+            host.StartCoroutine(vfx.ScreenFlash(new Color(1f, 0.93f, 0.7f, 0.75f), 0.55f));
+            host.StartCoroutine(vfx.Rings(view.Center, gold, 3, 0.8f));
+            vfx.Burst(view.Center, gold, Color.white, 30, 30, 120, 0.8f, 2, 120, 12);
+            view.SetFlash(0.9f); yield return VfxLayer.Wait(0.1f); view.SetFlash(0);
             if (hpAnimation != null) yield return hpAnimation();
+            yield return VfxLayer.Wait(0.3f);
+            host.StartCoroutine(world.CameraTo(Vector2.zero, 1, 0.6f));
         }
 
         // ------------------------------------------------------------------ 기술
