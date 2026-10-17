@@ -159,7 +159,7 @@ VS 장면 (HTML, 약 2초, 확인 입력으로 건너뜀)
 **HTML 시작·VS 화면** (`Assets/WebGLTemplates/Pokepedia/index.html`)
 - 게임 안 VS와 같은 **대각선 대결 구도**: 왼쪽 붉은 번개 폭풍(플레이어) vs 오른쪽 깊은 바다(상대), 빛나는 대각선(위 60% → 아래 40%), 천천히 도는 빛줄기, 불꽃·거품 입자, 크게 마주 선 공식 아트워크(못 받으면 뺀다).
 - 엠블럼: 빨간 POKEPEDIA 리본 + **Bangers** BATTLE(진한 입체 그림자·흰 안쪽 테두리·노랑→주황 그라데이션·가끔 쓸고 지나가는 빛, 등장 때 찍히듯 들어오고 속도선). 버튼은 기울어진 두툼한 게임 버튼, 로딩은 줄무늬가 흐르는 기울어진 막대 + TIP, 안내는 노란 테두리 대화 상자.
-- 글꼴: 로고 Bangers, 리본·버튼·이름 띠 Black Han Sans, 본문 Noto Sans KR(가나는 Noto Sans JP) — Google Fonts, 필요한 글자 조각만 받고 막히면 시스템 글꼴.
+- 글꼴: 로고 Bangers, 영문 리본·TIP Black Han Sans, 한글 버튼·이름 띠 Noto Sans KR 900, 본문 Noto Sans KR(가나는 Noto Sans JP) — Google Fonts, 필요한 글자 조각만 받고 막히면 시스템 글꼴. Black Han Sans 는 한글을 작게 쓰면 'ㅌ' 가운데 획이 붙어 "배틀"이 "배들"로 보여 한글에 쓰지 않는다.
 - **VS(view = vs):** 로고·버튼이 사라지고 두 포켓몬이 양쪽에서 밀고 들어오며, 0.62초에 Bangers "VS"가 대각선 위에 찍히고(흰 번쩍임·흔들림) 이름 띠(상대 오른쪽 위 파랑, 플레이어 왼쪽 아래 노랑)가 들어온다. 1.75초부터 0.45초 동안 옅어지며 도트 전투가 드러난다.
 - 크기는 모두 게임 폭 기준(cqw)이라 데스크톱·휴대폰에서 같은 짜임이다. 겹침 상자는 `overflow: clip`(hidden은 스크롤 상자라 화면이 바뀔 때 저절로 밀려 있었다).
 - **Unity ↔ HTML:** Unity가 상태·문구(로케일 파일)·도감 번호를 보내고(`HostBridge.ShowTitle` → `window.pokeTitle.show`, view = loading|idle|connecting|failed|no_partner|vs|hidden), 버튼은 템플릿이 `SendMessage("App", "OnTitleAction", start|retry|demo)`로 돌려준다 — 클릭 처리 안에서 바로 불러 첫 소리(오디오 잠금 해제)가 막히지 않는다. VS의 소리(등장음·급소 타격음)·시간·건너뛰기(0.3초 뒤 확인 입력)는 Unity(`BattleEventPlayer.PlayHtmlVs`)가 맡는다.
