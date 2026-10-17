@@ -1,12 +1,35 @@
 # Pokepedia Battle (Unity)
 
-[Pokepedia](https://pokepedia.dev)의 **퀴즈 → 띠부띠부씰 컬렉션 → 배틀** 루프 중 배틀을 맡는 Unity 2D 턴제 배틀 게임입니다. 퀴즈로 모은 포켓몬 중 배틀을 지원하는 포켓몬으로 NPC와 1:1로 싸웁니다.
+[Pokepedia](https://pokepedia.dev)의 **퀴즈 → 띠부띠부씰 컬렉션 → 배틀** 루프 중 배틀을 맡는 Unity 2D 턴제 배틀 게임입니다. 게임보이 감성의 1:1 포켓몬 배틀을 브라우저에서 바로 할 수 있습니다.
 
-> **배틀 지원 포켓몬은 1세대 151종 중 일부(로스터)입니다.** 로스터는 데이터로 관리하며 엔진은 지원 포켓몬 수를 모릅니다.
+**▶ 플레이: https://battle.pokepedia.dev** (로그인 없이 Demo 모드, PC·모바일 브라우저)
 
-- Unity 6.3 LTS (6000.3.26f1), C#, uGUI + TextMesh Pro, URP 2D
-- 웹(WebGL) 빌드, Pokepedia에서는 iframe으로 접속하고 단독으로도 플레이할 수 있습니다(Demo 모드).
-- 서버·DB가 없습니다. 보유 포켓몬 목록은 Pokepedia(React)가 `postMessage`로 한 번 넘깁니다 → [docs/PROJECT.md 9.2](docs/PROJECT.md)
+| 기술 선택 | 10만볼트 |
+|---|---|
+| ![기술 선택 화면](docs/images/battle-moves.png) | ![피카츄의 10만볼트](docs/images/battle-thunderbolt.png) |
+| **하이드로펌프** | **승리 — 비가 그치고 노을 진 하늘** |
+| ![거북왕의 하이드로펌프](docs/images/battle-hydro-pump.png) | ![승리 연출](docs/images/battle-victory.png) |
+
+## 지원 범위 (정확한 수)
+
+- **지금 공개된 Demo: 피카츄 vs 거북왕 1매치업.** 두 포켓몬은 전용 연출(Showcase 품질)을 적용했습니다.
+- 로스터 데이터에는 **6종**(피카츄·거북왕·리자몽·이상해꽃·팬텀·뮤츠)이 공통 전투 시스템으로 정의돼 있습니다. 나머지 4종은 Pokepedia 연동(Collection 모드)과 공통 연출 확인 뒤 공개합니다.
+- **배틀 지원 포켓몬은 1세대 151종 중 일부입니다.** 로스터는 데이터(`roster.json`)로 관리하며 엔진은 지원 포켓몬 수를 모릅니다.
+- 포켓몬마다 기술 3개(몸통박치기 + 속성 기술 2개)이고, 상성·물리/특수·명중·급소를 계산합니다. PP·상태이상은 없습니다.
+
+## 보여 주고 싶은 것
+
+- **규칙은 순수 C#, 화면은 Unity.** 전투 엔진(상성 18×18, 능력치·데미지, 명중·급소, 턴 순서, NPC AI)은 `UnityEngine`을 참조하지 않는 어셈블리입니다. NUnit 테스트 102개가 Unity 없이 `dotnet test`로 돌고, 규칙 코드가 바뀐 PR은 GitHub Actions에서 검증합니다.
+- **이벤트 로그 → 연출 디렉터.** 엔진은 "기술 사용·피해·급소·기절" 같은 이벤트만 내고, 화면이 그 목록을 차례로 재생합니다. 그래서 규칙과 연출이 서로를 모릅니다.
+- **2.5D 화면 연출.** 월드(스프라이트·Light2D·후처리 Bloom/색 보정·패럴랙스 배경·비 파티클·안개 레이어)와 HUD(uGUI, 후처리 제외)를 따로 렌더링하고, 정수 배율 픽셀 카메라로 도트를 유지합니다. 배경은 코드로 그린 디더링 도트 그림이고, 피격 번쩍임은 직접 쓴 셰이더입니다.
+- **데이터 주도 콘텐츠.** 종·기술·로스터·연출 강도·전용 연출 배정을 JSON으로 관리하고, 기술은 타입에서 자동 배정합니다. 한국어·영어·일본어 로케일을 지원합니다.
+- **웹 배포.** Unity WebGL 빌드를 Brotli로 미리 압축해 Cloudflare Pages에 올리고, 응답 헤더(`Content-Encoding`, `application/wasm`, `frame-ancestors`)를 직접 맞췄습니다. 데스크톱 75 FPS(모니터 상한), 아이폰 Safari 50~60 FPS로 측정했습니다.
+- **Pokepedia 연동 규약.** 서버·DB 없이 iframe + `postMessage`(origin 검증)로 보유 포켓몬 목록을 한 번 받습니다 → [docs/PROJECT.md 9.2](docs/PROJECT.md)
+
+## 기술 스택
+
+- Unity 6.3 LTS (6000.3.26f1), C# 9, uGUI + TextMesh Pro, URP 2D (Light2D, Volume 후처리)
+- 웹(WebGL) 빌드, Cloudflare Pages(`battle.pokepedia.dev`). Pokepedia(Next.js, Vercel)에서는 iframe으로, 단독으로도(Demo 모드) 실행합니다.
 - 기획·설계·연동 규약: [docs/PROJECT.md](docs/PROJECT.md) (확정/위임/미정 사항) · 단계별 진행: [docs/ROADMAP.md](docs/ROADMAP.md)
 
 ## 진행 상태
