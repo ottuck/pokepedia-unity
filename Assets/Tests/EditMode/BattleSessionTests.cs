@@ -139,8 +139,21 @@ namespace Pokepedia.Tests
             s.Start();
             s.UseMove(0);
             Assert.That(s.Player.Hp, Is.LessThan(s.Player.MaxHp), "fixture: player took damage");
+            s.TryRun();                                   // 다음 배틀은 이번 배틀이 끝난 뒤에만 부를 수 있다
             s.NextBattle();
             Assert.AreEqual(s.Player.MaxHp, s.Player.Hp);
+        }
+
+        [Test]
+        public void NextBattleAndRetry_WhileBattleIsOn_Throw()
+        {
+            // 진행 중에 불리면 싸우던 배틀이 통째로 사라진다 (화면의 중복 입력 등). 끝난 뒤에만 허용한다.
+            var s = Session(25, new Picks(9, 7));
+            s.Start();
+            s.UseMove(0);
+            Assert.IsFalse(s.IsOver, "fixture: battle still on");
+            Assert.Throws<InvalidOperationException>(() => s.NextBattle());
+            Assert.Throws<InvalidOperationException>(() => s.Retry());
         }
 
         [Test]

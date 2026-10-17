@@ -42,6 +42,7 @@ namespace Pokepedia.Presentation
             handshake = new HostHandshake(bridge);
             handshake.StateChanged += OnStateChanged;
             labRequested = bridge != null && bridge.IsLabMode;
+            if (bridge != null && bridge.IsFpsMode) FpsOverlay.Create(font);
             sfx = gameObject.AddComponent<AudioSource>();
             confirmClip = Beep(880f, 0.07f);
             BuildUi();

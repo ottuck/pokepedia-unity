@@ -85,17 +85,19 @@ namespace Pokepedia.App.Battle
             return RunOutcome.Escaped;
         }
 
-        /// <summary>새 상대(pickOpponent)로 새 배틀. 승리 후 [다음 상대와 싸운다], 도망 성공 후 호출.</summary>
+        /// <summary>새 상대(pickOpponent)로 새 배틀. 승리 후 [다음 상대와 싸운다], 도망 성공 후 호출. 배틀 중에는 InvalidOperationException.</summary>
         public IReadOnlyList<BattleEvent> NextBattle()
         {
+            if (!IsOver) throw new InvalidOperationException("battle is still on; NextBattle() is only for after it ends");
             npcSpeciesId = pickOpponent();
             NewEngine();
             return engine.Start();
         }
 
-        /// <summary>같은 상대로 처음부터 다시. 패배 후 [다시 도전].</summary>
+        /// <summary>같은 상대로 처음부터 다시. 패배 후 [다시 도전]. 배틀 중에는 InvalidOperationException.</summary>
         public IReadOnlyList<BattleEvent> Retry()
         {
+            if (!IsOver) throw new InvalidOperationException("battle is still on; Retry() is only for after it ends");
             NewEngine();
             return engine.Start();
         }

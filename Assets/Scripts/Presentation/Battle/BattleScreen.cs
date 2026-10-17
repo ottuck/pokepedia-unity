@@ -210,6 +210,9 @@ namespace Pokepedia.Presentation.Battle
 
         IEnumerator NewBattle(Func<IReadOnlyList<BattleEvent>> start)
         {
+            // 승리 메시지를 빨리 넘기면 승리 연출(뛰기·카메라)이 아직 돌고 있다. 새 배틀의 포켓몬을 움직이지 않게 멈춘다.
+            if (victory != null) { StopCoroutine(victory); victory = null; }
+            world.ResetPan();
             foreach (var v in sides) v.Reset();
             message.Clear();
             world.Backdrop?.SetWeather(1, 0);
@@ -217,6 +220,8 @@ namespace Pokepedia.Presentation.Battle
             sound.PlayMusic(SoundBank.BattleMusicKey); // 판마다 처음부터
             yield return PlayThenPrompt(start());
         }
+
+        Coroutine victory;   // 진행 중인 승리 연출 (NewBattle 이 멈춘다)
 
         IEnumerator PlayThenPrompt(IReadOnlyList<BattleEvent> events)
         {
@@ -305,7 +310,8 @@ namespace Pokepedia.Presentation.Battle
         // ------------------------------------------------------------------ 연출 실험실
         ChoiceMenu labMenu;
         int labIndex;
-        bool labMiss;
+        static readonly string[] LabOutcomes = { "Hit", "Miss", "Crit" };   // 명중 / 빗나감 / 급소, 고를 때마다 돌아간다
+        int labOutcome;
 
         IEnumerator LabIntro()
         {
@@ -342,7 +348,7 @@ namespace Pokepedia.Presentation.Battle
                 labMenu.Chosen += _ => sound.Play(SfxKind.Confirm);
                 vfx.BringToFront();
             }
-            var labels = effects.Select(e => e.Label).Concat(new[] { "Victory", labMiss ? "Miss ON" : "Miss off" }).ToArray();
+            var labels = effects.Select(e => e.Label).Concat(new[] { "Victory", LabOutcomes[labOutcome] }).ToArray();
             SetMenu(labMenu);
             labMenu.Show(labels, labIndex);
         }
@@ -351,7 +357,7 @@ namespace Pokepedia.Presentation.Battle
         {
             labIndex = i;
             var effects = AnimationDirector.LabEffects;
-            if (i == effects.Length + 1) { labMiss = !labMiss; ShowLabMenu(); return; }
+            if (i == effects.Length + 1) { labOutcome = (labOutcome + 1) % LabOutcomes.Length; ShowLabMenu(); return; }
             labMenu.Hide();
             SetMenu(null);
             StartCoroutine(PlayLab(i));
@@ -371,8 +377,10 @@ namespace Pokepedia.Presentation.Battle
             {
                 var e = effects[i];
                 int attacker = SpeciesOf(e.Side), target = SpeciesOf(BattleState.Opponent(e.Side));
-                var moves = catalog.MoveSetFor(attacker);
-                yield return director.PlayLab(e.Id, e.Side, attacker, target, moves[moves.Count - 1], labMiss);
+                var move = catalog.MoveSetFor(attacker).First(m => m.Role == MoveRole.Signature);   // 전용 연출은 대표 기술의 것
+                bool crit = labOutcome == 2;
+                yield return director.PlayLab(e.Id, e.Side, attacker, target, move, labOutcome == 1, crit);
+                if (crit) yield return message.Say(locale.Get(BattleTextKeys.CriticalHit));
             }
             yield return VfxLayer.Wait(0.3f);
             ShowLabMenu();
@@ -432,7 +440,7 @@ namespace Pokepedia.Presentation.Battle
                     case BattleEnded b:
                         yield return sound.FadeOutMusic(0.25f);
                         sound.Play(b.WinnerSide == BattleState.Player ? SfxKind.Victory : SfxKind.Defeat);
-                        if (b.WinnerSide == BattleState.Player) StartCoroutine(director.Victory(b.WinnerSide));
+                        if (b.WinnerSide == BattleState.Player) victory = StartCoroutine(director.Victory(b.WinnerSide));
                         yield return SayAll(e);
                         break;
                     default:

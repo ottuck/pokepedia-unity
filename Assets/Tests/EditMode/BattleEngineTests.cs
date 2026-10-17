@@ -23,6 +23,14 @@ namespace Pokepedia.Tests
         static readonly UseMove First = new UseMove(0);
 
         [Test]
+        public void BattleSide_ActiveIndexOutsideParty_Throws()
+        {
+            // 3:3 확장 대비: 출전 인덱스가 파티 밖이면 Active 를 읽을 때가 아니라 만들 때 바로 막는다.
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new BattleSide(new[] { Mon() }, 1));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new BattleSide(new[] { Mon() }, -1));
+        }
+
+        [Test]
         public void Start_SendsOutNpcThenPlayer()
         {
             var e = Engine(Mon(hp: 120), Mon(hp: 90), ScriptedRandom.Of());

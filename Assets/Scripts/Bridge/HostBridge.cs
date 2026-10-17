@@ -24,6 +24,9 @@ namespace Pokepedia.Bridge
         /// <summary>주소에 ?lab 이 있으면 연출 실험실(전용 연출 후보를 골라 보는 화면)로 연다</summary>
         public bool IsLabMode { get; private set; }
 
+        /// <summary>주소에 ?fps 가 있으면 프레임 표시를 켠다 (성능 측정용)</summary>
+        public bool IsFpsMode { get; private set; }
+
         void Awake()
         {
             gameObject.name = "HostBridge";
@@ -32,6 +35,7 @@ namespace Pokepedia.Bridge
             var search = Marshal.PtrToStringUTF8(HostBridge_GetSearch());
             IsHostMode = search.Contains("host=pokepedia");
             IsLabMode = search.Contains("lab");
+            IsFpsMode = search.Contains("fps");
 #endif
         }
 

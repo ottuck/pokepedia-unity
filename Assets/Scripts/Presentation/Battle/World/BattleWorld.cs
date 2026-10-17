@@ -93,6 +93,13 @@ namespace Pokepedia.Presentation.Battle
             if (Backdrop != null) Backdrop.SetPan(x);
         }
 
+        /// <summary>진행 중인 PanTo 를 멈추고 카메라를 바로 가운데로 (새 배틀 시작)</summary>
+        public void ResetPan()
+        {
+            panToken++;
+            SetPan(0);
+        }
+
         /// <summary>카메라를 부드럽게 target 까지 옮긴다. 새 이동이 시작되면 이전 이동은 멈춘다.</summary>
         public IEnumerator PanTo(float target, float seconds)
         {
