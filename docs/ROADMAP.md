@@ -4,7 +4,7 @@
 
 ## 현재 상태
 
-- **다음 작업:** M6 Pokepedia 연동 진행 중 — 설계·결정 완료(PROJECT.md 9.2·9.6·9.7), **U2 Unity Collection 모드 완료**. 남은 순서: Unity Release 배포(Pokepedia Preview가 새 헤더·Collection 모드를 쓰므로 먼저) → **P1** Pokepedia `/[locale]/battle` 페이지(서버가 보유 스티커를 읽어 `init`, 내비 "배틀") → **P2** 첫 퀴즈 피카츄(피카츄 띠부씰 없는 사용자)·획득 화면 "내 피카츄로 배틀" → **P3** 컬렉션 피카츄 황금 테두리 → Pokepedia Preview에서 전체 흐름 확인. Pokepedia 쪽은 그 저장소 PR·머지 정책을 따른다
+- **다음 작업:** M6 마무리 — Pokepedia PR [60](https://github.com/ottuck/pokepedia/pull/60)(배틀 페이지)·[61](https://github.com/ottuck/pokepedia/pull/61)(첫 퀴즈 피카츄) 사용자 승인 → 60 → 61 → [62](https://github.com/ottuck/pokepedia/pull/62)(컬렉션 금색 테두리, 디자인 확인) 순서로 병합 → Production(pokepedia.dev)에서 흐름 확인 → M6 완료. 그다음 M7 최적화
 - 마지막 갱신: 2026-10-17
 
 ## 마일스톤
@@ -26,6 +26,8 @@
 ## 진행 기록
 
 최신이 위. 한 줄에 날짜, 한 일, 근거(커밋·PR·문서 절)를 적는다.
+
+- 2026-10-17 M6 **Collection 모드를 battle.pokepedia.dev에 배포**(main `e921cd9`, Release 빌드). 서빙 파일 해시가 빌드와 일치, `.br` 헤더 정상, `frame-ancestors`에 `*.vercel.app`·`localhost:3000` 적용. **Pokepedia Preview(PR 62, P1~P3 포함)에서 전체 흐름 확인:** 띠부씰 없는 상태로 `/battle` → 안내 + [데모 체험], 퀴즈 첫 문제 피카츄 실루엣 → 정답 → 획득 화면 "내 피카츄로 배틀" → `/battle`에서 VS 도입 → 피카츄 vs 거북왕, 컬렉션 피카츄 금색 테두리 + "배틀하기" 배지. Pokepedia PR: 60(배틀 페이지)·61(첫 퀴즈 피카츄)은 그 저장소 정책상 구조 변경이라 사용자 승인 필요(`needs-approval`), 62(컬렉션 테두리)는 UI.
 
 - 2026-10-17 M6 **U2 Unity Collection 모드**: `roster.json`에 `playable`(피카츄만), Standard 4종 `npcWeight` 0. 연결되면 보유 ∩ 플레이어 가능(`CollectionLineup`)으로 바로 VS 도입 → 피카츄 vs 거북왕, 색이 다른 피카츄는 shiny 스프라이트, 상대 후보가 1마리라 도망 불가, 승패마다 `battleEnded`(win/lose). 후보가 없으면 "퀴즈에서 피카츄 띠부씰을 얻으면…" 안내 + [데모 체험]. 웹 템플릿에 로딩 화면(진행 막대·`?lang` 안내), Vercel Preview origin 정규식 허용, `frame-ancestors`에 `*.vercel.app`·`localhost:3000`. 모의 호스트에 보유 상황 선택. dotnet 테스트 105개, WebGL Dev 빌드에서 shiny 진입·도망 불가·`battleEnded`·0마리 안내 확인. PROJECT.md 6.5·9.2.
 
