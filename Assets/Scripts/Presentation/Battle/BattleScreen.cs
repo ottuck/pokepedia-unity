@@ -31,6 +31,8 @@ namespace Pokepedia.Presentation.Battle
         Result,
         /// <summary>도망칠 수 없는 배틀에서 "정말 도망칠까?"에 답을 기다림 (그만둔다 / 계속 싸운다)</summary>
         ConfirmQuit,
+        /// <summary>플레이어가 쓰러져 [응원한다 / 트레이너가 처리한다]를 기다림 (5.3)</summary>
+        ChooseFaint,
         /// <summary>연출 실험실 메뉴 (개발용)</summary>
         Lab,
     }
@@ -91,8 +93,8 @@ namespace Pokepedia.Presentation.Battle
         public void BeginDemo(string localeCode, Action onExit)
         {
             Prepare(localeCode, onExit);
-            // 누구나 처음 하는 전투라 져서 다시 도전할 이유가 없다: 처음 쓰러지면 응원으로 다시 일어선다 (5.3)
-            ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, NewRandom(), BattleMode.Demo, DemoPlayer, () => DemoNpc, cheerRevives: 1);
+            // 누구나 처음 하는 전투라 져서 다시 도전할 이유가 없다: 쓰러지면 응원해 다시 일으킬지, 트레이너가 처리해 끝낼지 고른다 (5.3)
+            ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, NewRandom(), BattleMode.Demo, DemoPlayer, () => DemoNpc, faintChoice: true);
             oneOpponent = true;
             StartCoroutine(NewBattle(ctx.Session.Start));
         }
@@ -111,7 +113,7 @@ namespace Pokepedia.Presentation.Battle
             oneOpponent = !canEscape;
             ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, random, BattleMode.Collection, choice.SpeciesId,
                                             OpponentPicker.Weighted(ctx.Catalog, random, choice.SpeciesId), canEscape,
-                                            cheerRevives: 1);   // Pokepedia 에서 피카츄 띠부씰로 들어오는 첫 전투도 같은 경험 (5.3)
+                                            faintChoice: true);   // Pokepedia 에서 피카츄 띠부씰로 들어오는 첫 전투도 같은 경험 (5.3)
             StartCoroutine(NewBattle(ctx.Session.Start));
         }
 
@@ -183,6 +185,7 @@ namespace Pokepedia.Presentation.Battle
             hud.ResultMenu.Chosen += OnResult;
             hud.QuitMenu.Chosen += OnQuitChoice;
             hud.QuitMenu.Cancelled += () => OnQuitChoice(1);
+            hud.FaintMenu.Chosen += OnFaintChoice;   // 취소(바깥 누르기·Esc)는 없다: 둘 중 하나를 골라야 이어진다
         }
 
         // ------------------------------------------------------------------ 흐름
@@ -203,13 +206,14 @@ namespace Pokepedia.Presentation.Battle
         {
             SetMenu(null);
             yield return player.Play(events);
-            if (ctx.Session.State.IsOver) ShowResultMenu();
+            if (ctx.Session.AwaitingFaintChoice) ShowFaintChoice();
+            else if (ctx.Session.State.IsOver) ShowResultMenu();
             else ShowActionMenu();
         }
 
         void SetMenu(ChoiceMenu menu)
         {
-            foreach (var m in new[] { hud.ActionMenu, hud.MoveMenu, hud.ResultMenu, hud.QuitMenu }) if (m != menu) m.Hide();
+            foreach (var m in new[] { hud.ActionMenu, hud.MoveMenu, hud.ResultMenu, hud.QuitMenu, hud.FaintMenu }) if (m != menu) m.Hide();
             activeMenu = menu;
         }
 
@@ -292,6 +296,24 @@ namespace Pokepedia.Presentation.Battle
             SetMenu(null);
             if (i == 0) { Exit(); return; }
             ShowActionMenu();
+        }
+
+        /// <summary>쓰러진 뒤: [○○을(를) 응원한다]면 다시 일어나 이어 싸우고, [트레이너가 처리한다]면 몬스터볼로 상대를 쓰러뜨려 이긴다 (5.3)</summary>
+        void ShowFaintChoice()
+        {
+            State = BattleViewState.ChooseFaint;
+            hud.Message.SetStatic(ctx.Locale.Get(BattleTextKeys.FaintAsk));
+            SetMenu(hud.FaintMenu);
+            var name = ctx.Names.Species(ctx.Session.Player.Species.Id);
+            hud.FaintMenu.Show(new[] { ctx.Locale.Format(BattleTextKeys.FaintCheer, name), ctx.Locale.Get(BattleTextKeys.FaintFinish) }, 0);
+        }
+
+        void OnFaintChoice(int i)
+        {
+            if (State != BattleViewState.ChooseFaint) return;
+            State = BattleViewState.Animating;
+            hud.Message.Clear();
+            StartCoroutine(PlayThenPrompt(i == 0 ? ctx.Session.Cheer() : ctx.Session.TrainerFinish()));
         }
 
         void OnResult(int i)

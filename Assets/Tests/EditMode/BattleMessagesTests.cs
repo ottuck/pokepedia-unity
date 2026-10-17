@@ -66,6 +66,7 @@ namespace Pokepedia.Tests
             AssertLines(new BattleEnded(BattleState.Player), L(BattleTextKeys.Won));
             AssertLines(new BattleEnded(BattleState.Npc), L(BattleTextKeys.Lost));
             AssertLines(new Revived(BattleState.Player, 1, 1), L(BattleTextKeys.Cheer, "S25"), L(BattleTextKeys.CheerRevived, "S25"));
+            AssertLines(new TrainerThrewBall(BattleState.Npc), L(BattleTextKeys.TrainerThrew), L(BattleTextKeys.BallHit, "S9"));
         }
 
         // ---------- 키 목록 ----------
@@ -79,6 +80,7 @@ namespace Pokepedia.Tests
                 new MoveUsed(BattleState.Player, "a"), new MoveUsed(BattleState.Npc, "b"), new MoveMissed(0, "a"),
                 new DamageDealt(1, 1, 1, 2.0, true), new DamageDealt(1, 1, 1, 0.5, false), new DamageDealt(1, 0, 1, 0, false),
                 new Fainted(0), new Fainted(1), new BattleEnded(0), new BattleEnded(1), new Revived(0, 1, 1),
+                new TrainerThrewBall(1),
             };
             var lines = events.SelectMany(For)
                 .Concat(new[] { BattleMessages.ForRun(RunOutcome.Escaped), BattleMessages.ForRun(RunOutcome.CannotEscape) });
@@ -115,7 +117,7 @@ namespace Pokepedia.Tests
         public void LocaleStrings_ExistAndUseEveryArgumentAndNoOther()
         {
             var counts = ArgCountByKey();
-            foreach (var k in BattleTextKeys.UiKeys) counts[k] = k == BattleTextKeys.PromptWhatToDo ? 1 : 0; // "{0}은(는) 무엇을 할까?"
+            foreach (var k in BattleTextKeys.UiKeys) counts[k] = k == BattleTextKeys.PromptWhatToDo || k == BattleTextKeys.FaintCheer ? 1 : 0; // "{0}은(는) 무엇을 할까?", "{0}을(를) 응원한다"
             CollectionAssert.AreEquivalent(BattleTextKeys.All, counts.Keys);
             foreach (var lang in Locales)
             {

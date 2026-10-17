@@ -112,6 +112,16 @@ namespace Pokepedia.Presentation.Battle
                         yield return hud.Message.Say(ctx.Locale.Format(lines[1].Key, lines[1].Args.Cast<object>().ToArray()));
                         break;
                     }
+                    case TrainerThrewBall t:
+                    {
+                        // "트레이너가 몬스터볼을 힘껏 던졌다!" → 날아가 머리에 맞는 연출 → "퍽! 몬스터볼이 ○○의 머리에 정통으로 맞았다!"
+                        var lines = BattleMessages.For(e, ctx.Names, ctx.SpeciesOf);
+                        yield return hud.Message.Say(ctx.Locale.Format(lines[0].Key, lines[0].Args.Cast<object>().ToArray()));
+                        yield return hud.Director.TrainerBall(t.TargetSide);
+                        yield return sides[t.TargetSide].Hp.AnimateTo(0);   // 한 방에 HP 가 바닥난다
+                        yield return hud.Message.Say(ctx.Locale.Format(lines[1].Key, lines[1].Args.Cast<object>().ToArray()));
+                        break;
+                    }
                     case BattleEnded b:
                         yield return hud.Sound.FadeOutMusic(0.25f);
                         hud.Sound.Play(b.WinnerSide == BattleState.Player ? SfxKind.Victory : SfxKind.Defeat);

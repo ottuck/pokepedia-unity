@@ -36,6 +36,8 @@ namespace Pokepedia.Presentation.Battle
         public ChoiceMenu ResultMenu { get; }
         /// <summary>"정말 도망칠까?" [그만둔다 / 계속 싸운다] (결과 메뉴와 같은 자리)</summary>
         public ChoiceMenu QuitMenu { get; }
+        /// <summary>플레이어가 쓰러졌을 때 [응원한다 / 트레이너가 처리한다] (5.3)</summary>
+        public ChoiceMenu FaintMenu { get; }
         public MoveCards Moves { get; }
 
         public BattleHud(MonoBehaviour host, TMP_FontAsset font, Material flashMaterial, Material particleMaterial, Material litMaterial,
@@ -98,8 +100,13 @@ namespace Pokepedia.Presentation.Battle
                 new[] { new Vector3(6, 6, 128), new Vector3(6, 24, 128) }, 1);
             QuitMenu.Hide();
 
+            var faintInner = Ui.Box(srt, "FaintMenu", 72, 108, 166, 46);   // 선택지 글이 길어(일본어) 확인 메뉴보다 넓다
+            FaintMenu = new ChoiceMenu(faintInner.parent.gameObject, faintInner, font,
+                new[] { new Vector3(6, 6, 152), new Vector3(6, 24, 152) }, 1);
+            FaintMenu.Hide();
+
             Vfx.BringToFront(); // 화면 번쩍임이 모든 것 위에 오도록
-            foreach (var m in new[] { ActionMenu, MoveMenu, ResultMenu, QuitMenu }) WireSounds(m);
+            foreach (var m in new[] { ActionMenu, MoveMenu, ResultMenu, QuitMenu, FaintMenu }) WireSounds(m);
             MoveMenu.Cancelled += () => Sound.Play(SfxKind.Cancel);
         }
 

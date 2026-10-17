@@ -29,6 +29,19 @@ namespace Pokepedia.Tests
         }
 
         [Test]
+        public void TurnRotation_MixesInWeakerMoves()
+        {
+            // 같은 기술만 쓰면 전투가 단조롭다: 턴 1·3 은 가장 센 기술, 2 는 두 번째, 4 는 세 번째, 이후 반복 (난수 없음)
+            var self = TestMon.Battler(TestMon.Stats(), PokemonType.Fire,
+                TestMove.Of(PokemonType.Normal, power: 20, id: "weak"), TestMove.Of(PokemonType.Normal, power: 60, id: "strong"),
+                TestMove.Of(PokemonType.Normal, power: 40, id: "mid"));
+            var target = TestMon.Battler(TestMon.Stats(), PokemonType.Normal);
+            var picks = new int[5];
+            for (int turn = 1; turn <= 5; turn++) picks[turn - 1] = NpcBattleAi.Choose(self, target, Rules, turn).MoveIndex;
+            CollectionAssert.AreEqual(new[] { 1, 2, 1, 0, 1 }, picks);
+        }
+
+        [Test]
         public void Ties_PickFirstMove()
         {
             Assert.AreEqual(0, Choose(PokemonType.Fire, PokemonType.Normal,

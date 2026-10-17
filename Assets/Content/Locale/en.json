@@ -28,7 +28,7 @@
     "shadow_ball": "Shadow Ball",
     "psychic": "Psychic",
     "thunder": "Thunder",
-    "water_gun": "Water Gun",
+    "water_pledge": "Water Pledge",
     "confusion": "Confusion"
   },
   "battle": {
@@ -47,6 +47,8 @@
     "lost": "You blacked out!",
     "cheer": "Your cheer reached {0}!",
     "cheer_revived": "{0} got back up, full of power!",
+    "trainer_threw": "The Trainer hurled a Poké Ball!",
+    "ball_hit": "Bonk! The Poké Ball hit {0} right on the head!",
     "escaped": "Got away safely!",
     "cannot_escape": "Can't escape!",
     "prompt": {
@@ -60,6 +62,11 @@
       "ask": "Really run away?\nThe battle ends and you go back to the title.",
       "yes": "Quit",
       "no": "Keep fighting"
+    },
+    "faint": {
+      "ask": "Trainer, what will you do?",
+      "cheer": "Cheer on {0}",
+      "finish": "Handle it yourself"
     },
     "result": {
       "next_opponent": "Next opponent",

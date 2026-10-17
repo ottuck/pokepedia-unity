@@ -12,7 +12,7 @@ namespace Pokepedia.App.Battle
 
     /// <summary>
     /// 밸런스 조정용 시드 고정 시뮬레이션(PROJECT.md 6.5). 양쪽 모두 NpcBattleAi 로 행동한다
-    /// (플레이어도 "가장 센 기술을 고르는 사람"으로 가정). 시드가 같으면 결과가 항상 같다.
+    /// (플레이어는 "가장 센 기술만 고르는 사람"으로, NPC 는 BattleSession 처럼 턴에 따라 기술을 섞는다). 시드가 같으면 결과가 항상 같다.
     /// </summary>
     public static class BattleSimulator
     {
@@ -34,7 +34,7 @@ namespace Pokepedia.App.Battle
                     if (state.Turn >= TurnLimit) throw new InvalidOperationException($"battle {i} exceeded {TurnLimit} turns");
                     var p = state.Sides[BattleState.Player].Active;
                     var n = state.Sides[BattleState.Npc].Active;
-                    engine.PlayTurn(NpcBattleAi.Choose(p, n, rules), NpcBattleAi.Choose(n, p, rules));
+                    engine.PlayTurn(NpcBattleAi.Choose(p, n, rules), NpcBattleAi.Choose(n, p, rules, state.Turn + 1));
                 }
                 if (state.Winner == BattleState.Player) wins++;
                 totalTurns += state.Turn;
