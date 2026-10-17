@@ -433,16 +433,21 @@ public sealed record BattleEnded(int WinnerSide) : BattleEvent;
 엔진 API: `new BattleEngine(state, rules, random)` → `Start()`(등장 이벤트) → `PlayTurn(playerAction, npcAction)`(한 턴 이벤트, 한쪽이 전멸하면 그 자리에서 끝). 행동은 지금 `UseMove(moveIndex)`뿐이고 도망은 Application 흐름에서 처리한다. `BattleSide`는 파티(여러 마리)+출전 인덱스 구조지만 쓰러진 뒤 교체는 3:3 확장 때 넣는다.
 
 ```text
-BattleEngine (Pure C#)
+BattleEngine (Pure C#)  ←  BattleSession (Application: NPC AI, 다음 상대·다시 도전)
       │ BattleEvent 목록
       ▼
-BattleController
-      │ 이벤트 실행
+BattleScreen (흐름·표시 상태)  ── BattleHud (보이는 것: HUD 캔버스·월드·메뉴)
+      │                           BattleLab (연출 실험실, 개발용)
+      ▼
+BattleEventPlayer (이벤트 재생: 메시지 + 연출, VS 도입)
+      │
       ▼
 AnimationDirector (Presentation)
       │ 기본 타임라인(접촉/발사/효과) + (종족/기술) AnimationProfile 오버라이드
       ├── Animator   ├── Particle System   ├── Shader   ├── Audio   └── Camera Effects
 ```
+
+**화면 쪽 구조 (M6 준비, 2026-10-17, GPT 리뷰 P1·P2):** `BattleScreen`은 흐름과 **표시 상태 `BattleViewState`**(`Hidden → Entering(VS·등장) → Command(메뉴) → Animating(턴 연출) → Result`, 개발용 `Lab`)만 다룬다. 메뉴 입력 처리기는 맞는 상태일 때만 동작해 중복 입력·연출 중 입력을 막는다. M6에서 `Connecting`(호스트 `init` 대기)·`Selecting`(보유 포켓몬 고르기)을 `Entering` 앞에 더한다. 이번 판의 데이터(카탈로그·로케일·이름·세션)는 `BattleContext` 하나에 모은다.
 
 엔진은 데미지와 남은 HP만 반환하고 연출은 Presentation이 이벤트와 AnimationProfile로 결정한다. 규칙과 시각적 연출이 완전히 분리되므로 연출을 바꿔도 엔진은 변경하지 않는다. 테스트는 이벤트 리스트만 단언하고, 메시지는 이벤트 → 로케일 키 → 문자열 순으로 Presentation에서 조립한다.
 

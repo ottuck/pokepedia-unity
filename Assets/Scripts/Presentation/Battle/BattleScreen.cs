@@ -7,20 +7,35 @@ using Pokepedia.Content;
 using Pokepedia.Domain;
 using Pokepedia.Domain.Battle;
 using Pokepedia.Domain.Rules;
-using Pokepedia.Presentation.Audio;
-using Pokepedia.Presentation.Audio.Synth;
-using Pokepedia.Presentation.Battle.Fx;
-using Pokepedia.Presentation.UI;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Pokepedia.Presentation.Battle
 {
     /// <summary>
-    /// 배틀 화면 (PROJECT.md 5.3): 게임보이식 레이아웃, 행동 메뉴(싸우다/도망) → 기술 2×2 → 턴 재생 → 결과 메뉴.
-    /// 규칙은 판단하지 않는다. BattleSession 이 돌려준 BattleEvent 를 순서대로 "재생"만 하고,
-    /// 움직임·이펙트·소리는 AnimationDirector 에 맡긴다 (PROJECT.md 7.3).
+    /// 배틀 화면이 지금 무엇을 하는 중인지 (PROJECT.md 7.3). 입력은 Command·Result·Lab 에서만 받는다.
+    /// M6(Pokepedia 연동)에서 Connecting(호스트 init 대기)·Selecting(보유 포켓몬 고르기)을 Entering 앞에 더한다.
+    /// </summary>
+    public enum BattleViewState
+    {
+        /// <summary>배틀 화면이 꺼져 있음(타이틀 등)</summary>
+        Hidden,
+        /// <summary>판 시작: VS 도입 장면과 등장 메시지</summary>
+        Entering,
+        /// <summary>행동·기술 메뉴에서 플레이어 입력을 기다림</summary>
+        Command,
+        /// <summary>한 턴(또는 도망)의 메시지·연출을 재생 중 — 입력 없음</summary>
+        Animating,
+        /// <summary>승패가 나서 결과 메뉴(다음 상대/다시 도전, 처음으로)를 기다림</summary>
+        Result,
+        /// <summary>연출 실험실 메뉴 (개발용)</summary>
+        Lab,
+    }
+
+    /// <summary>
+    /// 배틀 화면의 흐름 (PROJECT.md 5.3): 판 시작(VS·등장) → 행동 메뉴(싸우다/도망) → 기술 2×2 → 턴 재생 → 결과 메뉴.
+    /// 규칙은 판단하지 않는다(BattleSession). 보이는 것은 BattleHud, 이벤트 재생은 BattleEventPlayer, 실험실은 BattleLab 이 맡고,
+    /// 여기서는 표시 상태(BattleViewState)와 메뉴 사이의 전환만 다룬다.
     /// </summary>
     public sealed class BattleScreen : MonoBehaviour
     {
@@ -38,7 +53,6 @@ namespace Pokepedia.Presentation.Battle
 
         const int DemoPlayer = 25; // 피카츄
         const int DemoNpc = 9;     // 거북왕
-        const int CanvasOrder = 10;
 
         /// <summary>화면 문구 키. 단일 출처는 Application 의 BattleTextKeys (로케일 파일 검사도 그쪽 테스트가 한다).</summary>
         static class Keys
@@ -54,156 +68,72 @@ namespace Pokepedia.Presentation.Battle
             public static string Type(PokemonType t) => BattleTextKeys.TypeName(t);
         }
 
-        ContentCatalog catalog;
-        AnimationCatalog animation;
-        LocaleTable locale;
-        BattleNames names;
-        BattleSession session;
+        readonly BattleContext ctx = new BattleContext();
+        BattleHud hud;
+        BattleEventPlayer player;
+        BattleLab lab;
         Action onExit;
-
-        GameObject root;
-        readonly BattleSideView[] sides = new BattleSideView[2];
-        BattleWorld world;
-        BattleLighting lighting;
-        BackdropTheme theme;
-        RectTransform hud;
-        VfxLayer vfx;
-        AnimationDirector director;
-        SoundBank sound;
-        MessageBox message;
-        ChoiceMenu actionMenu, moveMenu, resultMenu;
-        TextMeshProUGUI moveInfo;
-        GameObject moveInfoBox;
         ChoiceMenu activeMenu;
         bool lastWin;
         int lastMoveIndex;
+
+        /// <summary>지금 무엇을 하는 중인지. 입력 처리기는 맞는 상태일 때만 동작한다(중복 입력·연출 중 입력 방지).</summary>
+        public BattleViewState State { get; private set; } = BattleViewState.Hidden;
 
         /// <summary>타이틀에서 호출. Demo 매치업(피카츄 vs 거북왕)을 시작한다. onExit 는 [처음으로].</summary>
         public void BeginDemo(string localeCode, Action onExit)
         {
             Prepare(localeCode, onExit);
-            StartCoroutine(NewBattle(session.Start));
+            StartCoroutine(NewBattle(ctx.Session.Start));
         }
 
-        /// <summary>
-        /// 연출 실험실 (주소에 ?lab, 또는 타이틀에서 L): 전용 연출 후보(10만볼트·하이드로펌프)와 승리 연출을 골라 반복 재생한다.
-        /// HP 는 바뀌지 않는다. 고른 결과는 animation.json 의 moveFx 에 적는다.
-        /// </summary>
+        /// <summary>연출 실험실 (주소에 ?lab, 또는 타이틀에서 L). 자세한 것은 BattleLab.</summary>
         public void BeginLab(string localeCode, Action onExit)
         {
             Prepare(localeCode, onExit);
-            StartCoroutine(LabIntro());
+            State = BattleViewState.Animating;
+            StartCoroutine(lab.Intro());
         }
 
         void Prepare(string localeCode, Action onExit)
         {
             this.onExit = onExit;
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            if (catalog == null)
+            if (ctx.Catalog == null)
             {
-                catalog = ContentLoader.Load(speciesJson.text, movesJson.text, rosterJson.text);
+                ctx.Catalog = ContentLoader.Load(speciesJson.text, movesJson.text, rosterJson.text);
                 Perf("content", sw);
-                animation = AnimationCatalog.Parse(animationJson.text);
+                ctx.Animation = AnimationCatalog.Parse(animationJson.text);
                 Perf("animation", sw);
             }
             var asset = localeCode switch { "en" => localeEn, "ja" => localeJa, _ => localeKo };
-            locale = LocaleTable.Parse(asset.text);
+            ctx.Locale = LocaleTable.Parse(asset.text);
             Perf("locale", sw);
-            names = new BattleNames(id => locale.Get(catalog.GetSpecies(id).NameKey), id => locale.Get(catalog.GetMove(id).NameKey));
-            if (root == null) { Build(); Perf("build ui", sw); }
-            root.SetActive(true);
-            world.Container.SetActive(true);
+            var catalog = ctx.Catalog; var locale = ctx.Locale;
+            ctx.Names = new BattleNames(id => locale.Get(catalog.GetSpecies(id).NameKey), id => locale.Get(catalog.GetMove(id).NameKey));
+            if (hud == null) { Build(); Perf("build ui", sw); }
+            hud.SetVisible(true);
 
             var seed = (uint)Environment.TickCount | 1u;
-            session = new BattleSession(catalog, BattleRules.Default, new SeededRandom(seed), BattleMode.Demo, DemoPlayer, () => DemoNpc);
+            ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, new SeededRandom(seed), BattleMode.Demo, DemoPlayer, () => DemoNpc);
             lastMoveIndex = 0;
         }
 
         /// <summary>배틀 시작 단계별 누적 시간을 콘솔에 남긴다 (WebGL 시작 지연 조사용, 처음 한 번만 몇 줄)</summary>
         static void Perf(string step, System.Diagnostics.Stopwatch sw) => Debug.Log($"[Perf] {step}: {sw.ElapsedMilliseconds} ms");
 
-        // ------------------------------------------------------------------ 레이아웃
         void Build()
         {
-            var canvasGo = new GameObject("BattleCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(PixelCanvasScaler));
-            canvasGo.transform.SetParent(transform, false);
-            var canvas = canvasGo.GetComponent<Canvas>();
-            // HUD(HP 바·메뉴·메시지)는 Overlay 캔버스: 월드 카메라의 후처리(PROJECT.md 5.5)를 받지 않고 항상 월드 위에 그려진다
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = CanvasOrder;
-            root = canvasGo;
-            sound = new SoundBank(gameObject);
+            hud = new BattleHud(this, font, flashMaterial, particleMaterial, litMaterial, ctx.Catalog, ctx.Animation);
+            player = new BattleEventPlayer(this, hud, ctx);
+            lab = new BattleLab(this, hud, ctx, player, SetMenu,
+                playing => State = playing ? BattleViewState.Animating : BattleViewState.Lab, Exit);
 
-            // 월드(배경·발판·포켓몬·이펙트)는 SpriteRenderer 와 카메라로 그린다. 머티리얼은 URP 2D 언릿 스프라이트 셰이더다.
-            world = new BattleWorld(transform, Camera.main, particleMaterial, litMaterial);
-            // 2.5D 연출 (PROJECT.md 5.5): 배경 레이어(패럴랙스·안개·비) + 조명(분위기·타입별 glow) + 후처리(Bloom)
-            theme = BackdropTheme.Storm;
-            var backdrop = new BattleBackdrop(world, theme);
-            world.Backdrop = backdrop;
-            world.Container.AddComponent<BackdropTicker>().OnTick = backdrop.Tick;
-            lighting = new BattleLighting(world.Root, theme.Ambient, 1f);
-            new BattlePostFx(world.Container.transform, Camera.main);
-
-            // 240×216 HUD 영역을 캔버스 가운데에 둔다 (정수 배율은 PixelCanvasScaler, 홀수 창의 반 픽셀은 PixelAlign)
-            var screen = new GameObject("Screen", typeof(RectTransform), typeof(PixelAlign));
-            screen.transform.SetParent(canvasGo.transform, false);
-            var srt = (RectTransform)screen.transform;
-            srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0.5f, 0.5f);
-            srt.sizeDelta = new Vector2(PixelCanvasScaler.BaseWidth, PixelCanvasScaler.BaseHeight);
-            hud = srt;
-
-            sides[BattleState.Npc] = MakeSide(srt, "Npc", new Vector2(178, 86), 6, 6, 116, 32, false);
-            sides[BattleState.Player] = MakeSide(srt, "Player", new Vector2(66, 148), 122, 100, 112, 46, true);
-            vfx = new VfxLayer(world, srt, particleMaterial);
-            director = new AnimationDirector(this, sides, vfx, sound, animation, catalog, world, lighting);
-            vsIntro = new VsIntro(this, srt, font, sound, vfx);
-
-            var msgInner = Ui.Box(srt, "MessageBox", 2, 156, 236, 58);
-            message = new MessageBox(msgInner, font);
-
-            var actInner = Ui.Box(srt, "ActionMenu", 144, 156, 94, 58);
-            actionMenu = new ChoiceMenu(actInner.parent.gameObject, actInner, font,
-                new[] { new Vector3(6, 8, 80), new Vector3(6, 28, 80) }, 1);
-            actionMenu.Chosen += OnAction;
-            actionMenu.Hide();
-
-            var moveInner = Ui.Box(srt, "MoveMenu", 2, 156, 158, 58);
-            moveMenu = new ChoiceMenu(moveInner.parent.gameObject, moveInner, font,
-                new[] { new Vector3(4, 8, 76), new Vector3(78, 8, 76), new Vector3(4, 28, 76), new Vector3(78, 28, 76) }, 2);
-            moveMenu.Chosen += OnMove;
-            moveMenu.Cancelled += ShowActionMenu;
-            moveMenu.Highlighted += ShowMoveInfo;
-            moveMenu.Hide();
-            var infoInner = Ui.Box(srt, "MoveInfo", 160, 156, 78, 58);
-            moveInfoBox = infoInner.parent.gameObject;
-            moveInfo = Ui.Label(infoInner, "Info", font, 5, 4, 68, 50);
-            moveInfoBox.SetActive(false);
-
-            var resInner = Ui.Box(srt, "ResultMenu", 96, 108, 142, 46);
-            resultMenu = new ChoiceMenu(resInner.parent.gameObject, resInner, font,
-                new[] { new Vector3(6, 6, 128), new Vector3(6, 24, 128) }, 1);
-            resultMenu.Chosen += OnResult;
-            resultMenu.Hide();
-
-            vfx.BringToFront(); // 화면 번쩍임이 모든 것 위에 오도록
-
-            foreach (var m in new[] { actionMenu, moveMenu, resultMenu })
-            {
-                m.Navigated += () => sound.Play(SfxKind.CursorMove);
-                m.Chosen += _ => sound.Play(SfxKind.Confirm);
-            }
-            moveMenu.Cancelled += () => sound.Play(SfxKind.Cancel);
-        }
-
-        BattleSideView MakeSide(RectTransform screen, string name, Vector2 feet, float bx, float by, float bw, float bh, bool player)
-        {
-            var inner = Ui.Panel(screen, name + "Info", bx, by, bw, bh, ledgeToRight: !player);
-            var nameLabel = Ui.Label(inner, "Name", font, 4, 2, bw - 50, 14);
-            Ui.Label(inner, "Level", font, bw - 42, 2, 36, 14, TextAlignmentOptions.TopRight).text = ":L50";
-            var hp = new HpBar(inner, font, 6, 18, bw - 34, player);
-            var view = new BattleSideView(world, name, feet, flashMaterial, inner.parent.parent.gameObject, nameLabel, hp);
-            view.Reset();
-            return view;
+            hud.ActionMenu.Chosen += OnAction;
+            hud.MoveMenu.Chosen += OnMove;
+            hud.MoveMenu.Cancelled += ShowActionMenu;
+            hud.MoveMenu.Highlighted += ShowMoveInfo;
+            hud.ResultMenu.Chosen += OnResult;
         }
 
         // ------------------------------------------------------------------ 흐름
@@ -211,272 +141,104 @@ namespace Pokepedia.Presentation.Battle
 
         IEnumerator NewBattle(Func<IReadOnlyList<BattleEvent>> start)
         {
-            // 승리 메시지를 빨리 넘기면 승리 연출(뛰기·카메라)이 아직 돌고 있다. 새 배틀의 포켓몬을 움직이지 않게 멈춘다.
-            if (victory != null) { StopCoroutine(victory); victory = null; }
-            world.ResetPan();
-            foreach (var v in sides) v.Reset();
-            message.Clear();
-            world.Backdrop?.SetWeather(1, 0);
-            lighting.SetAmbient(theme.Ambient);
-            sound.PlayMusic(SoundBank.BattleMusicKey); // 판마다 처음부터
+            State = BattleViewState.Entering;
+            player.StopVictory();
+            hud.ResetStage();
             var events = start();   // 새 상대가 정해진 뒤에 VS 장면을 그린다
-            yield return PlayVs();
+            yield return player.PlayVs();
             yield return PlayThenPrompt(events);
         }
-
-        /// <summary>도입 VS 장면 (M5): 두 포켓몬의 앞모습·이름·첫 타입 색은 데이터에서 가져온다.</summary>
-        IEnumerator PlayVs()
-        {
-            yield return vsIntro.Play(VsSide(SpeciesOf(BattleState.Player)), VsSide(SpeciesOf(BattleState.Npc)));
-        }
-
-        VsIntro.Side VsSide(int speciesId)
-        {
-            var info = catalog.GetSpecies(speciesId);
-            var tv = animation.TypeFor(info.Species.Types[0]);
-            return new VsIntro.Side(SpriteSheet.Load(info.Sprites.Front), names.Species(speciesId), Ui.Hex(tv.PrimaryRgb), Ui.Hex(tv.SecondaryRgb));
-        }
-
-        Coroutine victory;   // 진행 중인 승리 연출 (NewBattle 이 멈춘다)
-        VsIntro vsIntro;
 
         IEnumerator PlayThenPrompt(IReadOnlyList<BattleEvent> events)
         {
             SetMenu(null);
-            yield return Play(events);
-            if (session.State.IsOver) ShowResultMenu();
+            yield return player.Play(events);
+            if (ctx.Session.State.IsOver) ShowResultMenu();
             else ShowActionMenu();
         }
 
         void SetMenu(ChoiceMenu menu)
         {
-            foreach (var m in new[] { actionMenu, moveMenu, resultMenu }) if (m != menu) m.Hide();
-            moveInfoBox.SetActive(menu == moveMenu);
+            foreach (var m in new[] { hud.ActionMenu, hud.MoveMenu, hud.ResultMenu }) if (m != menu) m.Hide();
+            hud.MoveInfoBox.SetActive(menu == hud.MoveMenu);
             activeMenu = menu;
         }
 
         void ShowActionMenu()
         {
+            State = BattleViewState.Command;
             // 행동 메뉴가 메시지 창 오른쪽을 덮으므로 그 왼쪽 폭(약 130px) 안에서 줄바꿈한다
-            message.SetStatic(locale.Format(Keys.WhatToDo, names.Species(session.Player.Species.Id)), 130);
-            SetMenu(actionMenu);
-            actionMenu.Show(new[] { locale.Get(Keys.Fight), locale.Get(Keys.Run) });
+            hud.Message.SetStatic(ctx.Locale.Format(Keys.WhatToDo, ctx.Names.Species(ctx.Session.Player.Species.Id)), 130);
+            SetMenu(hud.ActionMenu);
+            hud.ActionMenu.Show(new[] { ctx.Locale.Get(Keys.Fight), ctx.Locale.Get(Keys.Run) });
         }
 
         void OnAction(int i)
         {
+            if (State != BattleViewState.Command) return;
             if (i == 0) { ShowMoveMenu(); return; }
+            State = BattleViewState.Animating;
             SetMenu(null);
             StartCoroutine(RunAway());
         }
 
         IEnumerator RunAway()
         {
-            var outcome = session.TryRun();
-            yield return message.Say(locale.Get(BattleMessages.ForRun(outcome).Key));
+            var outcome = ctx.Session.TryRun();
+            yield return hud.Message.Say(ctx.Locale.Get(BattleMessages.ForRun(outcome).Key));
             if (outcome == RunOutcome.CannotEscape) { ShowActionMenu(); yield break; }
-            yield return sound.FadeOutMusic(0.3f);
-            yield return NewBattle(session.NextBattle);
+            yield return hud.Sound.FadeOutMusic(0.3f);
+            yield return NewBattle(ctx.Session.NextBattle);
         }
 
         void ShowMoveMenu()
         {
-            message.Clear();
-            SetMenu(moveMenu);
-            moveMenu.Show(session.PlayerMoveInfos.Select(m => locale.Get(m.NameKey)).ToArray(), lastMoveIndex);
+            hud.Message.Clear();
+            SetMenu(hud.MoveMenu);
+            hud.MoveMenu.Show(ctx.Session.PlayerMoveInfos.Select(m => ctx.Locale.Get(m.NameKey)).ToArray(), lastMoveIndex);
         }
 
         void ShowMoveInfo(int i)
         {
-            var infos = session.PlayerMoveInfos;
+            var infos = ctx.Session.PlayerMoveInfos;
             if (i < 0 || i >= infos.Count) return;
             var m = infos[i].Move;
-            moveInfo.text = $"{locale.Get(Keys.Type(m.Type))}\n{locale.Get(Keys.InfoPower)} {m.Power}\n{locale.Get(Keys.InfoAccuracy)} {m.Accuracy}";
+            hud.MoveInfo.text = $"{ctx.Locale.Get(Keys.Type(m.Type))}\n{ctx.Locale.Get(Keys.InfoPower)} {m.Power}\n{ctx.Locale.Get(Keys.InfoAccuracy)} {m.Accuracy}";
         }
 
         void OnMove(int i)
         {
+            if (State != BattleViewState.Command) return;
+            State = BattleViewState.Animating;
             lastMoveIndex = i;
             SetMenu(null);
-            message.Clear();
-            StartCoroutine(PlayThenPrompt(session.UseMove(i)));
+            hud.Message.Clear();
+            StartCoroutine(PlayThenPrompt(ctx.Session.UseMove(i)));
         }
 
         void ShowResultMenu()
         {
-            lastWin = session.State.Winner == BattleState.Player;
-            SetMenu(resultMenu);
-            resultMenu.Show(new[] { locale.Get(lastWin ? Keys.NextOpponent : Keys.Retry), locale.Get(Keys.ToTitle) });
+            State = BattleViewState.Result;
+            lastWin = ctx.Session.State.Winner == BattleState.Player;
+            SetMenu(hud.ResultMenu);
+            hud.ResultMenu.Show(new[] { ctx.Locale.Get(lastWin ? Keys.NextOpponent : Keys.Retry), ctx.Locale.Get(Keys.ToTitle) });
         }
 
         void OnResult(int i)
         {
+            if (State != BattleViewState.Result) return;
             SetMenu(null);
-            if (i == 1)
-            {
-                sound.StopMusic();
-                root.SetActive(false);
-                world.Container.SetActive(false);
-                onExit?.Invoke();
-                return;
-            }
-            StartCoroutine(NewBattle(lastWin ? session.NextBattle : (Func<IReadOnlyList<BattleEvent>>)session.Retry));
+            if (i == 1) { Exit(); return; }
+            StartCoroutine(NewBattle(lastWin ? ctx.Session.NextBattle : (Func<IReadOnlyList<BattleEvent>>)ctx.Session.Retry));
         }
 
-
-        // ------------------------------------------------------------------ 연출 실험실
-        ChoiceMenu labMenu;
-        int labIndex;
-        static readonly string[] LabOutcomes = { "Hit", "Miss", "Crit" };   // 명중 / 빗나감 / 급소, 고를 때마다 돌아간다
-        int labOutcome;
-
-        IEnumerator LabIntro()
+        /// <summary>배틀 화면을 닫고 타이틀로 (결과 메뉴 [처음으로], 실험실 취소)</summary>
+        void Exit()
         {
-            foreach (var v in sides) v.Reset();
-            message.Clear();
-            world.Backdrop?.SetWeather(1, 0);
-            lighting.SetAmbient(theme.Ambient);
-            sound.PlayMusic(SoundBank.BattleMusicKey);
-            foreach (var e in session.Start())
-            {
-                if (!(e is PokemonSentOut s)) continue;
-                var view = sides[s.Side];
-                view.Name.text = names.Species(s.SpeciesId);
-                view.Hp.Set(s.Hp, s.MaxHp);
-                yield return director.SendOut(s.Side, catalog.GetSpecies(s.SpeciesId));
-                view.InfoBox.SetActive(true);
-            }
-            ShowLabMenu();
-        }
-
-        void ShowLabMenu()
-        {
-            var effects = AnimationDirector.LabEffects;
-            if (labMenu == null)
-            {
-                int count = effects.Length + 3;   // 전용 연출 + VS + Victory + 결과 버튼
-                var cells = new Vector3[count];
-                for (int i = 0; i < count; i++) cells[i] = new Vector3(4 + (i % 3) * 76, 4 + (i / 3) * 17, 74);
-                var inner = Ui.Box(hud, "LabMenu", 2, 156, 236, 58);
-                labMenu = new ChoiceMenu(inner.parent.gameObject, inner, font, cells, 3);
-                labMenu.Chosen += OnLab;
-                labMenu.Cancelled += ExitLab;
-                labMenu.Navigated += () => sound.Play(SfxKind.CursorMove);
-                labMenu.Chosen += _ => sound.Play(SfxKind.Confirm);
-                vfx.BringToFront();
-            }
-            var labels = effects.Select(e => e.Label).Concat(new[] { "VS", "Victory", LabOutcomes[labOutcome] }).ToArray();
-            SetMenu(labMenu);
-            labMenu.Show(labels, labIndex);
-        }
-
-        void OnLab(int i)
-        {
-            labIndex = i;
-            var effects = AnimationDirector.LabEffects;
-            if (i == effects.Length + 2) { labOutcome = (labOutcome + 1) % LabOutcomes.Length; ShowLabMenu(); return; }
-            labMenu.Hide();
-            SetMenu(null);
-            StartCoroutine(PlayLab(i));
-        }
-
-        IEnumerator PlayLab(int i)
-        {
-            var effects = AnimationDirector.LabEffects;
-            if (i == effects.Length)
-            {
-                yield return PlayVs();
-            }
-            else if (i == effects.Length + 1)
-            {
-                yield return director.Victory(BattleState.Player);
-                yield return VfxLayer.Wait(3f);
-                world.Backdrop?.SetWeather(1, 1.2f);
-                StartCoroutine(lighting.FadeAmbient(theme.Ambient, 1.2f));
-            }
-            else
-            {
-                var e = effects[i];
-                int attacker = SpeciesOf(e.Side), target = SpeciesOf(BattleState.Opponent(e.Side));
-                // 전용 연출은 대표 기술로, 몸통박치기(contact)는 기본기로 재생한다(색·소리가 그 기술의 타입을 따른다)
-                var role = e.Id == "contact" ? MoveRole.Basic : MoveRole.Signature;
-                var move = catalog.MoveSetFor(attacker).First(m => m.Role == role);
-                bool crit = labOutcome == 2;
-                yield return director.PlayLab(e.Id, e.Side, attacker, target, move, labOutcome == 1, crit);
-                if (crit) yield return message.Say(locale.Get(BattleTextKeys.CriticalHit));
-            }
-            yield return VfxLayer.Wait(0.3f);
-            ShowLabMenu();
-        }
-
-        void ExitLab()
-        {
-            labMenu.Hide();
-            SetMenu(null);
-            sound.StopMusic();
-            root.SetActive(false);
-            world.Container.SetActive(false);
+            State = BattleViewState.Hidden;
+            hud.Sound.StopMusic();
+            hud.SetVisible(false);
             onExit?.Invoke();
-        }
-
-        // ------------------------------------------------------------------ 이벤트 재생
-        int SpeciesOf(int side) => session.State.Sides[side].Active.Species.Id;
-
-        IEnumerator Play(IReadOnlyList<BattleEvent> events)
-        {
-            for (int i = 0; i < events.Count; i++)
-            {
-                var e = events[i];
-                switch (e)
-                {
-                    case PokemonSentOut s:
-                    {
-                        var view = sides[s.Side];
-                        view.Name.text = names.Species(s.SpeciesId);
-                        view.Hp.Set(s.Hp, s.MaxHp);
-                        view.InfoBox.SetActive(false);
-                        yield return director.SendOut(s.Side, catalog.GetSpecies(s.SpeciesId));
-                        view.InfoBox.SetActive(true);
-                        yield return SayAll(e);
-                        break;
-                    }
-                    case MoveUsed m:
-                    {
-                        yield return SayAll(e);
-                        // 다음 이벤트(명중 → DamageDealt / 빗나감 → MoveMissed)를 미리 보고 한 동작으로 연출한다
-                        var next = i + 1 < events.Count ? events[i + 1] : null;
-                        var hit = next as DamageDealt;
-                        Func<IEnumerator> hpAnim = hit == null ? null : (Func<IEnumerator>)(() => sides[hit.TargetSide].Hp.AnimateTo(hit.HpAfter));
-                        yield return director.UseMove(m.Side, SpeciesOf(m.Side), SpeciesOf(BattleState.Opponent(m.Side)),
-                                                      catalog.GetMove(m.MoveId), hit, hpAnim);
-                        if (hit != null || next is MoveMissed)
-                        {
-                            i++;
-                            yield return SayAll(next); // "급소에 맞았다!" / "효과가 굉장했다!" / "공격은 빗나갔다!"
-                        }
-                        break;
-                    }
-                    case Fainted f:
-                        yield return director.Faint(f.Side);
-                        yield return SayAll(e);
-                        break;
-                    case BattleEnded b:
-                        yield return sound.FadeOutMusic(0.25f);
-                        sound.Play(b.WinnerSide == BattleState.Player ? SfxKind.Victory : SfxKind.Defeat);
-                        if (b.WinnerSide == BattleState.Player) victory = StartCoroutine(director.Victory(b.WinnerSide));
-                        yield return SayAll(e);
-                        break;
-                    default:
-                        yield return SayAll(e);
-                        break;
-                }
-            }
-        }
-
-        IEnumerator SayAll(BattleEvent e)
-        {
-            foreach (var line in BattleMessages.For(e, names, SpeciesOf))
-                yield return message.Say(locale.Format(line.Key, line.Args.Cast<object>().ToArray()));
         }
     }
 }
