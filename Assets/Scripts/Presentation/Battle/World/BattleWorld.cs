@@ -40,8 +40,9 @@ namespace Pokepedia.Presentation.Battle
 
         readonly Material lit;
         readonly Transform pan;
-        float panX;
-        int panToken;
+        Vector2 camCenter;        // 화면 가운데에 오는 월드 위치(Root 기준, 픽셀)
+        float camZoom = 1, punch = 1;
+        int panToken, punchToken;
 
         /// <summary>조명을 받지 않는 스프라이트 머티리얼 (이펙트·그림자·안개 등)</summary>
         public Material Unlit { get; }
@@ -83,36 +84,74 @@ namespace Pokepedia.Presentation.Battle
         public static Vector3 ToLocal(Vector2 px)
             => new Vector3(px.x - PixelCanvasScaler.BaseWidth / 2f, PixelCanvasScaler.BaseHeight / 2f - px.y, 0);
 
-        // ------------------------------------------------------------------ 카메라 이동 (패럴랙스)
-        /// <summary>카메라를 옆으로 옮긴 양(픽셀, 정수로 반올림). 가까운 것은 그만큼, 먼 배경은 덜 따라가 보인다.</summary>
-        public void SetPan(float value)
+        // ------------------------------------------------------------------ 카메라 (이동 + 확대, 패럴랙스)
+        // 카메라(PixelCamera)는 정수 배율로 고정하고, 월드의 Pan 노드를 옮기고 키워서 "카메라가 움직이는 것처럼" 보이게 한다.
+        // HUD 는 다른 캔버스라 그대로다. 확대는 움직이는 짧은 순간에만 쓴다 — 1배가 아니면 도트 크기가 고르지 않기 때문에,
+        // 멈춰 있을 때는 항상 1배로 돌아온다. 회전(기울기)은 도트 계단이 깨져서 쓰지 않는다.
+        const float CamMarginX = 24;   // 배경 레이어(304px)가 화면(240px)보다 넓어 좌우로 이만큼은 더 갈 수 있다
+
+        /// <summary>화면 픽셀 위치 px 쪽으로 k(0~1)만큼 옮긴 카메라 중심 (CameraTo 의 center 로 쓴다)</summary>
+        public static Vector2 Toward(Vector2 px, float k) => (Vector2)ToLocal(px) * k;
+
+        void ApplyCamera()
         {
-            panX = value;
-            float x = Mathf.Round(value);
-            pan.localPosition = new Vector3(-x, 0, 0);
-            if (Backdrop != null) Backdrop.SetPan(x);
+            float z = camZoom * punch;
+            // 확대하면 보이는 범위가 줄어드는 만큼만 중심을 옮길 수 있다(배경 밖이 보이지 않게)
+            float maxX = BaseHalfW - BaseHalfW / z + CamMarginX, maxY = BaseHalfH - BaseHalfH / z;
+            var c = new Vector2(Mathf.Clamp(camCenter.x, -maxX, maxX), Mathf.Clamp(camCenter.y, -maxY, maxY));
+            pan.localScale = new Vector3(z, z, 1);
+            pan.localPosition = new Vector3(Mathf.Round(-c.x * z), Mathf.Round(-c.y * z), 0);
+            if (Backdrop != null) Backdrop.SetPan(Mathf.Round(c.x));
         }
 
-        /// <summary>진행 중인 PanTo 를 멈추고 카메라를 바로 가운데로 (새 배틀 시작)</summary>
+        static float BaseHalfW => PixelCanvasScaler.BaseWidth / 2f;
+        static float BaseHalfH => PixelCanvasScaler.BaseHeight / 2f;
+
+        /// <summary>진행 중인 카메라 이동을 멈추고 바로 가운데·1배로 (새 배틀 시작)</summary>
         public void ResetPan()
         {
-            panToken++;
-            SetPan(0);
+            panToken++; punchToken++;
+            camCenter = Vector2.zero; camZoom = 1; punch = 1;
+            ApplyCamera();
         }
 
-        /// <summary>카메라를 부드럽게 target 까지 옮긴다. 새 이동이 시작되면 이전 이동은 멈춘다.</summary>
-        public IEnumerator PanTo(float target, float seconds)
+        /// <summary>카메라를 옆으로만 부드럽게 옮긴다(1배). 새 이동이 시작되면 이전 이동은 멈춘다.</summary>
+        public IEnumerator PanTo(float target, float seconds) => CameraTo(new Vector2(target, 0), 1, seconds);
+
+        /// <summary>카메라 중심과 확대를 seconds 동안 부드럽게 바꾼다. 새 이동이 시작되면 이전 이동은 멈춘다.</summary>
+        public IEnumerator CameraTo(Vector2 center, float zoom, float seconds)
         {
             int token = ++panToken;
-            float from = panX;
+            var fromC = camCenter; float fromZ = camZoom;
             for (float t = 0; t < seconds; t += Time.deltaTime)
             {
                 if (token != panToken) yield break;
-                float k = t / seconds;
-                SetPan(Mathf.Lerp(from, target, k * k * (3 - 2 * k)));
+                float k = t / seconds; k = k * k * (3 - 2 * k);
+                camCenter = Vector2.Lerp(fromC, center, k);
+                camZoom = Mathf.Lerp(fromZ, zoom, k);
+                ApplyCamera();
                 yield return null;
             }
-            if (token == panToken) SetPan(target);
+            if (token != panToken) yield break;
+            camCenter = center; camZoom = zoom;
+            ApplyCamera();
+        }
+
+        /// <summary>맞는 순간 짧게 한 번 당겨지는 확대 (CameraTo 와 따로 곱해진다)</summary>
+        public IEnumerator Punch(float amount, float seconds)
+        {
+            int token = ++punchToken;
+            for (float t = 0; t < seconds; t += Time.deltaTime)
+            {
+                if (token != punchToken) yield break;
+                float k = t / seconds;
+                punch = 1 + amount * (k < 0.25f ? k / 0.25f : 1 - (k - 0.25f) / 0.75f);
+                ApplyCamera();
+                yield return null;
+            }
+            if (token != punchToken) yield break;
+            punch = 1;
+            ApplyCamera();
         }
 
         // ------------------------------------------------------------------ 도형 만들기
