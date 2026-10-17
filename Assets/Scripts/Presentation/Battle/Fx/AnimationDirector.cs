@@ -113,6 +113,36 @@ namespace Pokepedia.Presentation.Battle.Fx
             host.StartCoroutine(world.CameraTo(Vector2.zero, 1, 0.9f));
         }
 
+        /// <summary>
+        /// 응원 부활 (PROJECT.md 5.3): 금빛이 번지고 반짝임이 피어오르는 가운데, 쓰러졌던 포켓몬이 아래에서 떠오르며 다시 나타나고
+        /// 번쩍인 뒤 HP 가 다시 찬다(hpAnimation, 화면이 넘긴다).
+        /// </summary>
+        public IEnumerator Revive(int side, Func<IEnumerator> hpAnimation)
+        {
+            var view = sides[side];
+            var gold = new Color(1f, 0.86f, 0.42f);
+            sound.Play(SfxKind.Charge);
+            host.StartCoroutine(lighting.Pulse(view.Center, gold, 160, 2.2f, 1.5f));
+            host.StartCoroutine(vfx.Rings(view.Center, gold, 3, 0.8f));
+            vfx.Burst(view.Center, gold, Color.white, 50, 20, 90, 1.1f, 3, -40, 18);
+            view.SetVisible(true);
+            const float rise = 0.6f, from = 24;
+            for (float t = 0; t < rise; t += Time.deltaTime)
+            {
+                float k = t / rise, e = 1 - (1 - k) * (1 - k);
+                view.SetOffset(new Vector2(0, Mathf.Round(from * (1 - e))));
+                view.SetAlpha(e);
+                view.SetFlash(1 - 0.7f * k);
+                yield return null;
+            }
+            view.SetOffset(Vector2.zero);
+            view.SetAlpha(1);
+            sound.Play(SfxKind.SendOut);
+            view.SetFlash(0.9f); yield return VfxLayer.Wait(0.08f); view.SetFlash(0);
+            vfx.Burst(view.Center, gold, Color.white, 24, 30, 110, 0.7f, 2, 120, 10);
+            if (hpAnimation != null) yield return hpAnimation();
+        }
+
         // ------------------------------------------------------------------ 기술
         /// <param name="hit">명중했으면 피해 이벤트, 빗나갔으면 null</param>
         /// <param name="hpAnimation">HP 바를 줄이는 코루틴 (화면이 넘긴다)</param>

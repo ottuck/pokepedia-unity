@@ -229,6 +229,22 @@ namespace Pokepedia.Tests
         }
 
         [Test]
+        public void CheerRevive_TurnsFirstLossIntoRevive_OncePerBattle()
+        {
+            // 데모 응원 부활(5.3): 처음 쓰러지면 BattleEnded 대신 Revived 로 이어 싸우고, 두 번째로 쓰러지면 진다. 다시 도전하면 또 한 번.
+            var s = new BattleSession(Catalog(), Rules, new SeededRandom(1), BattleMode.Demo, 9, () => 25, cheerRevives: 1);
+            s.Start();
+            var events = PlayOut(s, 0);
+            Assert.AreEqual(1, events.OfType<Revived>().Count());
+            Assert.AreEqual(new BattleEnded(BattleState.Npc), events.Last(), "the second faint ends it");
+            Assert.AreEqual(1, events.OfType<BattleEnded>().Count());
+            Assert.That(events.IndexOf(events.OfType<Revived>().Single()), Is.LessThan(events.Count - 2));
+
+            s.Retry();
+            Assert.AreEqual(1, PlayOut(s, 0).OfType<Revived>().Count(), "a retry gets the cheer again");
+        }
+
+        [Test]
         public void SameSeed_ReproducesWholeSession()
         {
             static List<BattleEvent> Script(uint seed)

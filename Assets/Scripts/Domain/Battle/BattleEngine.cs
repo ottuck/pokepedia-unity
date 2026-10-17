@@ -67,6 +67,20 @@ namespace Pokepedia.Domain.Battle
             return events;
         }
 
+        /// <summary>
+        /// 진 쪽(side)을 다시 일으킨다: HP 가득, 주는 피해 ×powerBoost, 승패를 지워 배틀이 이어진다 (데모 응원 부활, PROJECT.md 5.3).
+        /// side 가 방금 져서 배틀이 끝났을 때만 부를 수 있다. 몇 번 허용할지는 호출자(BattleSession)가 정한다.
+        /// </summary>
+        public IReadOnlyList<BattleEvent> Revive(int side, double powerBoost)
+        {
+            if (!State.IsOver || State.Winner != BattleState.Opponent(side)) throw new InvalidOperationException("only the side that just lost can be revived");
+            if (powerBoost <= 0) throw new ArgumentOutOfRangeException(nameof(powerBoost));
+            var b = State.Sides[side].Active;
+            b.Revive(powerBoost);
+            State.Winner = null;
+            return new BattleEvent[] { new Revived(side, b.Hp, b.MaxHp) };
+        }
+
         UseMove Validate(int side, BattleAction action)
         {
             if (action == null) throw new ArgumentNullException(side == BattleState.Player ? "playerAction" : "npcAction");

@@ -29,4 +29,7 @@ namespace Pokepedia.Domain.Battle
     public sealed record Fainted(int Side) : BattleEvent;
 
     public sealed record BattleEnded(int WinnerSide) : BattleEvent;
+
+    /// <summary>응원으로 다시 일어섰다 (데모 응원 부활, PROJECT.md 5.3). HP 가 Hp/MaxHp 로 돌아오고 공격이 강해진다.</summary>
+    public sealed record Revived(int Side, int Hp, int MaxHp) : BattleEvent;
 }

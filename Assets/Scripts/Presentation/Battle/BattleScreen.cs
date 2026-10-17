@@ -88,7 +88,8 @@ namespace Pokepedia.Presentation.Battle
         public void BeginDemo(string localeCode, Action onExit)
         {
             Prepare(localeCode, onExit);
-            ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, NewRandom(), BattleMode.Demo, DemoPlayer, () => DemoNpc);
+            // 누구나 처음 하는 전투라 져서 다시 도전할 이유가 없다: 처음 쓰러지면 응원으로 다시 일어선다 (5.3)
+            ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, NewRandom(), BattleMode.Demo, DemoPlayer, () => DemoNpc, cheerRevives: 1);
             oneOpponent = true;
             StartCoroutine(NewBattle(ctx.Session.Start));
         }
@@ -106,7 +107,8 @@ namespace Pokepedia.Presentation.Battle
             bool canEscape = OpponentPicker.CandidateCount(ctx.Catalog, choice.SpeciesId) > 1;
             oneOpponent = !canEscape;
             ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, random, BattleMode.Collection, choice.SpeciesId,
-                                            OpponentPicker.Weighted(ctx.Catalog, random, choice.SpeciesId), canEscape);
+                                            OpponentPicker.Weighted(ctx.Catalog, random, choice.SpeciesId), canEscape,
+                                            cheerRevives: 1);   // Pokepedia 에서 피카츄 띠부씰로 들어오는 첫 전투도 같은 경험 (5.3)
             StartCoroutine(NewBattle(ctx.Session.Start));
         }
 
