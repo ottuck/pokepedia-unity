@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>{{{ PRODUCT_NAME }}}</title>
-    <!-- 시작 화면 글꼴: BATTLE 로고는 Bangers(만화 액션체), 리본·버튼은 Black Han Sans(굵은 한글 디스플레이), 본문은 Pokepedia 와 같은 Noto Sans KR.
+    <!-- 시작 화면 글꼴: BATTLE 로고는 Bangers(만화 액션체), 영문 리본·TIP 은 Black Han Sans, 한글 버튼·이름 띠는 Noto Sans KR 900,
+         본문은 Pokepedia 와 같은 Noto Sans KR. (Black Han Sans 는 한글을 작게 쓰면 'ㅌ' 가운데 획이 붙어 "배틀"이 "배들"로 보여 한글에 쓰지 않는다)
          가나는 Noto Sans JP. 필요한 글자 조각만 내려받고, 막히면 시스템 글꼴 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -81,7 +82,6 @@
       /*
        * 엠블럼: 빨간 POKEPEDIA 리본 + Bangers(만화 액션체) BATTLE. 글자는 네 겹 — 진한 입체 그림자(depth), 흰 안쪽 테두리(rim),
        * 노랑→주황 크롬 그라데이션(face), 가끔 쓸고 지나가는 빛(shine). 화면이 뜨면 크게 찍히듯 들어오고(slam) 뒤로 속도선이 뻗는다.
-       * (2026-10-17 사용자 피드백 "타이포를 박진감 넘치게": Bangers·Bungee·Luckiest Guy·Black Ops One·Black Han Sans 를 같은 효과로 비교해 고름)
        */
       #title .logo { position: absolute; top: 4%; left: 0; right: 0; z-index: 5; display: flex; flex-direction: column; align-items: center;
         animation: slam 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
@@ -116,7 +116,7 @@
         box-shadow: 0 0 0 0.45cqw #1a0b2e, 0 1.6cqw 3cqw rgba(0, 0, 0, 0.55); }
       #title .actions { display: flex; gap: 3cqw; flex-wrap: wrap; justify-content: center; }
       /* 게임 버튼: 기울어진 두툼한 판, 진한 테두리·아래 두께·빛이 쓸고 지나감 */
-      #title button { position: relative; font: inherit; font-family: "Black Han Sans", "Noto Sans KR", "Noto Sans JP", sans-serif; font-weight: 400;
+      #title button { position: relative; font: inherit; font-family: "Noto Sans KR", "Noto Sans JP", sans-serif; font-weight: 900;
         font-size: max(5cqw, 17px); letter-spacing: 0.05em; color: #2a1200; text-shadow: 0 0.25cqw 0 rgba(255, 255, 255, 0.55); cursor: pointer; border: 0; padding: 1.7cqw 7cqw 2cqw;
         background: linear-gradient(#fff3a6 0%, #ffd23f 45%, #ffae00 100%); transform: skewX(-12deg); border-radius: 0.8cqw;
         box-shadow: 0 0 0 0.5cqw #1a0b2e, 0 1.1cqw 0 0.5cqw #1a0b2e, 0 2cqw 3cqw rgba(0, 0, 0, 0.55), inset 0 -0.7cqw 0 rgba(180, 83, 9, 0.55);
@@ -188,7 +188,7 @@
       @keyframes vs-flash { 0% { opacity: 0; } 1% { opacity: 0.9; } 100% { opacity: 0; } }
       /* 이름 띠: 상대는 오른쪽 위(파랑), 플레이어는 왼쪽 아래(노랑) */
       #title .tag { position: absolute; z-index: 6; padding: 1cqw 6cqw; transform: skewX(-14deg); box-shadow: 0 0 0 0.5cqw #1a0b2e, 0 0.8cqw 0 0.5cqw #1a0b2e; }
-      #title .tag span { display: block; transform: skewX(14deg); font-family: "Black Han Sans", "Noto Sans KR", "Noto Sans JP", sans-serif; font-size: 5.4cqw;
+      #title .tag span { display: block; transform: skewX(14deg); font-family: "Noto Sans KR", "Noto Sans JP", sans-serif; font-weight: 900; font-size: 5.4cqw;
         letter-spacing: 0.08em; color: #fff; text-shadow: 0 0.35cqw 0 #1a0b2e; white-space: nowrap; }
       #title .tag.left { left: -3%; bottom: 7%; padding-left: 8cqw; background: linear-gradient(#ffd23f, #f59e0b); animation: tag-left 0.35s cubic-bezier(0.2, 0.9, 0.2, 1) 0.45s both; }
       #title .tag.left span { color: #2a1200; text-shadow: 0 0.3cqw 0 rgba(255, 255, 255, 0.6); }
