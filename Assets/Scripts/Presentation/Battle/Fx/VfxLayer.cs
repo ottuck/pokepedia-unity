@@ -375,10 +375,18 @@ namespace Pokepedia.Presentation.Battle.Fx
                 if (splash) Spray(to, -dir, 75, light, Color.white, 5, 50, 140, 0.4f, 2, 300);
                 yield return null;
             }
+            // 끝: 전체 길이를 유지한 채 가늘어지며 옅어진다. 예전처럼 꼬리를 입에서 상대 쪽으로 쓸어 지우면
+            // 프레임이 적은 휴대폰에서 상대 근처의 짧은 사선 조각만 한두 프레임 보였다(2026-10-17 실기기).
             for (float t = 0; t < 0.16f; t += Time.deltaTime, time += Time.deltaTime)
             {
-                int tail = Mathf.Clamp(Mathf.FloorToInt(N * t / 0.16f), 0, N);
-                Shape(time, N, tail, 1 - 0.5f * t / 0.16f);
+                float k = t / 0.16f;
+                Shape(time, N, 0, 1 - 0.75f * k);
+                for (int i = 0; i < N; i++)
+                {
+                    outer[i].color = new Color(deepA.r, deepA.g, deepA.b, deepA.a * (1 - k));
+                    inner[i].color = new Color(light.r, light.g, light.b, light.a * (1 - k));
+                    core[i].color = new Color(1, 1, 1, 1 - k);
+                }
                 yield return null;
             }
             Object.Destroy(root.gameObject);
