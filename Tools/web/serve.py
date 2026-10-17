@@ -67,10 +67,11 @@ if __name__ == "__main__":
     ap.add_argument("--ancestors", default="http://localhost:8000")
     ap.add_argument("--mbps", type=float, default=0, help="전송 속도 제한(Mbps). 크롬 Fast 4G 근사 = 9")
     ap.add_argument("--latency-ms", type=float, default=0)
+    ap.add_argument("--host", default="127.0.0.1", help="같은 와이파이의 휴대폰에서 열려면 0.0.0.0 (방화벽 허용 필요)")
     a = ap.parse_args()
     Handler.ancestors = a.ancestors
     Handler.throttle_bps = int(a.mbps * 1_000_000 / 8)
     Handler.latency_s = a.latency_ms / 1000
     os.chdir(a.dir)
-    print(f"serving {a.dir} on http://localhost:{a.port} (frame-ancestors {a.ancestors})", flush=True)
-    ThreadingHTTPServer(("127.0.0.1", a.port), Handler).serve_forever()
+    print(f"serving {a.dir} on http://{a.host}:{a.port} (frame-ancestors {a.ancestors})", flush=True)
+    ThreadingHTTPServer((a.host, a.port), Handler).serve_forever()

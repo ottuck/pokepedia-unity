@@ -74,6 +74,7 @@ python -I Tools/web/serve.py --dir Tools/web/host-test --port 8000
 - 단독 실행: `http://localhost:8001/` → Demo 모드
 - iframe 실행: `http://localhost:8000/` → `?host=pokepedia`로 열려 `ready` → `init` 왕복
 - `serve.py --mbps 9 --latency-ms 60`으로 Fast 4G 근사 속도에서 로딩을 잴 수 있습니다.
+- 같은 와이파이의 휴대폰으로 열려면 `--host 0.0.0.0`을 붙이고(Windows 방화벽 허용 필요) 휴대폰에서 `http://<PC의 IP>:<포트>/?fps`를 엽니다. `?fps`는 왼쪽 위에 FPS와 가장 느린 프레임(ms)을 보여 줍니다.
 
 ## 라이선스·고지
 

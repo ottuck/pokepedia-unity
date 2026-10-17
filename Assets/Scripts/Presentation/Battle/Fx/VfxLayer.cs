@@ -268,18 +268,16 @@ namespace Pokepedia.Presentation.Battle.Fx
         /// 물줄기(하이드로펌프): 레이저처럼 곧은 막대가 아니라 물처럼 보이도록 길이 방향으로 잘게 나눈 조각마다 굵기가 시간·위치에 따라 출렁인다.
         /// 바깥(진한 물색, 반투명)·안쪽(밝은 물색)·흰 거품 줄(군데군데 끊기며 앞으로 흐름) 세 겹이고, 발사구에서 멀어질수록 퍼져 굵어진다.
         /// to 는 상대 몸의 "표면"이어야 한다(가운데를 주면 몸을 뚫은 것처럼 보인다). 맞는 동안 끝에서 물보라가 튀고, 끝날 때는 꼬리부터 끊겨 날아간다.
-        /// via 를 주면 그 점 쪽으로 휘는 곡선(2차 베지어)이 된다: 발사구에서는 from → via 방향으로 나가고 to 에는 via → to 방향으로 떨어진다.
+        /// 곧게 뻗어야 수압이 느껴진다(곡선으로 휘게 해 봤다가 사용자 피드백으로 되돌림, 2026-10-17).
         /// </summary>
-        public IEnumerator WaterJet(Vector2 from, Vector2 to, Color deep, Color light, float width, float extendSec, float holdSec, bool splash = true,
-                                    Vector2? via = null)
+        public IEnumerator WaterJet(Vector2 from, Vector2 to, Color deep, Color light, float width, float extendSec, float holdSec, bool splash = true)
         {
             const int N = 24;
             var root = new GameObject("WaterJet").transform;
             root.SetParent(fx, false);
             root.localPosition = ToLocal(from);
-            var ctrl = via ?? Vector2.Lerp(from, to, 0.5f);
-            Vector2 At(float u) => (1 - u) * (1 - u) * from + 2 * (1 - u) * u * ctrl + u * u * to;
-            var dir = to - ctrl;                                                            // 끝에서 물이 들어가는 방향
+            Vector2 At(float u) => Vector2.Lerp(from, to, u);
+            var dir = to - from;
             var outer = new SpriteRenderer[N];
             var inner = new SpriteRenderer[N];
             var core = new SpriteRenderer[N];

@@ -17,6 +17,8 @@ namespace Pokepedia.Domain.Battle
         public BattleSide(IReadOnlyList<Battler> party, int activeIndex = 0)
         {
             if (party == null || party.Count == 0) throw new ArgumentException("party must not be empty", nameof(party));
+            if (activeIndex < 0 || activeIndex >= party.Count)
+                throw new ArgumentOutOfRangeException(nameof(activeIndex), activeIndex, $"must be within the party (0..{party.Count - 1})");
             Party = party.ToArray();
             ActiveIndex = activeIndex;
         }

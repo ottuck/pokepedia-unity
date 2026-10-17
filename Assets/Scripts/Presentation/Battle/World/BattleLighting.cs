@@ -16,6 +16,7 @@ namespace Pokepedia.Presentation.Battle
         readonly Light2D ambient;
         readonly Light2D[] pool = new Light2D[6];
         int next;
+        int[] slotToken;   // 슬롯을 다시 쓰면 이전 Pulse 는 손을 뗀다(6개보다 많이 겹쳐도 새 조명을 끄지 않게)
         int ambientToken;
 
         public BattleLighting(Transform parent, Color ambientColor, float ambientIntensity)
@@ -71,8 +72,11 @@ namespace Pokepedia.Presentation.Battle
         /// <summary>화면 픽셀 위치에 점 조명을 켜고 seconds 동안 서서히 끈다 (타입별 glow). radius 는 픽셀.</summary>
         public IEnumerator Pulse(Vector2 px, Color color, float radius, float peak, float seconds)
         {
-            var l = pool[next];
+            int slot = next;
             next = (next + 1) % pool.Length;
+            if (slotToken == null || slotToken.Length != pool.Length) slotToken = new int[pool.Length];
+            int token = ++slotToken[slot];
+            var l = pool[slot];
             l.transform.localPosition = BattleWorld.ToLocal(px);
             l.color = color;
             l.pointLightOuterRadius = radius;
@@ -80,11 +84,12 @@ namespace Pokepedia.Presentation.Battle
             l.enabled = true;
             for (float t = 0; t < seconds; t += Time.deltaTime)
             {
+                if (token != slotToken[slot]) yield break;
                 float k = 1 - t / seconds;
                 l.intensity = peak * k * k;
                 yield return null;
             }
-            l.enabled = false;
+            if (token == slotToken[slot]) l.enabled = false;
         }
     }
 }
