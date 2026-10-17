@@ -4,7 +4,7 @@
 
 ## 현재 상태
 
-- **다음 작업:** M4 마무리 — 포트폴리오 소개(README·포트폴리오 허브). 공개 주소 https://battle.pokepedia.dev
+- **다음 작업:** M5 로스터 확장(리자몽·이상해꽃·팬텀·뮤츠 공통 연출 확인, 체형별 표시, 밸런스). 공개 주소 https://battle.pokepedia.dev
 - 마지막 갱신: 2026-10-17
 
 ## 마일스톤
@@ -15,7 +15,7 @@
 | M1 | **정식** Unity 프로젝트·저장소 초기화 (M0 결과 반영), asmdef, 테스트 환경, 웹 빌드 설정, 진입 화면·브리지 | 정식 프로젝트가 웹에서 실행 | 완료 |
 | M2 | 순수 C# 엔진 (포켓몬 2마리): 타입 상성(18×18), 데미지, 명중·급소, 턴 순서, 승패, NPC AI, 시드 고정 시뮬레이션으로 수치 조정 | UI 없이 1:1 전투를 테스트로 검증 | 완료 |
 | M3 | **Vertical Slice — 피카츄 vs 거북왕**: 콘텐츠 로딩(로스터 2마리, 기술 12개), 5.3의 전투 흐름과 화면, 이벤트 재생, 공격·피격·급소·빗나감 연출, 사운드, 2.5D 화면 연출 (Showcase 품질, PROJECT.md 5.5) | 실제 엔진을 쓰는 한 판이 처음부터 끝까지 플레이됨 | 완료 (M3-1 흐름·화면, M3-2 연출, M3-3 사운드, M3-4 월드/HUD 분리, M3-5 2.5D 연출, 프레임 측정: 데스크톱 75·아이폰 Safari 50~60 FPS) |
-| M4 | 웹 배포, 최적화, 포트폴리오 소개 (**Demo Mode**). Cloudflare 실배포 헤더 검증 포함 | 외부 사용자가 로그인 없이 단독 플레이 가능 | 진행 중 (Pages 배포·`.br` 헤더 검증·`battle.pokepedia.dev` 연결 완료. 남은 것: 포트폴리오 소개) |
+| M4 | 웹 배포, 최적화, 포트폴리오 소개 (**Demo Mode**). Cloudflare 실배포 헤더 검증 포함 | 외부 사용자가 로그인 없이 단독 플레이 가능 | 완료 (Cloudflare Pages 배포·`.br` 헤더 검증·`battle.pokepedia.dev` 연결·README 소개. 포트폴리오 허브 항목 추가는 다른 저장소라 별도) |
 | M5 | 로스터 확장(4마리) + **Standard 연출**, 체형별 표시 확인, 밸런스 조정 | 추가 포켓몬이 엔진 수정 없이 데이터만으로 플레이됨 | 예정 |
 | M6 | Pokepedia 연동 (**Collection Mode**): 내비게이션, iframe, `ready` → `init`, 보유 ∩ 지원 선택 화면 | Pokepedia에서 보유 포켓몬으로 배틀 | 예정 |
 | 이후 | 게임 완성 후: 퀴즈 우선 출제(9.7), "배틀 가능" 필터(9.6), 보상 화면 연동, 3:3·교체·가방, 로스터 추가 등 | | 미정 |
@@ -25,6 +25,8 @@
 ## 진행 기록
 
 최신이 위. 한 줄에 날짜, 한 일, 근거(커밋·PR·문서 절)를 적는다.
+
+- 2026-10-17 **M4 완료**: README에 포트폴리오 소개(플레이 링크, 배포본에서 픽셀 그대로 뽑은 장면 4장 `docs/images/`, 지원 범위의 정확한 수 — 공개 Demo는 피카츄 vs 거북왕, 로스터 데이터 6종, 보여 줄 기술). 외부 사용자가 로그인 없이 https://battle.pokepedia.dev 에서 플레이 가능(완료 기준). 포트폴리오 허브(`portfolio-hub-nuxt`) 항목은 다른 저장소라 별도로 한다. PROJECT.md 11.
 
 - 2026-10-17 `battle.pokepedia.dev` 연결: Cloudflare Pages 커스텀 도메인(My DNS provider → CNAME 방식, 사용자가 대시보드에서 등록) + Vercel DNS에 `battle CNAME pokepedia-battle.pages.dev`(Vercel CLI). 약 2분 뒤 HTTPS 200, 커스텀 도메인에서도 `.br` 헤더·`frame-ancestors` 정상(br을 받는 요청엔 그대로, 못 받는 요청엔 Cloudflare가 풀어서 보냄), 브라우저에서 전투 시작까지 확인. PROJECT.md 10.4.
 
