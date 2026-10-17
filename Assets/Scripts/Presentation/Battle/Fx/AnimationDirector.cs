@@ -223,23 +223,28 @@ namespace Pokepedia.Presentation.Battle.Fx
                 // ---------------- 하이드로펌프 후보 (A 굵은 빔, B 쌍포, C 3연발, D 예전 물줄기)
                 case "hydro_beam":
                 {
+                    bool mouth = FromMouth(prof, side);
+                    if (mouth) attacker.Animator.Hold(MouthFrame);
                     var muzzle = Muzzle(attacker, prof, side, 0);
                     var impact = missed ? target.Center + new Vector2(40, -16) : Surface(target, muzzle);
-                    var away = (impact - muzzle).normalized;
+                    var via = Arc(muzzle, impact);
+                    var away = (impact - via).normalized;                                            // 끝에서 물이 들어가는 방향
                     host.StartCoroutine(lighting.Pulse(muzzle, c1, 60, 1.2f, 0.4f));
-                    yield return Recoil(attacker, -toTarget * 4, prof.WindupSec * 0.7f);
-                    vfx.Spray(muzzle, away, 30, c2, Color.white, 14, 40, 110, 0.25f, 2, 0);          // 발사구 물보라
+                    if (!mouth) yield return Recoil(attacker, -toTarget * 4, prof.WindupSec * 0.7f);
+                    else yield return VfxLayer.Wait((float)prof.WindupSec * 0.7f);                 // 입에서 쏠 때는 몸이 밀려 입과 물줄기가 벌어지지 않게
+                    vfx.Spray(muzzle, (via - muzzle).normalized, 30, c2, Color.white, 14, 40, 110, 0.25f, 2, 0);   // 발사구 물보라
                     host.StartCoroutine(lighting.Pulse(muzzle, c1, 90, 1.6f, 0.85f));
-                    host.StartCoroutine(Recoil(attacker, -toTarget * 8, 0.75f));
-                    if (missed) yield return Parallel(vfx.WaterJet(muzzle, impact, c1, c2, 17, 0.12f, 0.55f, false), Dodge(target));
+                    host.StartCoroutine(Recoil(attacker, -toTarget * (mouth ? 1 : 8), 0.75f));
+                    if (missed) yield return Parallel(vfx.WaterJet(muzzle, impact, c1, c2, 11, 0.12f, 0.55f, false, via), Dodge(target));
                     else
                     {
                         host.StartCoroutine(vfx.Shake(2, 0.7f));
                         host.StartCoroutine(lighting.Pulse(impact, c1, 110, 1.8f, 0.8f));
                         host.StartCoroutine(Shove(target, away * 10, 0.67f));
-                        yield return vfx.WaterJet(muzzle, impact, c1, c2, 17, 0.12f, 0.55f);
+                        yield return vfx.WaterJet(muzzle, impact, c1, c2, 11, 0.12f, 0.55f, true, via);
                         HeavySplash(impact, -away, c1, c2, 1.1f);
                     }
+                    attacker.Animator.Release();
                     break;
                 }
 
@@ -268,12 +273,14 @@ namespace Pokepedia.Presentation.Battle.Fx
 
                 case "hydro_burst":
                 {
+                    bool mouth = FromMouth(prof, side);
+                    if (mouth) attacker.Animator.Hold(MouthFrame);
                     var muzzle = Muzzle(attacker, prof, side, 0);
                     var dest = missed ? target.Center + new Vector2(34, -14) : target.Center;
                     for (int k = 0; k < 3; k++)
                     {
                         bool last = k == 2;
-                        yield return Recoil(attacker, -toTarget * (last ? 7 : 4), last ? 0.16f : 0.1f);
+                        yield return Recoil(attacker, -toTarget * (mouth ? 1 : last ? 7 : 4), last ? 0.16f : 0.1f);
                         host.StartCoroutine(lighting.Pulse(muzzle, c1, 60, 1.2f, 0.25f));
                         yield return vfx.Orb(muzzle, dest + new Vector2(0, (k - 1) * 5), c1, last ? 18 : 12, 0.18f, c2);
                         if (missed) { if (last) yield return Dodge(target); continue; }
@@ -282,6 +289,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                         target.SetFlash(1); yield return VfxLayer.Wait(0.04f); target.SetFlash(0);
                     }
                     if (!missed) HeavySplash(dest, attacker.Center - dest, c1, c2, 0.8f);
+                    attacker.Animator.Release();
                     break;
                 }
 
@@ -355,10 +363,22 @@ namespace Pokepedia.Presentation.Battle.Fx
         /// </summary>
         static Vector2 Muzzle(BattleSideView v, AnimationProfile prof, int side, int lane)
         {
-            if (prof?.Mouth != null && side == BattleState.Npc)
-                return v.Center + new Vector2(Mathf.Round(v.Size.x * (float)prof.Mouth.X) - 2, Mathf.Round(v.Size.y * (float)prof.Mouth.Y));
+            if (FromMouth(prof, side))
+                return v.Center + new Vector2(Mathf.Round(v.Size.x * (float)prof.Mouth.X), Mathf.Round(v.Size.y * (float)prof.Mouth.Y));
             return v.Center + new Vector2(Mathf.Round(v.Size.x * 0.2f * lane), -Mathf.Round(v.Size.y * 0.22f));
         }
+
+        /// <summary>animation.json 의 mouth 는 앞모습 첫 프레임 기준이다. 입에서 쏘는 동안 이 프레임에 고정해야 입과 발사 위치가 맞는다(머리가 프레임마다 크게 움직인다).</summary>
+        const int MouthFrame = 0;
+
+        static bool FromMouth(AnimationProfile prof, int side) => prof?.Mouth != null && side == BattleState.Npc;
+
+        /// <summary>
+        /// 물줄기가 지나는 조절점: 발사구에서는 가로에 가깝게 나가고(세로 변화의 2할만) 상대 쪽으로 휘어 떨어진다.
+        /// 곧은 대각선보다 입에서 앞으로 뿜는 느낌이 난다.
+        /// </summary>
+        static Vector2 Arc(Vector2 from, Vector2 to)
+            => new Vector2(Mathf.Lerp(from.x, to.x, 0.5f), Mathf.Lerp(from.y, to.y, 0.2f));
 
         /// <summary>
         /// 상대 몸의 표면 쪽 점: 가운데에서 공격이 오는 방향으로 몸 폭의 3할만큼 나온 곳. 물줄기·빔의 끝을 여기에 두면 몸을 뚫지 않고 부딪힌다.

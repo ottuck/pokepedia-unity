@@ -268,20 +268,22 @@ namespace Pokepedia.Presentation.Battle.Fx
         /// 물줄기(하이드로펌프): 레이저처럼 곧은 막대가 아니라 물처럼 보이도록 길이 방향으로 잘게 나눈 조각마다 굵기가 시간·위치에 따라 출렁인다.
         /// 바깥(진한 물색, 반투명)·안쪽(밝은 물색)·흰 거품 줄(군데군데 끊기며 앞으로 흐름) 세 겹이고, 발사구에서 멀어질수록 퍼져 굵어진다.
         /// to 는 상대 몸의 "표면"이어야 한다(가운데를 주면 몸을 뚫은 것처럼 보인다). 맞는 동안 끝에서 물보라가 튀고, 끝날 때는 꼬리부터 끊겨 날아간다.
+        /// via 를 주면 그 점 쪽으로 휘는 곡선(2차 베지어)이 된다: 발사구에서는 from → via 방향으로 나가고 to 에는 via → to 방향으로 떨어진다.
         /// </summary>
-        public IEnumerator WaterJet(Vector2 from, Vector2 to, Color deep, Color light, float width, float extendSec, float holdSec, bool splash = true)
+        public IEnumerator WaterJet(Vector2 from, Vector2 to, Color deep, Color light, float width, float extendSec, float holdSec, bool splash = true,
+                                    Vector2? via = null)
         {
             const int N = 24;
             var root = new GameObject("WaterJet").transform;
             root.SetParent(fx, false);
             root.localPosition = ToLocal(from);
-            var dir = to - from;
-            float length = dir.magnitude;
-            root.localEulerAngles = new Vector3(0, 0, Mathf.Atan2(-dir.y, dir.x) * Mathf.Rad2Deg);
-            float seg = length / N;
+            var ctrl = via ?? Vector2.Lerp(from, to, 0.5f);
+            Vector2 At(float u) => (1 - u) * (1 - u) * from + 2 * (1 - u) * u * ctrl + u * u * to;
+            var dir = to - ctrl;                                                            // 끝에서 물이 들어가는 방향
             var outer = new SpriteRenderer[N];
             var inner = new SpriteRenderer[N];
             var core = new SpriteRenderer[N];
+            var segLen = new float[N];
             var deepA = new Color(deep.r, deep.g, deep.b, 0.88f);
             for (int i = 0; i < N; i++)
             {
@@ -289,13 +291,16 @@ namespace Pokepedia.Presentation.Battle.Fx
                 inner[i] = world.NewRenderer(root, "I" + i, BattleWorld.PixelLeft, BattleWorld.SortFx + 1);
                 core[i] = world.NewRenderer(root, "C" + i, BattleWorld.PixelLeft, BattleWorld.SortFx + 2);
                 outer[i].color = deepA; inner[i].color = light; core[i].color = Color.white;
+                var a = At((float)i / N) - from;
+                var d = At((float)(i + 1) / N) - from - a;
+                segLen[i] = d.magnitude;
                 foreach (var r in new[] { outer[i], inner[i], core[i] })
                 {
-                    r.transform.localPosition = new Vector3(Mathf.Round(i * seg), 0, 0);
+                    r.transform.localPosition = new Vector3(Mathf.Round(a.x), -Mathf.Round(a.y), 0);
+                    r.transform.localEulerAngles = new Vector3(0, 0, Mathf.Atan2(-d.y, d.x) * Mathf.Rad2Deg);
                     r.enabled = false;
                 }
             }
-            var perp = new Vector2(-dir.y, dir.x).normalized;
 
             void Shape(float t, int head, int tail, float thin)
             {
@@ -308,7 +313,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                     float wob = 1 + 0.22f * Mathf.Sin(t * 38 + i * 0.9f) + 0.12f * Mathf.Sin(t * 23 - i * 1.7f);
                     float w = Mathf.Max(1, Mathf.Round(width * grow * wob * thin));
                     float wi = Mathf.Max(1, Mathf.Round(w * (0.5f + 0.1f * Mathf.Sin(t * 29 + i * 1.3f))));
-                    float len = Mathf.Ceil(seg) + 1;
+                    float len = Mathf.Ceil(segLen[i]) + 1;
                     outer[i].transform.localScale = new Vector3(len, w, 1);
                     inner[i].transform.localScale = new Vector3(len, wi, 1);
                     // 거품 줄: 군데군데 끊기고 그 끊김이 앞으로 흘러간다
@@ -329,7 +334,9 @@ namespace Pokepedia.Presentation.Battle.Fx
             {
                 Shape(time, N, 0, 1);
                 // 물줄기 가장자리에서 떨어지는 물방울, 끝에서 튀는 물보라
-                var along = Vector2.Lerp(from, to, Random.Range(0.15f, 0.95f)) + perp * Random.Range(-width * 0.6f, width * 0.6f);
+                float u = Random.Range(0.15f, 0.95f);
+                var tangent = At(Mathf.Min(1, u + 0.02f)) - At(u);
+                var along = At(u) + new Vector2(-tangent.y, tangent.x).normalized * Random.Range(-width * 0.6f, width * 0.6f);
                 Burst(along, light, Color.white, 1, 10, 40, 0.35f, 2, 160);
                 if (splash) Spray(to, -dir, 75, light, Color.white, 5, 50, 140, 0.4f, 2, 300);
                 yield return null;

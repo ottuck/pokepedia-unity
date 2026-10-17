@@ -11,7 +11,7 @@ namespace Pokepedia.Content
     /// 종(species.json 의 animProfile 키)별 연출 데이터 (PROJECT.md 5.2: 포켓몬별 애니메이션을 만들지 않고 강도·속도를 데이터로 조정).
     /// MoveFx: 기술 id → 전용 이펙트 id (Showcase 오버라이드, 예: pikachu 의 thunderbolt → "lightning_strike").
     /// 없으면 화면이 기술의 animKind(접촉/발사/효과) 기본 타임라인을 쓴다.
-    /// Mouth: 앞모습 스프라이트에서 입의 위치(없으면 null). 물 기술의 발사 위치로 쓴다.
+    /// Mouth: 앞모습 스프라이트 첫 프레임에서 입의 위치(없으면 null). 물 기술의 발사 위치로 쓰고, 쏘는 동안 화면이 그 프레임에 고정한다.
     /// </summary>
     public sealed record AnimationProfile(
         string Key,
