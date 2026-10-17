@@ -36,11 +36,47 @@ namespace Pokepedia.Presentation.Battle.Fx
             flash = Ui.Fill(hudScreen, "ScreenFlash", 0, 0, PixelCanvasScaler.BaseWidth, PixelCanvasScaler.BaseHeight, new Color(1, 1, 1, 0));
             circle = MakeSprite(16, (x, y) => Dist(x, y, 16) <= 1f);
             ring = MakeSprite(32, (x, y) => { var d = Dist(x, y, 32); return d <= 1f && d >= 0.8f; });
+            // 타격 불꽃: 가로·세로로 길고 대각선은 짧은 별(마름모 4개를 겹친 모양). 바깥 별(색)과 안쪽 별(흰색) 두 겹으로 쓴다.
+            starRim = MakeSprite(17, (x, y) => Star(x, y, 17, 1f));
+            starCore = MakeSprite(17, (x, y) => Star(x, y, 17, 0.55f));
             for (int i = 0; i < 4; i++) pool.Add(CreateEmitter("Particles" + i));
         }
 
         /// <summary>화면 번쩍임을 HUD 맨 위로 (정보 상자·메시지보다 위)</summary>
         public void BringToFront() => flash.transform.SetAsLastSibling();
+
+        Sprite starRim, starCore;
+
+        static bool Star(int x, int y, int n, float scale)
+        {
+            float c = (n - 1) / 2f, dx = Mathf.Abs(x - c) / (c * scale), dy = Mathf.Abs(y - c) / (c * scale);
+            bool cross = dx + dy * 4 <= 1 || dy + dx * 4 <= 1;                        // 가로·세로 긴 가시
+            float u = (dx + dy) * 0.7071f, v = Mathf.Abs(dx - dy) * 0.7071f;
+            bool diag = u * 1.6f + v * 5 <= 1;                                           // 대각선 짧은 가시
+            return cross || diag || dx * dx + dy * dy <= 0.06f;
+        }
+
+        /// <summary>
+        /// 타격 불꽃: 맞은 지점에 도트 별이 1배 → 2배로 "팍" 커졌다가 사라진다. 정수 배율로만 바꿔 도트가 고르게 유지된다.
+        /// </summary>
+        public IEnumerator ImpactStar(Vector2 at, Color core, Color rim, float seconds)
+        {
+            var back = world.NewRenderer(fx, "StarRim", starRim, BattleWorld.SortFx + 3);
+            var front = world.NewRenderer(fx, "StarCore", starCore, BattleWorld.SortFx + 4);
+            foreach (var r in new[] { back, front }) r.transform.localPosition = ToLocal(at);
+            back.color = rim; front.color = core;
+            for (float t = 0; t < seconds; t += Time.deltaTime)
+            {
+                float k = t / seconds;
+                float sc = k < 0.25f ? 1 : 2;
+                foreach (var r in new[] { back, front }) r.transform.localScale = new Vector3(sc, sc, 1);
+                float a = k < 0.5f ? 1 : 1 - (k - 0.5f) / 0.5f;
+                back.color = new Color(rim.r, rim.g, rim.b, a);
+                front.color = new Color(core.r, core.g, core.b, a);
+                yield return null;
+            }
+            Object.Destroy(back.gameObject); Object.Destroy(front.gameObject);
+        }
 
         static float Dist(int x, int y, int n)
         {
