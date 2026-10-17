@@ -11,3 +11,6 @@
 *.wav binary
 *.ogg binary
 *.unitypackage binary
+
+# Cloudflare Pages 헤더 규칙: 헤더 값에  이 섞이지 않게 항상 LF
+Tools/web/_headers text eol=lf
