@@ -15,6 +15,8 @@ namespace Pokepedia.Presentation.Audio
         public const double MoveSoundLength = 0.8;
 
         public static string MoveKey(string typeName) => "move_" + typeName;
+        /// <summary>기술 전용 공격음(animation.json moveSfx)의 클립 이름</summary>
+        public static string MoveSfxKey(string soundId) => "movesfx_" + soundId;
         public static string SfxKey(SfxKind kind) => "sfx_" + kind.ToString().ToLowerInvariant();
 
         public const string BattleMusicKey = "bgm_battle";
@@ -75,6 +77,10 @@ namespace Pokepedia.Presentation.Audio
 
         public void Play(SfxKind kind) => PlayKey(SfxKey(kind));
         public void Move(string typeName) => PlayKey(MoveKey(typeName));
+        public void MoveSfx(string soundId) => PlayKey(MoveSfxKey(soundId));
+
+        /// <summary>기술 전용 공격음을 발사 순간보다 몇 초 먼저 틀어야 하는지 (<see cref="TypeAttackSounds.MoveSoundLead"/>).</summary>
+        public static float MoveSfxLead(string soundId) => (float)TypeAttackSounds.MoveSoundLead(soundId, MoveSoundLength);
 
         /// <summary>속성 공격음이 있는 속성인지. 없으면(노말 등) 맞을 때 타격음만 난다.</summary>
         public static bool HasMoveSound(string typeName) => TypeAttackSounds.IsSupported(typeName);

@@ -30,7 +30,8 @@ namespace Pokepedia.Content
 
     /// <summary>
     /// Assets/Content/Data/animation.json 로더. 순수 C#.
-    /// 구조: { "defaults": {...}, "profiles": { key: {...} }, "types": { type: { primary, secondary } } }.
+    /// 구조: { "defaults": {...}, "profiles": { key: {...} }, "types": { type: { primary, secondary } }, "moveSfx": { moveId: soundId } }.
+    /// moveSfx(선택): 기술 id → 전용 공격음 id. 없는 기술은 화면이 타입 공격음을 쓴다(소리 id 가 실제로 있는지는 굽는 쪽 AudioBaker 가 확인한다).
     /// defaults 는 moveFx 를 뺀 모든 필드가 필수(moveFx 는 종 단위 오버라이드라 defaults 에 둘 수 없다),
     /// profiles 의 필드는 모두 선택이며 빠진 필드는 defaults 로 채운다.
     /// ContentLoader 와 같이 엄격하다: 누락·모르는 필드·범위 밖 값은 어느 항목인지 적은 FormatException.
@@ -43,7 +44,7 @@ namespace Pokepedia.Content
         static readonly Regex SnakeCase = new Regex("^[a-z][a-z0-9]*(_[a-z0-9]+)*$");
         static readonly Regex HexColor = new Regex("^#[0-9A-Fa-f]{6}$");
 
-        static readonly string[] TopFields = { "defaults", "profiles", "types" };
+        static readonly string[] TopFields = { "defaults", "profiles", "types", "moveSfx" };
         static readonly string[] DefaultsFields = { "windupSec", "lungePx", "hitShakePx", "knockbackPx" };
         static readonly string[] ProfileFields = { "windupSec", "lungePx", "hitShakePx", "knockbackPx", "moveFx", "mouth" };
         static readonly string[] TypeFields = { "primary", "secondary" };
@@ -55,11 +56,13 @@ namespace Pokepedia.Content
         readonly Dictionary<string, AnimationProfile> profiles;
         readonly Dictionary<PokemonType, TypeVisual> types;
 
-        AnimationCatalog(AnimationProfile defaults, Dictionary<string, AnimationProfile> profiles, Dictionary<PokemonType, TypeVisual> types)
+        AnimationCatalog(AnimationProfile defaults, Dictionary<string, AnimationProfile> profiles, Dictionary<PokemonType, TypeVisual> types,
+                         IReadOnlyDictionary<string, string> moveSfx)
         {
             Defaults = defaults;
             this.profiles = profiles;
             this.types = types;
+            MoveSfx = moveSfx;
         }
 
         public static AnimationCatalog Parse(string json)
@@ -84,7 +87,8 @@ namespace Pokepedia.Content
             }
 
             var types = ParseTypes(top.Object("types", "animation: types"));
-            return new AnimationCatalog(defaults, profiles, types);
+            var moveSfx = top.Has("moveSfx") ? IdMap(top.Object("moveSfx", "animation: moveSfx"), "sound") : NoMoveFx;
+            return new AnimationCatalog(defaults, profiles, types, moveSfx);
         }
 
         /// <summary>프로필 키가 없을 때 쓰는 기본값 (Key 는 "defaults", MoveFx 는 비어 있음)</summary>
@@ -118,6 +122,13 @@ namespace Pokepedia.Content
             return p.MoveFx.TryGetValue(moveId, out var fx) ? fx : null;
         }
 
+        /// <summary>기술 id → 전용 공격음 id (animation.json 의 moveSfx)</summary>
+        public IReadOnlyDictionary<string, string> MoveSfx { get; }
+
+        /// <summary>전용 공격음 id, 없으면 null (화면이 타입 공격음을 쓴다)</summary>
+        public string MoveSfxFor(string moveId)
+            => moveId != null && MoveSfx.TryGetValue(moveId, out var id) ? id : null;
+
         /// <summary>"#RRGGBB"(대소문자 무관) → 0xRRGGBB. 형식이 틀리면 FormatException.</summary>
         public static int Rgb(string hex)
         {
@@ -141,20 +152,7 @@ namespace Pokepedia.Content
         {
             o.OnlyFields(ProfileFields);
 
-            var moveFx = NoMoveFx;
-            if (o.Has("moveFx"))
-            {
-                var fxObj = o.Object("moveFx", o.Where + ": moveFx");
-                var map = new Dictionary<string, string>(StringComparer.Ordinal);
-                foreach (var moveId in fxObj.Keys)
-                {
-                    if (!SnakeCase.IsMatch(moveId)) throw fxObj.Error($"move id '{moveId}' must be snake_case (a-z, 0-9, _)");
-                    var fx = fxObj.String(moveId);
-                    if (!SnakeCase.IsMatch(fx)) throw fxObj.Error($"'{moveId}' effect id must be lowercase snake_case (got '{fx}')");
-                    map.Add(moveId, fx);
-                }
-                moveFx = new ReadOnlyDictionary<string, string>(map);
-            }
+            var moveFx = o.Has("moveFx") ? IdMap(o.Object("moveFx", o.Where + ": moveFx"), "effect") : NoMoveFx;
 
             SpriteAnchor mouth = null;
             if (o.Has("mouth"))
@@ -172,6 +170,20 @@ namespace Pokepedia.Content
                 o.Has("knockbackPx") ? Px(o, "knockbackPx") : d.KnockbackPx,
                 moveFx,
                 mouth);
+        }
+
+        /// <summary>{ 기술 id: 연출·소리 id } — 둘 다 snake_case</summary>
+        static IReadOnlyDictionary<string, string> IdMap(Obj o, string what)
+        {
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var moveId in o.Keys)
+            {
+                if (!SnakeCase.IsMatch(moveId)) throw o.Error($"move id '{moveId}' must be snake_case (a-z, 0-9, _)");
+                var id = o.String(moveId);
+                if (!SnakeCase.IsMatch(id)) throw o.Error($"'{moveId}' {what} id must be lowercase snake_case (got '{id}')");
+                map.Add(moveId, id);
+            }
+            return new ReadOnlyDictionary<string, string>(map);
         }
 
         static Dictionary<PokemonType, TypeVisual> ParseTypes(Obj o)

@@ -31,8 +31,9 @@ namespace Pokepedia.Tests
             return "{ " + string.Join(", ", entries) + " }";
         }
 
-        static string Json(string profiles = "{}", string defaults = DefaultsJson, string types = null)
-            => Q("{ 'defaults': " + defaults + ", 'profiles': " + profiles + ", 'types': " + (types ?? TypesJson()) + " }");
+        static string Json(string profiles = "{}", string defaults = DefaultsJson, string types = null, string moveSfx = null)
+            => Q("{ 'defaults': " + defaults + ", 'profiles': " + profiles + ", 'types': " + (types ?? TypesJson())
+                 + (moveSfx == null ? "" : ", 'moveSfx': " + moveSfx) + " }");
 
         static AnimationCatalog Parse(string profiles = "{}") => AnimationCatalog.Parse(Json(profiles));
 
@@ -79,6 +80,16 @@ namespace Pokepedia.Tests
             Assert.IsNull(c.MoveFxFor("pikachu", "tackle"));
             Assert.IsNull(c.MoveFxFor("gengar", "thunderbolt"));
             Assert.IsNull(c.MoveFxFor("missingno", "thunderbolt"));
+        }
+
+        [Test]
+        public void MoveSfxFor_ReturnsSoundIdOrNull_AndRejectsBadId()
+        {
+            var c = AnimationCatalog.Parse(Json(moveSfx: "{ 'water_pledge': 'water_magic' }"));
+            Assert.AreEqual("water_magic", c.MoveSfxFor("water_pledge"));
+            Assert.IsNull(c.MoveSfxFor("thunder"));                    // 없으면 화면이 타입 공격음을 쓴다
+            Assert.IsNull(Parse().MoveSfxFor("water_pledge"));         // moveSfx 는 선택 항목
+            FailsWith(Json(moveSfx: "{ 'tackle': 'Tackle' }"), "moveSfx", "tackle");
         }
 
         [Test]
@@ -138,13 +149,16 @@ namespace Pokepedia.Tests
         }
 
         [Test]
-        public void RealFile_MoveFxMoveIds_ExistInMoves()
+        public void RealFile_MoveFxAndMoveSfxMoveIds_ExistInMoves()
         {
+            // 오타가 나면 오버라이드가 조용히 무시되고 기본 연출·소리가 나온다
             var c = RealCatalog();
             var moveIds = new HashSet<string>(ContentLoader.ParseMoves(ContentDataFilesTests.Read("Data", "moves.json")).Select(m => m.Move.Id));
             foreach (var key in c.ProfileKeys)
                 foreach (var moveId in c.ProfileFor(key).MoveFx.Keys)
                     Assert.IsTrue(moveIds.Contains(moveId), $"profile '{key}': moveFx '{moveId}' not in moves.json");
+            foreach (var moveId in c.MoveSfx.Keys)
+                Assert.IsTrue(moveIds.Contains(moveId), $"moveSfx '{moveId}' not in moves.json");
         }
     }
 }

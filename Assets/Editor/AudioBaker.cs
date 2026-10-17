@@ -32,6 +32,18 @@ namespace Pokepedia.EditorTools
                 Write(SoundBank.MoveKey(type), TypeAttackSounds.Render(new[] { type }, 0, SoundBank.MoveSoundLength, SampleRate));
                 count++;
             }
+            // 기술 전용 공격음 (animation.json moveSfx 에 적힌 것만). 레시피가 없는 id 면 굽기를 멈춘다(오타가 무음으로 묻히지 않게).
+            // 지정에서 빠진 소리가 Resources 에 남아 빌드에 들어가지 않게 먼저 지운다
+            foreach (var old in Directory.GetFiles(OutDir, SoundBank.MoveSfxKey("*") + ".wav"))
+                AssetDatabase.DeleteAsset(old.Replace('\\', '/'));
+            var moveSfx = AnimationCatalog.Parse(Read("animation.json")).MoveSfx;
+            foreach (var id in moveSfx.Values.Distinct())
+            {
+                if (!TypeAttackSounds.IsMoveSound(id))
+                    throw new InvalidOperationException($"animation.json moveSfx: 소리 '{id}' 의 레시피가 없습니다 (TypeAttackSounds.MoveOnlyIds·AlternateIds)");
+                Write(SoundBank.MoveSfxKey(id), TypeAttackSounds.RenderMoveSound(id, SoundBank.MoveSoundLength, SampleRate));
+                count++;
+            }
             foreach (SfxKind kind in Enum.GetValues(typeof(SfxKind)))
             {
                 Write(SoundBank.SfxKey(kind), BattleSfx.Render(kind, SampleRate));
