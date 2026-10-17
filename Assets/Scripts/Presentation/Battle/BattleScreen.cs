@@ -29,6 +29,8 @@ namespace Pokepedia.Presentation.Battle
         Animating,
         /// <summary>승패가 나서 결과 메뉴(다음 상대/다시 도전, 처음으로)를 기다림</summary>
         Result,
+        /// <summary>도망칠 수 없는 배틀에서 "정말 도망칠까?"에 답을 기다림 (그만둔다 / 계속 싸운다)</summary>
+        ConfirmQuit,
         /// <summary>연출 실험실 메뉴 (개발용)</summary>
         Lab,
     }
@@ -80,6 +82,7 @@ namespace Pokepedia.Presentation.Battle
         bool lastWin;
         bool oneOpponent;   // 상대 후보가 1마리: 이겨도 같은 상대라 [다음 상대] 대신 [한 번 더 싸운다]
         int lastMoveIndex;
+        int runPresses;     // 이번 판에서 "도망"을 누른 횟수: 두 번째부터 그만둘지 묻는다
 
         /// <summary>지금 무엇을 하는 중인지. 입력 처리기는 맞는 상태일 때만 동작한다(중복 입력·연출 중 입력 방지).</summary>
         public BattleViewState State { get; private set; } = BattleViewState.Hidden;
@@ -178,6 +181,8 @@ namespace Pokepedia.Presentation.Battle
             hud.MoveMenu.Chosen += OnMove;
             hud.MoveMenu.Cancelled += ShowActionMenu;
             hud.ResultMenu.Chosen += OnResult;
+            hud.QuitMenu.Chosen += OnQuitChoice;
+            hud.QuitMenu.Cancelled += () => OnQuitChoice(1);
         }
 
         // ------------------------------------------------------------------ 흐름
@@ -186,6 +191,7 @@ namespace Pokepedia.Presentation.Battle
         IEnumerator NewBattle(Func<IReadOnlyList<BattleEvent>> start)
         {
             State = BattleViewState.Entering;
+            runPresses = 0;
             player.StopVictory();
             hud.ResetStage();
             var events = start();   // 새 상대가 정해진 뒤에 VS 장면을 그린다
@@ -203,7 +209,7 @@ namespace Pokepedia.Presentation.Battle
 
         void SetMenu(ChoiceMenu menu)
         {
-            foreach (var m in new[] { hud.ActionMenu, hud.MoveMenu, hud.ResultMenu }) if (m != menu) m.Hide();
+            foreach (var m in new[] { hud.ActionMenu, hud.MoveMenu, hud.ResultMenu, hud.QuitMenu }) if (m != menu) m.Hide();
             activeMenu = menu;
         }
 
@@ -228,6 +234,8 @@ namespace Pokepedia.Presentation.Battle
         IEnumerator RunAway()
         {
             var outcome = ctx.Session.TryRun();
+            // 도망칠 수 없는 배틀(Demo, 상대 1마리)에 갇힌 느낌이 들지 않게: 두 번째 "도망"부터는 배틀을 그만둘지 묻는다 (5.3)
+            if (outcome == RunOutcome.CannotEscape && ++runPresses >= 2) { ShowQuitConfirm(); yield break; }
             yield return hud.Message.Say(ctx.Locale.Get(BattleMessages.ForRun(outcome).Key));
             if (outcome == RunOutcome.CannotEscape) { ShowActionMenu(); yield break; }
             yield return hud.Sound.FadeOutMusic(0.3f);
@@ -261,6 +269,22 @@ namespace Pokepedia.Presentation.Battle
             SetMenu(hud.ResultMenu);
             var again = !lastWin ? Keys.Retry : oneOpponent ? Keys.Rematch : Keys.NextOpponent;
             hud.ResultMenu.Show(new[] { ctx.Locale.Get(again), ctx.Locale.Get(Keys.ToTitle) });
+        }
+
+        void ShowQuitConfirm()
+        {
+            State = BattleViewState.ConfirmQuit;
+            hud.Message.SetStatic(ctx.Locale.Get(BattleTextKeys.QuitAsk));   // 확인 메뉴는 메시지 창 위에 떠서 창 전체 폭을 쓴다
+            SetMenu(hud.QuitMenu);
+            hud.QuitMenu.Show(new[] { ctx.Locale.Get(BattleTextKeys.QuitYes), ctx.Locale.Get(BattleTextKeys.QuitNo) }, 1);   // 기본 커서는 "계속 싸운다"
+        }
+
+        void OnQuitChoice(int i)
+        {
+            if (State != BattleViewState.ConfirmQuit) return;
+            SetMenu(null);
+            if (i == 0) { Exit(); return; }
+            ShowActionMenu();
         }
 
         void OnResult(int i)
