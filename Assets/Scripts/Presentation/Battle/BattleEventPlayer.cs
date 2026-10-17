@@ -46,10 +46,10 @@ namespace Pokepedia.Presentation.Battle
             if (victory != null) { host.StopCoroutine(victory); victory = null; }
         }
 
-        /// <summary>도입 VS 장면 (M5): 두 포켓몬의 앞모습·이름·첫 타입 색은 데이터에서 가져온다.</summary>
-        public IEnumerator PlayVs()
+        /// <summary>도입 VS 장면 (M5): 두 포켓몬의 앞모습·이름·첫 타입 색은 데이터에서 가져온다. 스타일을 안 주면 기본 스타일.</summary>
+        public IEnumerator PlayVs(VsIntro.Style? style = null)
         {
-            yield return hud.Vs.Play(VsSide(ctx.SpeciesOf(BattleState.Player)), VsSide(ctx.SpeciesOf(BattleState.Npc)));
+            yield return hud.Vs.Play(VsSide(ctx.SpeciesOf(BattleState.Player)), VsSide(ctx.SpeciesOf(BattleState.Npc)), style ?? VsIntro.Default);
         }
 
         VsIntro.Side VsSide(int speciesId)
