@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using Pokepedia.Content;
 using Pokepedia.Domain;
@@ -26,6 +27,7 @@ namespace Pokepedia.Presentation.Battle.Fx
             ("lightning_strike", "TB-C sky", BattleState.Player),
             ("hydro_beam", "HP-A beam", BattleState.Npc),
             ("hydro_burst", "HP-C 3x", BattleState.Npc),
+            ("contact", "Tackle", BattleState.Player),
         };
 
         readonly MonoBehaviour host;
@@ -267,22 +269,34 @@ namespace Pokepedia.Presentation.Battle.Fx
                 }
 
                 // ---------------- 공통 타임라인
+                // ---------------- 몸통박치기(접촉): 도움닫기 → 잔상과 함께 돌진 → 몸 표면 충돌(별·파편·고리·흙먼지) → 복귀
                 case "contact":
-                    yield return Charge(attacker, c1, c2, prof.WindupSec * 0.5f, 0);
-                    var reach = toTarget * Mathf.Max(prof.LungePx, 1) * 3; // 상대 쪽으로 크게 돌진
+                {
+                    float dist = (target.Center - attacker.Center).magnitude;
+                    var reach = toTarget * Mathf.Round(Mathf.Max(Mathf.Max(prof.LungePx, 1) * 3, dist * 0.3f));
+                    var back = -toTarget * 6;
+                    // 도움닫기(준비 시간의 절반 = ReleaseSec): 살짝 물러났다가
+                    yield return Move(attacker, Vector2.zero, back, Mathf.Max(0.08f, (float)prof.WindupSec * 0.5f));
+                    host.StartCoroutine(Afterimages(attacker, 0.12f));
                     if (missed)
                     {
-                        yield return Parallel(Move(attacker, Vector2.zero, reach, 0.12f), Dodge(target));
-                        yield return Move(attacker, reach, Vector2.zero, 0.15f);
+                        yield return Parallel(Move(attacker, back, reach, 0.11f), Dodge(target));
+                        yield return Move(attacker, reach, Vector2.zero, 0.22f);
                     }
                     else
                     {
-                        yield return Move(attacker, Vector2.zero, reach, 0.1f);
-                        vfx.Burst(target.Center, Color.white, c1, 18, 30, 90, 0.3f, 3);
-                        host.StartCoroutine(lighting.Pulse(target.Center, Color.Lerp(c1, Color.white, 0.5f), 75, 1.3f, 0.3f));
-                        yield return Move(attacker, reach, Vector2.zero, 0.15f);
+                        yield return Move(attacker, back, reach, 0.09f);
+                        var hitAt = Surface(target, attacker.Center + reach);
+                        host.StartCoroutine(vfx.ImpactStar(hitAt, Color.white, Color.Lerp(c1, new Color(1f, 0.85f, 0.4f), 0.5f), 0.22f));
+                        vfx.Burst(hitAt, Color.white, c1, 14, 40, 120, 0.3f, 2);
+                        host.StartCoroutine(vfx.Rings(hitAt, Color.Lerp(c1, Color.white, 0.6f), 1, 0.22f));
+                        vfx.Burst(target.Feet + new Vector2(0, -2), new Color(0.55f, 0.5f, 0.4f, 0.9f), new Color(0.75f, 0.7f, 0.58f, 0.8f), 10, 8, 35, 0.4f, 2, 0, 8);   // 흙먼지
+                        host.StartCoroutine(lighting.Pulse(hitAt, Color.Lerp(c1, Color.white, 0.5f), 75, 1.3f, 0.3f));
+                        yield return VfxLayer.Wait(0.05f);   // 부딪힌 채로 아주 잠깐 멈춘다(무게감)
+                        yield return Move(attacker, reach, Vector2.zero, 0.2f);
                     }
                     break;
+                }
 
                 case "projectile":
                     yield return Charge(attacker, c1, c2, prof.WindupSec, 10);
@@ -496,6 +510,22 @@ namespace Pokepedia.Presentation.Battle.Fx
                 yield return null;
             }
             view.SetOffset(to, airborne);
+        }
+
+        /// <summary>돌진하는 동안 지나간 자리에 잔상을 남긴다(3장, 각자 옅어지며 사라짐)</summary>
+        IEnumerator Afterimages(BattleSideView view, float seconds)
+        {
+            var ghosts = new List<(SpriteRenderer sr, float born)>();
+            float t = 0, next = 0;
+            while (t < seconds + 0.2f)
+            {
+                if (t >= next && t < seconds) { ghosts.Add((view.Snapshot(new Color(1, 1, 1, 0.5f)), t)); next += seconds / 3; }
+                foreach (var (sr, born) in ghosts)
+                    if (sr != null) sr.color = new Color(1, 1, 1, Mathf.Max(0, 0.5f * (1 - (t - born) / 0.2f)));
+                t += Time.deltaTime;
+                yield return null;
+            }
+            foreach (var (sr, _) in ghosts) if (sr != null) UnityEngine.Object.Destroy(sr.gameObject);
         }
 
         /// <summary>두 코루틴을 동시에 돌리고 둘 다 끝날 때까지 기다린다</summary>

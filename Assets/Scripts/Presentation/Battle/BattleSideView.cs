@@ -18,6 +18,7 @@ namespace Pokepedia.Presentation.Battle
         const int ShadowShiftX = 2;
 
         readonly SpriteRenderer body, flashRenderer, shadow;
+        readonly BattleWorld world;
         readonly Transform bodyTransform;
         bool visible;
         float flash;
@@ -34,6 +35,7 @@ namespace Pokepedia.Presentation.Battle
                               GameObject infoBox, TextMeshProUGUI nameLabel, HpBar hp)
         {
             Feet = feet; InfoBox = infoBox; Name = nameLabel; Hp = hp;
+            this.world = world;
 
             shadow = world.NewRenderer(world.Root, name + "Shadow", null, BattleWorld.SortShadow);
             shadow.enabled = false;
@@ -80,6 +82,16 @@ namespace Pokepedia.Presentation.Battle
             bodyTransform.localPosition = BattleWorld.ToLocal(at);
             var ground = airborne ? new Vector2(at.x, Mathf.Round(Feet.y)) : at;
             shadow.transform.localPosition = BattleWorld.ToLocal(ground + new Vector2(ShadowShiftX, -1));
+        }
+
+        /// <summary>잔상: 지금 프레임·위치를 복사한 스프라이트(조명·그림자·번쩍임 없음, 몸 바로 뒤). 지우는 것은 호출자 몫이다.</summary>
+        public SpriteRenderer Snapshot(Color tint)
+        {
+            var sr = world.NewRenderer(world.Root, "Afterimage", body.sprite, BattleWorld.SortSprite - 1);
+            sr.transform.localPosition = bodyTransform.localPosition;
+            sr.transform.localScale = bodyTransform.localScale;
+            sr.color = tint;
+            return sr;
         }
 
         public void SetFlash(float amount)

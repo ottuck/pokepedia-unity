@@ -398,7 +398,9 @@ namespace Pokepedia.Presentation.Battle
             {
                 var e = effects[i];
                 int attacker = SpeciesOf(e.Side), target = SpeciesOf(BattleState.Opponent(e.Side));
-                var move = catalog.MoveSetFor(attacker).First(m => m.Role == MoveRole.Signature);   // 전용 연출은 대표 기술의 것
+                // 전용 연출은 대표 기술로, 몸통박치기(contact)는 기본기로 재생한다(색·소리가 그 기술의 타입을 따른다)
+                var role = e.Id == "contact" ? MoveRole.Basic : MoveRole.Signature;
+                var move = catalog.MoveSetFor(attacker).First(m => m.Role == role);
                 bool crit = labOutcome == 2;
                 yield return director.PlayLab(e.Id, e.Side, attacker, target, move, labOutcome == 1, crit);
                 if (crit) yield return message.Say(locale.Get(BattleTextKeys.CriticalHit));
