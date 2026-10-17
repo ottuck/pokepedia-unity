@@ -126,6 +126,14 @@ namespace Pokepedia.Presentation.Battle
             StartCoroutine(lab.Intro());
         }
 
+        /// <summary>타이틀 화면에 그림자로 세우는 Demo 두 포켓몬(앞모습 첫 프레임)</summary>
+        public (Sprite Player, Sprite Npc) DemoFronts()
+        {
+            LoadCatalog();
+            Sprite Front(int id) => SpriteSheet.Load(ctx.Catalog.GetSpecies(id).Sprites.Front).Frames[0];
+            return (Front(DemoPlayer), Front(DemoNpc));
+        }
+
         /// <summary>Collection 모드의 플레이어 후보 (보유 ∩ 플레이어 가능). 타이틀이 연결 직후 묻는다.</summary>
         public IReadOnlyList<PlayerChoice> CollectionPlayers(IEnumerable<App.Host.OwnedSticker> owned)
         {
@@ -277,6 +285,9 @@ namespace Pokepedia.Presentation.Battle
             State = BattleViewState.Result;
             lastWin = ctx.Session.State.Winner == BattleState.Player;
             onBattleEnded?.Invoke(lastWin);
+            // 상대가 1마리뿐인 배틀(Demo·지금의 Collection)은 이기면 승리 장면에서 끝난다: 메뉴 없이 노을 하늘과 "승부에서 이겼다!"에 머문다
+            // (사용자 결정 2026-10-17. 나가기는 Pokepedia 메뉴, 단독 주소에서는 새로고침)
+            if (lastWin && oneOpponent) { SetMenu(null); return; }
             SetMenu(hud.ResultMenu);
             var again = !lastWin ? Keys.Retry : oneOpponent ? Keys.Rematch : Keys.NextOpponent;
             hud.ResultMenu.Show(new[] { ctx.Locale.Get(again), ctx.Locale.Get(Keys.ToTitle) });

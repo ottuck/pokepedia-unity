@@ -28,7 +28,7 @@ namespace Pokepedia.Presentation.Battle
         public const int SortFrame = 100;
 
         // 기준 해상도 밖을 가리는 막대 색 = 카메라 배경색 (ProjectSetup.CreateMainScene)
-        static readonly Color FrameColor = new Color(0.06f, 0.22f, 0.06f);
+        static readonly Color FrameColor = new Color(0.149f, 0.165f, 0.208f);   // #262a35 = 웹 템플릿의 화면 테두리
 
         static Sprite pixel, pixelLeft;
         static readonly Dictionary<long, Sprite> Ellipses = new Dictionary<long, Sprite>();

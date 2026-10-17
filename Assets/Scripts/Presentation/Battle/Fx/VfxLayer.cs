@@ -471,21 +471,37 @@ namespace Pokepedia.Presentation.Battle.Fx
         // ------------------------------------------------------------------ 응원 부활 (성스러운 빛)
         Sprite feather, shaft;
 
-        /// <summary>깃털 7×13 도트: 가운데 깃대, 양쪽 깃은 위가 넓고 아래로 좁아지며, 깃대 아래 2px 은 깃 없이 둔다.</summary>
+        /// <summary>
+        /// 깃털 7×15 도트: 흰 깃(오른쪽 가장자리는 옅은 하늘빛 그늘), 가운데 깃대가 아래로 빠져나온다. 깃 군데군데가 갈라져 있어
+        /// 잎사귀(양끝이 뾰족하고 잎맥이 있는 모양)와 구별된다. 금빛을 섞으면 비 오는 풀밭 위에서 나뭇잎처럼 보였다(2026-10-17 사용자 피드백).
+        /// </summary>
         static Sprite MakeFeather()
         {
-            const int w = 7, h = 13;
+            string[] rows =
+            {
+                "...W...",
+                "..WWW..",
+                "..WRW..",
+                ".WWRWG.",
+                ".WWRWWG",
+                "WWWRWWG",
+                "W.WRWWG",
+                "WWWRW.G",
+                "WWWRWWG",
+                ".WWRWWG",
+                ".W.RWG.",
+                "..WRW..",
+                "...R...",
+                "...R...",
+                "...R...",
+            };
+            int w = rows[0].Length, h = rows.Length;
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
-            for (int y = 0; y < h; y++)
+            var shade = new Color(0.82f, 0.89f, 1f);
+            var quill = new Color(0.76f, 0.83f, 0.95f);
+            for (int r = 0; r < h; r++)
                 for (int x = 0; x < w; x++)
-                {
-                    int dx = Mathf.Abs(x - 3);
-                    float k = (y - 2) / (float)(h - 3);                 // 0 = 깃 아래 끝, 1 = 깃 위 끝 (텍스처 y=0 이 아래)
-                    int half = y < 2 ? 0 : Mathf.RoundToInt(3 * Mathf.Sin(Mathf.PI * Mathf.Clamp01(k * 0.95f + 0.05f)));
-                    bool on = dx == 0 || (dx <= half && y >= 2);
-                    if (on && dx == half && dx > 0 && (y + dx) % 3 == 0) on = false;   // 가장자리를 군데군데 비워 깃 결이 보이게
-                    tex.SetPixel(x, y, on ? (dx == 0 ? new Color(0.85f, 0.8f, 0.6f) : Color.white) : Color.clear);
-                }
+                    tex.SetPixel(x, h - 1 - r, rows[r][x] switch { 'W' => Color.white, 'G' => shade, 'R' => quill, _ => Color.clear });   // 텍스처 y=0 이 아래
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 1f);
         }
@@ -525,8 +541,8 @@ namespace Pokepedia.Presentation.Battle.Fx
             Object.Destroy(r.gameObject);
         }
 
-        /// <summary>화면 전체에 성스러운 깃털 count 개가 좌우로 흔들리며 천천히 내려온다 (위치는 정수 픽셀, 기울기는 15° 단위).</summary>
-        public IEnumerator Feathers(int count, float seconds, Color tint)
+        /// <summary>화면 전체에 새하얀 깃털 count 개가 좌우로 흔들리며 천천히 내려온다 (위치는 정수 픽셀, 기울기는 15° 단위).</summary>
+        public IEnumerator Feathers(int count, float seconds)
         {
             if (feather == null) feather = MakeFeather();
             var rs = new SpriteRenderer[count];
@@ -543,7 +559,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                 sway[i] = Random.Range(5f, 12f);
                 phase[i] = Random.Range(0f, Mathf.PI * 2);
                 delay[i] = Random.Range(0f, seconds * 0.35f);
-                baseColor[i] = Color.Lerp(Color.white, tint, Random.Range(0f, 0.45f));
+                baseColor[i] = Color.white;   // 금빛을 섞지 않는다(섞으면 나뭇잎처럼 보였다)
             }
             for (float t = 0; t < seconds; t += Time.deltaTime)
             {

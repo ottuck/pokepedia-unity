@@ -84,7 +84,7 @@ namespace Pokepedia.EditorTools
             cam.orthographic = true;
             cam.orthographicSize = 4.5f; // 실제 크기는 배틀 화면의 PixelCamera 가 창 배율에 맞춰 바꾼다
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.06f, 0.22f, 0.06f);
+            cam.backgroundColor = new Color(0.149f, 0.165f, 0.208f);   // #262a35: 정수 배율로 남는 여백 = 웹 템플릿의 화면 테두리와 같은 색
             camGo.transform.position = new Vector3(0, 0, -10);
 
             var bridge = new GameObject("HostBridge", typeof(HostBridge)).GetComponent<HostBridge>();

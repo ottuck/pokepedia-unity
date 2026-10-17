@@ -1,13 +1,14 @@
 {
   "title": {
-    "name": "포켓피디아 배틀",
-    "start": "시작",
+    "subtitle": "배틀",
+    "press_start": "PRESS START",
     "retry": "다시 시도",
     "try_demo": "데모 체험",
     "demo_mode": "데모 모드\n피카츄 vs 거북왕",
     "connecting": "포켓피디아와 연결 중…",
     "connect_failed": "연결하지 못했습니다.",
-    "no_partner": "퀴즈에서 {0} 띠부씰을 얻으면\n내 포켓몬으로 배틀할 수 있어요"
+    "no_partner": "퀴즈에서 {0} 띠부씰을 얻으면\n내 포켓몬으로 배틀할 수 있어요",
+    "footer": "© 2026 Pokepedia · 팬 프로젝트"
   },
   "species": {
     "003": "이상해꽃",

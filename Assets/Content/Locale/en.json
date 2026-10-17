@@ -1,13 +1,14 @@
 {
   "title": {
-    "name": "POKEPEDIA BATTLE",
-    "start": "START",
+    "subtitle": "BATTLE",
+    "press_start": "PRESS START",
     "retry": "Retry",
     "try_demo": "Try Demo",
     "demo_mode": "DEMO MODE\nPikachu vs Blastoise",
     "connecting": "Connecting to Pokepedia…",
     "connect_failed": "Could not connect.",
-    "no_partner": "Win a {0} sticker in the quiz\nto battle with your own Pokémon"
+    "no_partner": "Win a {0} sticker in the quiz\nto battle with your own Pokémon",
+    "footer": "© 2026 Pokepedia · Fan project"
   },
   "species": {
     "003": "Venusaur",

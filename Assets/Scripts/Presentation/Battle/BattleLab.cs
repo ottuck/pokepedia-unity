@@ -101,6 +101,13 @@ namespace Pokepedia.Presentation.Battle
             else
             {
                 var e = effects[i];
+                if (e.Id == AnimationDirector.ReviveLabId)
+                {
+                    yield return hud.Director.Revive(e.Side, null);
+                    yield return VfxLayer.Wait(0.3f);
+                    ShowMenu();
+                    yield break;
+                }
                 if (e.Id == AnimationDirector.TrainerBallLabId)
                 {
                     yield return hud.Message.Say(ctx.Locale.Get(BattleTextKeys.TrainerThrew));

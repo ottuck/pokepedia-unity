@@ -5,30 +5,57 @@
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>{{{ PRODUCT_NAME }}}</title>
     <style>
-      html, body { margin: 0; padding: 0; height: 100%; background: #0f380f; overflow: hidden; overscroll-behavior: none; touch-action: none; }
+      /* 로딩 글자: Pokepedia 와 같은 Galmuri11 Bold (OFL, TemplateData/Galmuri-OFL.txt). 가나는 없어서 일본어는 기본 글꼴로 */
+      @font-face { font-family: "Galmuri11"; src: url("TemplateData/Galmuri11-Bold.woff2") format("woff2"); font-weight: 100 900; font-display: block; }
+      /* 게임 화면(10:9) 밖의 여백은 게임기 화면 테두리처럼 어두운 색: Pokepedia 데스크톱 프레임은 게임보다 넓다(PROJECT.md 9.6) */
+      html, body { margin: 0; padding: 0; height: 100%; background: #262a35; overflow: hidden; overscroll-behavior: none; touch-action: none; }
       /* 게임보이 비율(10:9)을 유지하며 가용 영역(안전 영역 제외)에 맞춘다 */
       #stage { position: fixed; inset: 0;
         padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         display: flex; align-items: center; justify-content: center; }
-      #frame { aspect-ratio: 10 / 9; width: min(100%, calc((100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 10 / 9)); }
-      #unity-canvas { width: 100%; height: 100%; display: block; background: #0f380f; outline: none; image-rendering: pixelated; }
-      /* 로딩 화면: 첫 방문은 4G 에서 10초 넘게 걸리므로(PROJECT.md 10.3) 진행 막대와 안내를 보여 준다 */
-      #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-        background: #0f380f; color: #9bbc0f; font: bold 12px/1.4 monospace; text-align: center; padding: 16px; }
-      #loading-title { font-size: 18px; letter-spacing: 2px; color: #8bac0f; }
-      #loading-bar { width: min(200px, 70vw); height: 10px; border: 2px solid #8bac0f; padding: 2px; box-sizing: content-box; }
-      #loading-fill { height: 100%; width: 0; background: #9bbc0f; image-rendering: pixelated; }
-      #loading-tip { font-weight: normal; opacity: 0.8; max-width: 260px; }
+      #frame { position: relative; container-type: inline-size; aspect-ratio: 10 / 9;
+        width: min(100%, calc((100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 10 / 9)); }
+      #unity-canvas { width: 100%; height: 100%; display: block; background: #7cc4ff; outline: none; image-rendering: pixelated; }
+      /* 로딩 화면: Pokepedia 퀴즈 시작 화면과 같은 하늘·구름·도트 테두리 로고 (첫 방문은 4G 에서 10초 넘게 걸린다, PROJECT.md 10.3) */
+      #loading { position: absolute; inset: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center;
+        padding-top: 13cqw; box-sizing: border-box; gap: 3cqw; text-align: center; color: #1f1d2e;
+        font-family: "Galmuri11", system-ui, sans-serif; font-weight: 700;
+        background: linear-gradient(#7cc4ff 0%, #9fd5ff 55%, #d8efff 72%, #ffffff 100%); image-rendering: pixelated; }
+      #loading-logo { margin: 0; font-size: 12cqw; font-weight: 900; line-height: 1; letter-spacing: 0.02em; color: #c86cff;
+        text-shadow: 0.8cqw 0 #3b1466, -0.8cqw 0 #3b1466, 0 0.8cqw #3b1466, 0 -0.8cqw #3b1466,
+          0.8cqw 0.8cqw #3b1466, -0.8cqw 0.8cqw #3b1466, 0.8cqw -0.8cqw #3b1466, -0.8cqw -0.8cqw #3b1466, 1.6cqw 1.6cqw #ffffff; }
+      #loading-logo span { color: #ffd23f; }
+      #loading-sub { font-size: 4.2cqw; font-weight: 900; letter-spacing: 0.35em; color: #e3342f; text-shadow: 0.5cqw 0.5cqw #ffffff, -0.25cqw -0.25cqw #7a1411; }
+      #loading-bar { margin-top: 5cqw; width: 58cqw; height: 3cqw; padding: 0.6cqw; border: 0.8cqw solid #3b1466; background: #ffffff; box-sizing: content-box; }
+      #loading-fill { height: 100%; width: 0; background: #ffd23f; }
+      #loading-text { font-size: 4cqw; }
+      #loading-tip { font-size: 3.4cqw; font-weight: 400; max-width: 80cqw; opacity: 0.8; }
+      /* 아래쪽 뭉게구름 */
+      #loading-clouds { position: absolute; left: 0; right: 0; bottom: 0; height: 22%; pointer-events: none;
+        background:
+          radial-gradient(circle at 4% 62%, #fff 0 7cqw, transparent 7.1cqw),
+          radial-gradient(circle at 16% 40%, #fff 0 8cqw, transparent 8.1cqw),
+          radial-gradient(circle at 30% 66%, #fff 0 7cqw, transparent 7.1cqw),
+          radial-gradient(circle at 42% 34%, #fff 0 9cqw, transparent 9.1cqw),
+          radial-gradient(circle at 56% 62%, #fff 0 7cqw, transparent 7.1cqw),
+          radial-gradient(circle at 68% 30%, #fff 0 8.5cqw, transparent 8.6cqw),
+          radial-gradient(circle at 82% 60%, #fff 0 7cqw, transparent 7.1cqw),
+          radial-gradient(circle at 96% 38%, #fff 0 8.5cqw, transparent 8.6cqw),
+          linear-gradient(transparent 62%, #fff 62%); }
     </style>
   </head>
   <body>
-    <div id="stage"><div id="frame"><canvas id="unity-canvas" tabindex="0"></canvas></div></div>
-    <div id="loading">
-      <div id="loading-title">POKEPEDIA BATTLE</div>
-      <div id="loading-bar"><div id="loading-fill"></div></div>
-      <div id="loading-text">0%</div>
-      <div id="loading-tip"></div>
-    </div>
+    <div id="stage"><div id="frame">
+      <canvas id="unity-canvas" tabindex="0"></canvas>
+      <div id="loading">
+        <h1 id="loading-logo">Poke<span>pedia</span></h1>
+        <div id="loading-sub"></div>
+        <div id="loading-bar"><div id="loading-fill"></div></div>
+        <div id="loading-text">0%</div>
+        <div id="loading-tip"></div>
+        <div id="loading-clouds"></div>
+      </div>
+    </div></div>
     <script src="Build/{{{ LOADER_FILENAME }}}"></script>
     <script>
       var canvas = document.querySelector("#unity-canvas");
@@ -38,11 +65,12 @@
       // 안내 문구 언어: Pokepedia 는 ?lang= 을 붙여 띄우고, 없으면 브라우저 언어
       var lang = (new URLSearchParams(location.search).get("lang") || navigator.language || "ko").slice(0, 2);
       var TEXT = {
-        ko: { tip: "처음 불러올 때는 조금 걸려요. 다음부터는 빨라요.", ready: "준비 중…", failed: "불러오지 못했어요. 새로고침해 주세요." },
-        en: { tip: "The first load takes a moment. It is faster next time.", ready: "Getting ready…", failed: "Could not load. Please refresh." },
-        ja: { tip: "はじめての よみこみは すこし じかんが かかります。", ready: "じゅんびちゅう…", failed: "よみこめませんでした。 リロードしてください。" }
+        ko: { sub: "배틀", tip: "처음 불러올 때는 조금 걸려요. 다음부터는 빨라요.", ready: "준비 중…", failed: "불러오지 못했어요. 새로고침해 주세요." },
+        en: { sub: "BATTLE", tip: "The first load takes a moment. It is faster next time.", ready: "Getting ready…", failed: "Could not load. Please refresh." },
+        ja: { sub: "バトル", tip: "はじめての よみこみは すこし じかんが かかります。", ready: "じゅんびちゅう…", failed: "よみこめませんでした。 リロードしてください。" }
       }[lang] || null;
-      if (!TEXT) TEXT = { tip: "The first load takes a moment. It is faster next time.", ready: "Getting ready…", failed: "Could not load. Please refresh." };
+      if (!TEXT) TEXT = { sub: "BATTLE", tip: "The first load takes a moment. It is faster next time.", ready: "Getting ready…", failed: "Could not load. Please refresh." };
+      document.querySelector("#loading-sub").textContent = TEXT.sub;
       document.querySelector("#loading-tip").textContent = TEXT.tip;
 
       // 호스트(Pokepedia) origin 허용 목록. init 수신 검증과 jslib 의 postMessage 대상에 함께 쓴다.
@@ -104,8 +132,8 @@
           return false;
         },
       }, function (p) {
-        // 0~0.9 는 내려받기, 그 뒤는 엔진 초기화
-        loadingFill.style.width = Math.round(p * 100) + "%";
+        // 0~0.9 는 내려받기, 그 뒤는 엔진 초기화. 막대는 5% 계단으로 채운다(도트 느낌)
+        loadingFill.style.width = Math.floor(p * 20) * 5 + "%";
         loadingText.textContent = p >= 0.9 ? TEXT.ready : Math.round(p * 100) + "%";
       })
       .then(function (instance) {
