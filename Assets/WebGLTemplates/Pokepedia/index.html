@@ -27,7 +27,8 @@
        * 화면 끝에 잘리게 마주 서고, 격투 게임식 BATTLE 엠블럼과 기울어진 두툼한 버튼. 상태와 문구는 Unity(TitleScreen)가 보낸다.
        * 크기는 모두 게임 폭 기준(cqw)이라 데스크톱 프레임과 휴대폰에서 같은 짜임으로 줄고 는다.
        */
-      #title { position: absolute; inset: 0; overflow: hidden; color: #fff; text-align: center; background: #0a0716;
+      /* overflow: clip — hidden 은 스크롤 상자라 화면이 바뀔 때(스크롤 고정) 저절로 아래로 밀려 있었다(VS 가 위로 올라가 보임) */
+      #title { position: absolute; inset: 0; overflow: hidden; overflow: clip; overflow-anchor: none; color: #fff; text-align: center; background: #0a0716;
         font-family: "Noto Sans KR", "Noto Sans JP", "Apple SD Gothic Neo", "Hiragino Sans", "Malgun Gothic", "Yu Gothic", system-ui, sans-serif;
         transition: opacity 0.45s ease, visibility 0.45s; -webkit-tap-highlight-color: transparent; user-select: none; }
       #title[data-view="hidden"] { opacity: 0; visibility: hidden; pointer-events: none; }
@@ -160,6 +161,40 @@
         border-radius: 0.6cqw; background: #ffd23f; color: #1a0b2e; }
       #title .footer { position: absolute; left: 0; right: 0; bottom: 2.6%; z-index: 6; font-size: max(1.9cqw, 10px); font-weight: 500; opacity: 0.6;
         text-shadow: 0 0.2cqw 0.8cqw rgba(0, 0, 0, 0.9); }
+      /*
+       * VS 장면(view = vs): 시작 화면과 같은 무대에서 이어진다. 로고·버튼은 사라지고 두 포켓몬이 양쪽에서 밀고 들어오며, 0.62초에
+       * 커다란 Bangers "VS"가 대각선 위에 찍히고(흰 번쩍임·흔들림) 이름 띠가 미끄러져 들어온다. 소리·시간·건너뛰기는 Unity 가 맡는다
+       * (BattleEventPlayer.PlayVs → HostBridge.ShowTitle). 그 뒤 Unity 가 hidden 을 보내면 옅어지며 도트 전투 화면이 드러난다.
+       */
+      #title .vs-mark, #title .tag, #title .flash { display: none; }
+      #title[data-view="vs"] .vs-mark, #title[data-view="vs"] .tag, #title[data-view="vs"] .flash { display: block; }
+      #title[data-view="vs"] .logo, #title[data-view="vs"] .streaks, #title[data-view="vs"] .panel, #title[data-view="vs"] .footer { display: none; }
+      #title[data-view="vs"] { animation: shake 0.32s linear 0.62s; }
+      @keyframes shake { 20% { translate: -1cqw 0.6cqw; } 40% { translate: 1cqw -0.6cqw; } 60% { translate: -0.6cqw -0.4cqw; } 80% { translate: 0.6cqw 0.4cqw; } }
+      #title[data-view="vs"] .mon.left { animation: vs-left 0.5s cubic-bezier(0.2, 0.9, 0.2, 1) both; }
+      #title[data-view="vs"] .mon.right { animation: vs-right 0.5s cubic-bezier(0.2, 0.9, 0.2, 1) 0.06s both; }
+      @keyframes vs-left { from { translate: -70cqw 0; } to { translate: 3cqw -1cqw; } }
+      @keyframes vs-right { from { translate: 80cqw 0; } to { translate: -3cqw -1cqw; } }
+      #title .vs-mark { position: absolute; left: 50%; top: 46%; z-index: 6; translate: -50% -50%; font-family: "Bangers", "Black Han Sans", sans-serif;
+        font-size: 34cqw; line-height: 1; letter-spacing: 0.02em; animation: vs-slam 0.28s cubic-bezier(0.2, 1.4, 0.4, 1) 0.62s both; }
+      @keyframes vs-slam { 0% { transform: scale(3.2) rotate(-14deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-6deg); opacity: 1; } }
+      #title .vs-mark span { display: block; white-space: nowrap; }
+      #title .vs-mark .depth { color: #1a0b2e; -webkit-text-stroke: 3cqw #1a0b2e;
+        text-shadow: 0 0.6cqw 0 #1a0b2e, 0 1.2cqw 0 #1a0b2e, 0 1.8cqw 0 #1a0b2e, 0 2.4cqw 0 #1a0b2e, 0 3cqw 3cqw rgba(0, 0, 0, 0.6); }
+      #title .vs-mark .rim { position: absolute; inset: 0; color: #fff; -webkit-text-stroke: 1.2cqw #fff; }
+      #title .vs-mark .face { position: absolute; inset: 0; color: transparent; -webkit-background-clip: text; background-clip: text;
+        background-image: linear-gradient(#fffbe6 0%, #ffe680 40%, #ffb703 52%, #ff7a00 80%, #d94a00 100%); }
+      #title .flash { position: absolute; inset: 0; z-index: 7; background: #fff; opacity: 0; pointer-events: none; animation: vs-flash 0.4s ease-out 0.62s both; }
+      @keyframes vs-flash { 0% { opacity: 0; } 1% { opacity: 0.9; } 100% { opacity: 0; } }
+      /* 이름 띠: 상대는 오른쪽 위(파랑), 플레이어는 왼쪽 아래(노랑) */
+      #title .tag { position: absolute; z-index: 6; padding: 1cqw 6cqw; transform: skewX(-14deg); box-shadow: 0 0 0 0.5cqw #1a0b2e, 0 0.8cqw 0 0.5cqw #1a0b2e; }
+      #title .tag span { display: block; transform: skewX(14deg); font-family: "Black Han Sans", "Noto Sans KR", "Noto Sans JP", sans-serif; font-size: 5.4cqw;
+        letter-spacing: 0.08em; color: #fff; text-shadow: 0 0.35cqw 0 #1a0b2e; white-space: nowrap; }
+      #title .tag.left { left: -3%; bottom: 7%; padding-left: 8cqw; background: linear-gradient(#ffd23f, #f59e0b); animation: tag-left 0.35s cubic-bezier(0.2, 0.9, 0.2, 1) 0.45s both; }
+      #title .tag.left span { color: #2a1200; text-shadow: 0 0.3cqw 0 rgba(255, 255, 255, 0.6); }
+      #title .tag.right { right: -3%; top: 6%; padding-right: 8cqw; background: linear-gradient(#38bdf8, #0369a1); animation: tag-right 0.35s cubic-bezier(0.2, 0.9, 0.2, 1) 0.5s both; }
+      @keyframes tag-left { from { translate: -60cqw 0; } to { translate: 0 0; } }
+      @keyframes tag-right { from { translate: 60cqw 0; } to { translate: 0 0; } }
       @media (prefers-reduced-motion: reduce) { #title *, #title *::after { animation: none !important; } }
     </style>
   </head>
@@ -174,6 +209,10 @@
         <img class="mon left" src="https://wrodjycecfjxkmepxqhb.supabase.co/storage/v1/object/public/pokemon-artwork/normal/025.webp" alt="" onerror="this.remove()">
         <img class="mon right" src="https://wrodjycecfjxkmepxqhb.supabase.co/storage/v1/object/public/pokemon-artwork/normal/009.webp" alt="" onerror="this.remove()">
         <div class="vignette"></div>
+        <div class="tag right"><span data-name="npc"></span></div>
+        <div class="tag left"><span data-name="player"></span></div>
+        <div class="vs-mark" aria-hidden="true"><span class="depth">VS</span><span class="rim">VS</span><span class="face">VS</span></div>
+        <div class="flash"></div>
         <div class="streaks"></div>
         <div class="logo">
           <div class="ribbon"><span>POKEPEDIA</span></div>
@@ -214,10 +253,20 @@
 
       // 시작 화면: Unity(TitleScreen) → HostBridge_ShowTitle → show(상태·문구). 버튼은 클릭 처리 안에서 바로 Unity 를 불러
       // 첫 소리(오디오 잠금 해제)가 막히지 않게 한다. 키보드(Z·Enter·Space)는 Unity 가 직접 받는다.
+      var ARTWORK = "https://wrodjycecfjxkmepxqhb.supabase.co/storage/v1/object/public/pokemon-artwork/normal/";
       window.pokeTitle = {
         show: function (v) {
+          title.scrollTop = 0; title.scrollLeft = 0;
+          if (v.view === "vs") {
+            // 두 포켓몬 아트워크(Pokepedia Storage, 도감 번호 3자리)와 이름. 같은 그림이면 다시 받지 않는다
+            var art = function (sel, id) { var img = title.querySelector(sel); if (!img || !id) return;
+              var src = ARTWORK + String(id).padStart(3, "0") + ".webp"; if (img.getAttribute("src") !== src) img.setAttribute("src", src); };
+            art(".mon.left", v.player); art(".mon.right", v.npc);
+            title.querySelector('[data-name="player"]').textContent = v.playerName || "";
+            title.querySelector('[data-name="npc"]').textContent = v.npcName || "";
+          }
           title.dataset.view = v.view;
-          if (v.view === "hidden") return;
+          if (v.view === "hidden" || v.view === "vs") return;
           var set = function (sel, text) { if (text != null) title.querySelector(sel).textContent = text; };
           set(".message", v.message);
           set('[data-action="start"] > span', v.start);

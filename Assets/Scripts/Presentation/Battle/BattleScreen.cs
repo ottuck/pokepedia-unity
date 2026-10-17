@@ -157,6 +157,7 @@ namespace Pokepedia.Presentation.Battle
             this.onExit = onExit;
             onBattleEnded = null;
             ctx.PlayerShiny = false;
+            if (ctx.Bridge == null) ctx.Bridge = FindAnyObjectByType<Pokepedia.Bridge.HostBridge>();
             LoadCatalog();
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var asset = localeCode switch { "en" => localeEn, "ja" => localeJa, _ => localeKo };

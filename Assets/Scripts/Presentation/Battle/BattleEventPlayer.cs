@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Pokepedia.App.Battle;
+using Pokepedia.Bridge;
 using Pokepedia.Content;
 using Pokepedia.Domain.Battle;
 using Pokepedia.Presentation.Audio.Synth;
@@ -22,6 +23,8 @@ namespace Pokepedia.Presentation.Battle
         public BattleSession Session;
         /// <summary>Collection 모드에서 플레이어가 색이 다른 스티커로 들어왔다 (외형만, PROJECT.md 9.2)</summary>
         public bool PlayerShiny;
+        /// <summary>웹 템플릿과의 다리. WebGL 빌드에서는 VS 장면을 HTML 이 그린다(HasHtmlTitle)</summary>
+        public HostBridge Bridge;
 
         public int SpeciesOf(int side) => Session.State.Sides[side].Active.Species.Id;
         public bool ShinyOf(int side) => side == BattleState.Player && PlayerShiny;
@@ -49,10 +52,42 @@ namespace Pokepedia.Presentation.Battle
             if (victory != null) { host.StopCoroutine(victory); victory = null; }
         }
 
-        /// <summary>도입 VS 장면 (M5): 두 포켓몬의 앞모습·이름·첫 타입 색은 데이터에서 가져온다.</summary>
+        /// <summary>
+        /// 도입 VS 장면 (M5). WebGL 빌드에서는 시작 화면과 같은 HTML 무대에서 이어진다(PlayHtmlVs) — 레트로 도트는 전투 화면부터.
+        /// 에디터에는 HTML 이 없어 도트 VsIntro 를 쓴다(두 포켓몬의 앞모습·이름·첫 타입 색은 데이터에서).
+        /// </summary>
         public IEnumerator PlayVs()
         {
+            if (ctx.Bridge != null && ctx.Bridge.HasHtmlTitle) { yield return PlayHtmlVs(); yield break; }
             yield return hud.Vs.Play(VsSide(BattleState.Player), VsSide(BattleState.Npc));
+        }
+
+        /// <summary>HTML VS 장면에 보내는 것 (필드 이름이 웹 템플릿 window.pokeTitle.show 와의 약속)</summary>
+        [Serializable]
+        sealed class HtmlVs
+        {
+            public string view = "vs";
+            public int player, npc;          // 도감 번호 → 아트워크
+            public string playerName, npcName;
+        }
+
+        /// <summary>HTML VS 와 같은 시간표: 0.62초에 VS 가 찍히고(급소 타격음), 1.75초에 옅어지기 시작(0.45초). 0.3초 뒤부터 확인 입력으로 건너뛴다.</summary>
+        const float HtmlSlam = 0.62f, HtmlHold = 1.75f, HtmlOut = 0.45f;
+
+        IEnumerator PlayHtmlVs()
+        {
+            int p = ctx.SpeciesOf(BattleState.Player), n = ctx.SpeciesOf(BattleState.Npc);
+            ctx.Bridge.ShowTitle(JsonUtility.ToJson(new HtmlVs { player = p, npc = n, playerName = ctx.Names.Species(p), npcName = ctx.Names.Species(n) }));
+            hud.Sound.Play(SfxKind.SendOut);
+            bool slammed = false;
+            for (float t = 0; t < HtmlHold; t += Time.deltaTime)
+            {
+                if (t > 0.3f && BattleInput.Advance) break;
+                if (!slammed && t >= HtmlSlam) { slammed = true; hud.Sound.Play(SfxKind.CriticalHit); }
+                yield return null;
+            }
+            ctx.Bridge.ShowTitle("{\"view\":\"hidden\"}");
+            yield return VfxLayer.Wait(HtmlOut);
         }
 
         VsIntro.Side VsSide(int side)
