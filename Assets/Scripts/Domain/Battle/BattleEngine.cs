@@ -81,6 +81,18 @@ namespace Pokepedia.Domain.Battle
             return new BattleEvent[] { new Revived(side, b.Hp, b.MaxHp) };
         }
 
+        /// <summary>
+        /// 방금 이긴 쪽(side)을 바깥에서 쓰러뜨려 승패를 뒤집는다 (트레이너가 처리한다, PROJECT.md 5.3): HP 0, 상대가 승자.
+        /// side 가 이겨서 배틀이 끝났을 때만 부를 수 있다.
+        /// </summary>
+        public IReadOnlyList<BattleEvent> KnockOut(int side)
+        {
+            if (!State.IsOver || State.Winner != side) throw new InvalidOperationException("only the side that just won can be knocked out");
+            State.Sides[side].Active.TakeDamage(int.MaxValue);
+            State.Winner = BattleState.Opponent(side);
+            return new BattleEvent[] { new Fainted(side), new BattleEnded(BattleState.Opponent(side)) };
+        }
+
         UseMove Validate(int side, BattleAction action)
         {
             if (action == null) throw new ArgumentNullException(side == BattleState.Player ? "playerAction" : "npcAction");

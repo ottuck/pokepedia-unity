@@ -229,19 +229,36 @@ namespace Pokepedia.Tests
         }
 
         [Test]
-        public void CheerRevive_TurnsFirstLossIntoRevive_OncePerBattle()
+        public void FaintChoice_CheerRevives_OrTrainerFinishesTheOpponent()
         {
-            // 데모 응원 부활(5.3): 처음 쓰러지면 BattleEnded 대신 Revived 로 이어 싸우고, 두 번째로 쓰러지면 진다. 다시 도전하면 또 한 번.
-            var s = new BattleSession(Catalog(), Rules, new SeededRandom(1), BattleMode.Demo, 9, () => 25, cheerRevives: 1);
+            // 쓰러질 때마다(5.3) 패배 대신 선택을 기다린다: 응원하면 다시 일어나 이어 싸우고,
+            // 트레이너가 처리하면 몬스터볼을 맞은 상대가 쓰러져 플레이어가 이긴다.
+            var s = new BattleSession(Catalog(), Rules, new SeededRandom(1), BattleMode.Demo, 9, () => 25, faintChoice: true);
             s.Start();
-            var events = PlayOut(s, 0);
-            Assert.AreEqual(1, events.OfType<Revived>().Count());
-            Assert.AreEqual(new BattleEnded(BattleState.Npc), events.Last(), "the second faint ends it");
-            Assert.AreEqual(1, events.OfType<BattleEnded>().Count());
-            Assert.That(events.IndexOf(events.OfType<Revived>().Single()), Is.LessThan(events.Count - 2));
+            CollectionAssert.IsEmpty(PlayUntilChoice(s).OfType<BattleEnded>());
+            Assert.IsFalse(s.IsOver);
+            Assert.Throws<InvalidOperationException>(() => s.UseMove(0), "no moves while the choice is open");
 
-            s.Retry();
-            Assert.AreEqual(1, PlayOut(s, 0).OfType<Revived>().Count(), "a retry gets the cheer again");
+            Assert.AreEqual(new BattleEvent[] { new Revived(BattleState.Player, s.Player.MaxHp, s.Player.MaxHp) }, s.Cheer());
+            Assert.IsFalse(s.AwaitingFaintChoice);
+
+            PlayUntilChoice(s);
+            Assert.AreEqual(new BattleEvent[] { new TrainerThrewBall(BattleState.Npc), new Fainted(BattleState.Npc), new BattleEnded(BattleState.Player) },
+                s.TrainerFinish(), "every faint offers the choice again");
+            Assert.IsTrue(s.IsOver);
+            Assert.AreEqual(BattleState.Player, s.State.Winner);
+            Assert.Throws<InvalidOperationException>(() => s.Cheer());
+        }
+
+        static List<BattleEvent> PlayUntilChoice(BattleSession s)
+        {
+            var all = new List<BattleEvent>();
+            for (int i = 0; !s.AwaitingFaintChoice; i++)
+            {
+                Assert.That(i, Is.LessThan(100), "player never fainted");
+                all.AddRange(s.UseMove(0));
+            }
+            return all;
         }
 
         [Test]

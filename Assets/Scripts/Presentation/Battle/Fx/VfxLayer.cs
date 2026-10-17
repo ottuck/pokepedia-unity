@@ -564,6 +564,91 @@ namespace Pokepedia.Presentation.Battle.Fx
             foreach (var r in rs) Object.Destroy(r.gameObject);
         }
 
+        // ------------------------------------------------------------------ 트레이너가 처리한다 (몬스터볼)
+        Sprite pokeBall, dizzyStar;
+
+        /// <summary>몬스터볼 11×11 도트: 검은 테두리, 위 빨강(왼쪽 위 하이라이트)·아래 흰색, 가운데 검은 띠와 흰 단추.</summary>
+        static Sprite MakePokeBall()
+        {
+            const int n = 11;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var red = new Color(0.9f, 0.15f, 0.17f);
+            var white = new Color(0.96f, 0.96f, 0.96f);
+            var black = new Color(0.1f, 0.1f, 0.13f);
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float dx = x - 5, dy = y - 5, d = Mathf.Sqrt(dx * dx + dy * dy);   // 텍스처 y=0 이 아래
+                    Color c;
+                    if (d > 5.4f) c = Color.clear;
+                    else if (d > 4.4f) c = black;
+                    else if (d <= 1.1f) c = white;                 // 단추
+                    else if (d <= 2.2f || dy == 0) c = black;       // 단추 테두리·가운데 띠
+                    else if (dy > 0) c = x == 3 && y == 8 ? new Color(1f, 0.7f, 0.68f) : red;
+                    else c = white;
+                    tex.SetPixel(x, y, c);
+                }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 1f);
+        }
+
+        /// <summary>
+        /// 몬스터볼 던지기: from → to 로 포물선(가운데가 arcPx 만큼 높다)을 그리며 45°씩 돌아 날아간다. 도착하면 사라진다(튕겨 나가는 공은 BounceBall).
+        /// </summary>
+        public IEnumerator ThrowBall(Vector2 from, Vector2 to, float arcPx, float seconds)
+        {
+            if (pokeBall == null) pokeBall = MakePokeBall();
+            var r = world.NewRenderer(fx, "PokeBall", pokeBall, BattleWorld.SortFx + 5);
+            for (float t = 0; t < seconds; t += Time.deltaTime)
+            {
+                float k = t / seconds;
+                var p = Vector2.Lerp(from, to, k);
+                p.y -= Mathf.Sin(k * Mathf.PI) * arcPx;
+                r.transform.localPosition = ToLocal(new Vector2(Mathf.Round(p.x), Mathf.Round(p.y)));
+                r.transform.localEulerAngles = new Vector3(0, 0, -Mathf.Round(k * 10) * 45);   // 시계 방향으로 휙휙
+                yield return null;
+            }
+            Object.Destroy(r.gameObject);
+        }
+
+        /// <summary>맞고 튕겨 나간 몬스터볼: at 에서 velocity(픽셀/초, 화면 좌표 y 아래)로 튀어 올랐다가 중력으로 떨어지며 돈다.</summary>
+        public IEnumerator BounceBall(Vector2 at, Vector2 velocity, float gravity, float seconds)
+        {
+            if (pokeBall == null) pokeBall = MakePokeBall();
+            var r = world.NewRenderer(fx, "PokeBallBounce", pokeBall, BattleWorld.SortFx + 5);
+            for (float t = 0; t < seconds; t += Time.deltaTime)
+            {
+                var p = at + velocity * t + new Vector2(0, gravity * t * t / 2);
+                r.transform.localPosition = ToLocal(new Vector2(Mathf.Round(p.x), Mathf.Round(p.y)));
+                r.transform.localEulerAngles = new Vector3(0, 0, Mathf.Round(t * 16) * 45);
+                yield return null;
+            }
+            Object.Destroy(r.gameObject);
+        }
+
+        /// <summary>머리 위를 도는 별 3개 (맞고 어지러움). 뒤쪽(타원 위쪽)을 지날 때는 옅다.</summary>
+        public IEnumerator Dizzy(Vector2 above, float radius, float seconds)
+        {
+            if (dizzyStar == null) dizzyStar = MakeSprite(5, (x, y) => x == 2 || y == 2 || (Mathf.Abs(x - 2) == 1 && Mathf.Abs(y - 2) == 1));
+            var rs = new SpriteRenderer[3];
+            for (int i = 0; i < 3; i++) rs[i] = world.NewRenderer(fx, "DizzyStar" + i, dizzyStar, BattleWorld.SortFx + 6);
+            var yellow = new Color(1f, 0.92f, 0.35f);
+            for (float t = 0; t < seconds; t += Time.deltaTime)
+            {
+                float fade = Mathf.Min(1, (seconds - t) / 0.3f);
+                for (int i = 0; i < 3; i++)
+                {
+                    float a = t * 7 + i * Mathf.PI * 2 / 3;
+                    var p = above + new Vector2(Mathf.Cos(a) * radius, Mathf.Sin(a) * radius * 0.35f);
+                    rs[i].transform.localPosition = ToLocal(new Vector2(Mathf.Round(p.x), Mathf.Round(p.y)));
+                    var c = yellow; c.a = (Mathf.Sin(a) > 0 ? 1 : 0.55f) * fade;
+                    rs[i].color = c;
+                }
+                yield return null;
+            }
+            foreach (var r in rs) Object.Destroy(r.gameObject);
+        }
+
         /// <summary>화면 전체 번쩍임 (급소 등). HUD 맨 위 Image 라서 글자까지 덮는다.</summary>
         public IEnumerator ScreenFlash(Color color, float seconds)
         {

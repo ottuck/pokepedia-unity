@@ -59,7 +59,8 @@ namespace Pokepedia.Presentation.Battle
                 int count = effects.Length + 3;   // 전용 연출 + VS + Victory + 결과 버튼
                 var cells = new Vector3[count];
                 for (int i = 0; i < count; i++) cells[i] = new Vector3(4 + (i % 3) * 76, 4 + (i / 3) * 17, 74);
-                var inner = Ui.Box(hud.Screen, "LabMenu", 2, 156, 236, 58);
+                int rows = (count + 2) / 3;
+                var inner = Ui.Box(hud.Screen, "LabMenu", 2, 214 - rows * 17 - 7, 236, rows * 17 + 7);
                 menu = new ChoiceMenu(inner.parent.gameObject, inner, hud.Font, cells, 3);
                 menu.Chosen += OnChosen;
                 menu.Cancelled += Exit;
@@ -100,9 +101,17 @@ namespace Pokepedia.Presentation.Battle
             else
             {
                 var e = effects[i];
+                if (e.Id == AnimationDirector.TrainerBallLabId)
+                {
+                    yield return hud.Message.Say(ctx.Locale.Get(BattleTextKeys.TrainerThrew));
+                    yield return hud.Director.TrainerBall(e.Side);
+                    yield return VfxLayer.Wait(0.3f);
+                    ShowMenu();
+                    yield break;
+                }
                 int attacker = ctx.SpeciesOf(e.Side), target = ctx.SpeciesOf(BattleState.Opponent(e.Side));
-                // 전용 연출은 대표 기술로, 몸통박치기(contact)는 기본기로 재생한다(색·소리가 그 기술의 타입을 따른다)
-                var role = e.Id == "contact" ? MoveRole.Basic : MoveRole.Signature;
+                // 전용 연출은 대표 기술로, 몸통박치기(contact)는 기본기로, 물기둥은 보조기(물의맹세)로 재생한다(색·소리가 그 기술의 타입을 따른다)
+                var role = e.Id == "contact" ? MoveRole.Basic : e.Id == "hydro_geyser" ? MoveRole.Secondary : MoveRole.Signature;
                 var move = ctx.Catalog.MoveSetFor(attacker).First(m => m.Role == role);
                 bool crit = outcome == 2;
                 yield return hud.Director.PlayLab(e.Id, e.Side, attacker, target, move, outcome == 1, crit);

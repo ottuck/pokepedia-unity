@@ -26,9 +26,14 @@ namespace Pokepedia.Presentation.Battle.Fx
             ("thunder_fork", "TB-B fork", BattleState.Player),
             ("lightning_strike", "TB-C sky", BattleState.Player),
             ("hydro_beam", "HP-A beam", BattleState.Npc),
-            ("hydro_burst", "HP-C 3x", BattleState.Npc),
+            ("hydro_geyser", "WP geyser", BattleState.Npc),
             ("contact", "Tackle", BattleState.Player),
+            ("contact", "Tackle(N)", BattleState.Npc),
+            (TrainerBallLabId, "Ball", BattleState.Npc),
         };
+
+        /// <summary>실험실 전용: 기술이 아니라 "트레이너가 처리한다"의 몬스터볼(TrainerBall)을 재생한다</summary>
+        public const string TrainerBallLabId = "trainer_ball";
 
         readonly MonoBehaviour host;
         readonly BattleSideView[] sides;
@@ -98,6 +103,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                 world.Backdrop.SetWeather(0, 1.4f);
                 host.StartCoroutine(lighting.FadeAmbient(world.Backdrop.Theme.ClearAmbient, 1.4f));
             }
+            if (!view.Visible) yield break;   // 트레이너가 처리한 승리: 쓰러진 쪽은 날씨만 갠다
             host.StartCoroutine(world.CameraTo(BattleWorld.Toward(view.Center, 0.3f), 1.1f, 0.7f));   // 이긴 쪽으로 다가가며 살짝 확대
             host.StartCoroutine(lighting.Pulse(view.Center, gold, 150, 1.9f, 1.3f));
             host.StartCoroutine(vfx.Rings(view.Center, gold, 2, 0.7f));
@@ -150,6 +156,43 @@ namespace Pokepedia.Presentation.Battle.Fx
             if (hpAnimation != null) yield return hpAnimation();
             yield return VfxLayer.Wait(0.3f);
             host.StartCoroutine(world.CameraTo(Vector2.zero, 1, 0.6f));
+        }
+
+        /// <summary>
+        /// 트레이너가 처리한다 (PROJECT.md 5.3): 화면 왼쪽 아래(트레이너 자리)에서 몬스터볼이 돌면서 포물선으로 날아가 상대 머리에 "퍽" 맞고
+        /// 튕겨 나간다. 맞은 상대는 번쩍이며 움찔한 뒤 머리 위에 별이 돌고 비틀거린다. 쓰러지는 것은 뒤따르는 Fainted 가 그린다.
+        /// </summary>
+        public IEnumerator TrainerBall(int targetSide)
+        {
+            var target = sides[targetSide];
+            var head = target.Center - new Vector2(0, Mathf.Round(target.Size.y * 0.3f));
+            host.StartCoroutine(world.CameraTo(BattleWorld.Toward(target.Center, 0.3f), 1.08f, 0.5f));
+            sound.Play(SfxKind.Miss);   // 휙
+            yield return vfx.ThrowBall(new Vector2(-12, 150), head, 50, 0.6f);
+
+            sound.Play(SfxKind.CriticalHit);
+            var gold = new Color(1f, 0.85f, 0.4f);
+            host.StartCoroutine(vfx.ImpactStar(head, Color.white, gold, 0.25f));
+            vfx.Burst(head, Color.white, gold, 16, 40, 120, 0.35f, 2);
+            host.StartCoroutine(vfx.Shake(3, 0.25f));
+            host.StartCoroutine(world.Punch(0.06f, 0.25f));
+            host.StartCoroutine(lighting.Pulse(head, Color.white, 80, 1.4f, 0.3f));
+            host.StartCoroutine(vfx.BounceBall(head, new Vector2(-55, -130), 480, 1.0f));
+            for (int i = 0; i < 2; i++)
+            {
+                target.SetFlash(1); target.SetOffset(new Vector2(0, 3));
+                yield return VfxLayer.Wait(0.06f);
+                target.SetFlash(0); target.SetOffset(Vector2.zero);
+                yield return VfxLayer.Wait(0.06f);
+            }
+            host.StartCoroutine(vfx.Dizzy(head - new Vector2(0, 8), Mathf.Round(target.Size.x * 0.25f), 1.2f));
+            for (float t = 0; t < 1.0f; t += Time.deltaTime)   // 비틀비틀
+            {
+                target.SetOffset(new Vector2(Mathf.Round(Mathf.Sin(t * 13) * 3), 0));
+                yield return null;
+            }
+            target.SetOffset(Vector2.zero);
+            host.StartCoroutine(world.CameraTo(Vector2.zero, 1, 0.4f));
         }
 
         // ------------------------------------------------------------------ 기술
@@ -309,6 +352,57 @@ namespace Pokepedia.Presentation.Battle.Fx
                     break;
                 }
 
+                // ---------------- 물의맹세: 상대 주변 땅이 울리며 물거품이 끓다가, 둘레에서 작은 물기둥들이 차례로 솟고
+                //                   마지막에 상대 발밑에서 가장 큰 물기둥이 솟구쳐 상대를 띄운다
+                case "hydro_geyser":
+                {
+                    var spot = missed ? target.Feet + new Vector2(32, 0) : target.Feet;   // 빗나가면 옆자리에서 솟는다
+                    float span = Mathf.Max(18, Mathf.Round(target.Size.x * 0.75f));      // 둘레 물기둥이 퍼지는 폭(상대 몸에 비례)
+                    float prep = (float)ReleaseSec(fx, prof.WindupSec);
+                    host.StartCoroutine(Recoil(attacker, new Vector2(0, 3), prep));     // 웅크렸다가
+                    host.StartCoroutine(vfx.Shake(1, prep));
+                    host.StartCoroutine(lighting.Pulse(spot, c1, 60, 0.9f, prep));
+                    for (float t = 0, next = 0; t < prep; t += Time.deltaTime)
+                    {
+                        if (t >= next)
+                        {
+                            vfx.Spray(spot + new Vector2(UnityEngine.Random.Range(-span, span), UnityEngine.Random.Range(-6f, 4f)), new Vector2(0, -1), 25, c2, Color.white, 2, 25, 65, 0.3f, 2, 220);
+                            next += 0.03f;
+                        }
+                        yield return null;
+                    }
+
+                    // 둘레: 왼쪽 → 오른쪽 → 뒤 → 앞 순서로 0.12초마다 작은 물기둥 (뒤쪽일수록 위, 짧게)
+                    var ring = new[]
+                    {
+                        new Vector3(-span, 3, 0.55f), new Vector3(span * 1.05f, -3, 0.6f),
+                        new Vector3(-span * 0.45f, -10, 0.45f), new Vector3(span * 0.55f, 7, 0.5f),
+                    };
+                    float colW = Mathf.Clamp(Mathf.Round(target.Size.x * 0.22f), 7, 11);
+                    host.StartCoroutine(vfx.Shake(2, ring.Length * 0.12f + 0.2f));
+                    foreach (var r in ring)
+                    {
+                        var at = spot + new Vector2(Mathf.Round(r.x), r.y);
+                        host.StartCoroutine(Column(at, Mathf.Round(target.Size.y * r.z + 18), colW, 0.5f, c1, c2, 0.5f));
+                        yield return VfxLayer.Wait(0.12f);
+                    }
+
+                    // 가운데: 가장 큰 물기둥이 상대를 띄운다
+                    float width = Mathf.Clamp(Mathf.Round(target.Size.x * 0.4f), 12, 22);
+                    host.StartCoroutine(vfx.Shake(3, 0.6f));
+                    host.StartCoroutine(lighting.Pulse(spot - new Vector2(0, Mathf.Round(target.Size.y / 2)), c1, 130, 2.0f, 0.8f));
+                    const float lift = 12;
+                    if (missed) host.StartCoroutine(Dodge(target));
+                    else host.StartCoroutine(Move(target, Vector2.zero, new Vector2(0, -lift), 0.25f, true));   // 물기둥에 떠오른다(그림자는 바닥)
+                    yield return Column(spot, Mathf.Round(target.Size.y + 38), width, 0.55f, c1, c2, 1f);
+                    if (!missed)
+                    {
+                        HeavySplash(target.Center, new Vector2(0, -1), c1, c2, 0.7f);
+                        yield return Move(target, new Vector2(0, -lift), Vector2.zero, 0.12f, true);
+                    }
+                    break;
+                }
+
                 // ---------------- 공통 타임라인
                 // ---------------- 몸통박치기(접촉): 도움닫기 → 잔상과 함께 돌진 → 몸 표면 충돌(별·파편·고리·흙먼지) → 복귀
                 case "contact":
@@ -415,6 +509,20 @@ namespace Pokepedia.Presentation.Battle.Fx
             view.SetOffset(by);
         }
 
+        /// <summary>
+        /// 땅에서 솟는 물기둥 하나 (물의맹세): 발밑에서 흙·물이 튀고 height 만큼 물줄기가 솟았다가, 꼭대기에서 흩어진 물이 떨어진다.
+        /// scale 은 튀는 물·흙의 양 (둘레의 작은 물기둥은 0.5).
+        /// </summary>
+        IEnumerator Column(Vector2 foot, float height, float width, float hold, Color c1, Color c2, float scale)
+        {
+            var top = foot - new Vector2(0, height);
+            vfx.Spray(foot, new Vector2(0, -1), 70, c1, Color.white, Mathf.RoundToInt(40 * scale), 60, 150 * scale, 0.6f, 3, 300);   // 땅을 뚫고 튀는 물
+            vfx.Burst(foot + new Vector2(0, -2), new Color(0.55f, 0.5f, 0.4f, 0.9f), new Color(0.75f, 0.7f, 0.58f, 0.8f), Mathf.RoundToInt(12 * scale), 10, 45, 0.45f, 2, 0, 10 * scale);   // 흙
+            host.StartCoroutine(lighting.Pulse(foot - new Vector2(0, height * 0.5f), c1, 70 * scale + 30, 1.2f, hold + 0.2f));
+            yield return vfx.WaterJet(foot + new Vector2(0, 4), top, c1, c2, width, 0.1f, hold);
+            vfx.Spray(top, new Vector2(0, -1), 80, c1, c2, Mathf.RoundToInt(40 * scale), 40, 120, 0.9f, 3, 320);   // 꼭대기에서 흩어져 떨어지는 물
+        }
+
         /// <summary>물 기술 명중: 맞은 곳에서 되튀는 큰 물보라(back = 되튀는 방향) + 사방 물방울 + 흰 거품 + 빛 + 흔들림</summary>
         void HeavySplash(Vector2 at, Vector2 back, Color c1, Color c2, float scale)
         {
@@ -436,7 +544,10 @@ namespace Pokepedia.Presentation.Battle.Fx
         /// </summary>
         /// <summary>발사 순간 = 준비 동작이 끝나는 시각(돌진은 절반, 물 기술은 반동 7할). 소리와 카메라가 같이 쓴다.</summary>
         static double ReleaseSec(string fx, double windupSec)
-            => fx == "contact" ? windupSec * 0.5 : IsWaterFx(fx) ? windupSec * 0.7 : windupSec;
+            => fx == "contact" ? windupSec * 0.5 : fx == "hydro_geyser" ? windupSec * 0.7 + GeyserRumbleSec : IsWaterFx(fx) ? windupSec * 0.7 : windupSec;
+
+        /// <summary>물의맹세: 물기둥이 솟기 전 땅이 울리고 거품이 끓는 시간</summary>
+        const double GeyserRumbleSec = 0.4;
 
         /// <summary>
         /// 공격 카메라 (M5, 2.5D): 준비 동작 동안 공격자 쪽으로 다가가며 확대하고, 발사 순간 상대 쪽으로 빠르게 넘어간다.

@@ -35,8 +35,7 @@ namespace Pokepedia.App.Battle
         readonly Func<int> pickOpponent;
         readonly int playerSpeciesId;
         readonly bool canEscape;
-        readonly int cheerRevives;
-        int revivesLeft;
+        readonly bool faintChoice;
         int npcSpeciesId;
         BattleEngine engine;
         bool escaped;
@@ -45,12 +44,12 @@ namespace Pokepedia.App.Battle
         public const double CheerPowerBoost = 1.5;
 
         /// <param name="canEscape">Collection 에서 도망칠 수 있는지. 상대 후보가 1마리면 false (OpponentPicker.CandidateCount, 9.2). Demo 는 항상 도망 불가.</param>
-        /// <param name="cheerRevives">판마다 플레이어가 응원으로 다시 일어서는 횟수 (데모 응원 부활, 5.3). 쓰러지면 BattleEnded 대신 Revived.</param>
+        /// <param name="faintChoice">플레이어가 쓰러질 때마다 지는 대신 [응원한다(Cheer) / 트레이너가 처리한다(TrainerFinish)]를 고르게 한다 (5.3)</param>
         public BattleSession(ContentCatalog catalog, BattleRules rules, IRandom random, BattleMode mode,
-                             int playerSpeciesId, Func<int> pickOpponent, bool canEscape = true, int cheerRevives = 0)
+                             int playerSpeciesId, Func<int> pickOpponent, bool canEscape = true, bool faintChoice = false)
         {
             this.canEscape = canEscape;
-            this.cheerRevives = Math.Max(0, cheerRevives);
+            this.faintChoice = faintChoice;
             this.catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             this.rules = rules ?? throw new ArgumentNullException(nameof(rules));
             this.random = random ?? throw new ArgumentNullException(nameof(random));
@@ -74,7 +73,10 @@ namespace Pokepedia.App.Battle
         public IReadOnlyList<MoveInfo> PlayerMoveInfos => catalog.MoveSetFor(playerSpeciesId);
 
         /// <summary>현재 배틀이 끝났다: 승패가 났거나(State.Winner) 도망쳤다(승자 없음). 이후엔 NextBattle / Retry 만 할 수 있다.</summary>
-        public bool IsOver => escaped || State.IsOver;
+        public bool IsOver => escaped || (State.IsOver && !AwaitingFaintChoice);
+
+        /// <summary>플레이어가 쓰러져 선택을 기다린다 (faintChoice). Cheer 또는 TrainerFinish 만 할 수 있다.</summary>
+        public bool AwaitingFaintChoice => faintChoice && !escaped && State.Winner == BattleState.Npc;
 
         /// <summary>첫 배틀 시작: 등장 이벤트</summary>
         public IReadOnlyList<BattleEvent> Start() => engine.Start();
@@ -83,12 +85,25 @@ namespace Pokepedia.App.Battle
         public IReadOnlyList<BattleEvent> UseMove(int moveIndex)
         {
             if (IsOver) throw new InvalidOperationException("battle is over; call NextBattle() or Retry()");
-            var npcAction = NpcBattleAi.Choose(Npc, Player, rules);
+            if (AwaitingFaintChoice) throw new InvalidOperationException("player fainted; call Cheer() or TrainerFinish()");
+            var npcAction = NpcBattleAi.Choose(Npc, Player, rules, State.Turn + 1);
             var events = engine.PlayTurn(new UseMove(moveIndex), npcAction);
-            if (State.Winner != BattleState.Npc || revivesLeft <= 0) return events;
-            // 응원 부활: 이번 턴의 패배(BattleEnded)를 빼고 다시 일어서는 이벤트로 잇는다
-            revivesLeft--;
-            return events.Where(e => !(e is BattleEnded)).Concat(engine.Revive(BattleState.Player, CheerPowerBoost)).ToList();
+            // 쓰러져 선택을 기다리면 패배(BattleEnded)는 아직 알리지 않는다
+            return AwaitingFaintChoice ? events.Where(e => !(e is BattleEnded)).ToList() : events;
+        }
+
+        /// <summary>[응원한다] 쓰러진 플레이어가 HP 가득, 주는 피해 ×CheerPowerBoost 로 다시 일어나 배틀이 이어진다</summary>
+        public IReadOnlyList<BattleEvent> Cheer()
+        {
+            if (!AwaitingFaintChoice) throw new InvalidOperationException("cheer is only for after the player faints");
+            return engine.Revive(BattleState.Player, CheerPowerBoost);
+        }
+
+        /// <summary>[트레이너가 처리한다] 트레이너가 던진 몬스터볼에 맞아 상대가 쓰러지고 플레이어가 이긴다 (배틀을 바로 끝내고 싶을 때)</summary>
+        public IReadOnlyList<BattleEvent> TrainerFinish()
+        {
+            if (!AwaitingFaintChoice) throw new InvalidOperationException("the trainer only steps in after the player faints");
+            return new BattleEvent[] { new TrainerThrewBall(BattleState.Npc) }.Concat(engine.KnockOut(BattleState.Npc)).ToList();
         }
 
         /// <summary>Demo(와 상대 후보가 1마리인 Collection)는 도망칠 수 없다(상태 변화 없음). 그 밖의 Collection 은 도망에 항상 성공하고 이 배틀이 끝난다.</summary>
@@ -123,7 +138,6 @@ namespace Pokepedia.App.Battle
             var npc = CreateBattler(npcSpeciesId);
             engine = new BattleEngine(new BattleState(new BattleSide(player), new BattleSide(npc)), rules, random);
             escaped = false;
-            revivesLeft = cheerRevives;
         }
 
         Battler CreateBattler(int speciesId)

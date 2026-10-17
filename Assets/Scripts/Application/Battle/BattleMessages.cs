@@ -59,6 +59,9 @@ namespace Pokepedia.App.Battle
         /// <summary>{0} 플레이어 종 이름: 응원 부활 첫 줄 / 둘째 줄</summary>
         public const string Cheer = "battle.cheer";
         public const string CheerRevived = "battle.cheer_revived";
+        /// <summary>트레이너가 처리한다 첫 줄 / 둘째 줄({0} 맞은 상대 종 이름)</summary>
+        public const string TrainerThrew = "battle.trainer_threw";
+        public const string BallHit = "battle.ball_hit";
         public const string Escaped = "battle.escaped";
         public const string CannotEscape = "battle.cannot_escape";
 
@@ -76,6 +79,10 @@ namespace Pokepedia.App.Battle
         public const string QuitAsk = "battle.quit.ask";
         public const string QuitYes = "battle.quit.yes";
         public const string QuitNo = "battle.quit.no";
+        /// <summary>플레이어가 쓰러졌을 때 고르는 메뉴 (5.3): 묻는 말, [{0} 플레이어 종을 응원한다], [트레이너가 처리한다]</summary>
+        public const string FaintAsk = "battle.faint.ask";
+        public const string FaintCheer = "battle.faint.cheer";
+        public const string FaintFinish = "battle.faint.finish";
         public const string InfoType = "battle.info.type";
         public const string InfoPower = "battle.info.power";
         public const string InfoAccuracy = "battle.info.accuracy";
@@ -87,13 +94,13 @@ namespace Pokepedia.App.Battle
         public static IReadOnlyList<string> MessageKeys { get; } = new[]
         {
             WildAppeared, PlayerSentOut, PlayerMove, WildMove, Missed, CriticalHit, SuperEffective, NotVeryEffective, NoEffect,
-            PlayerFainted, WildFainted, Won, Lost, Escaped, CannotEscape, Cheer, CheerRevived,
+            PlayerFainted, WildFainted, Won, Lost, Escaped, CannotEscape, Cheer, CheerRevived, TrainerThrew, BallHit,
         };
 
         /// <summary>메뉴·결과·기술 정보 라벨과 18개 타입 이름</summary>
         public static IReadOnlyList<string> UiKeys { get; } = new[]
             {
-                PromptWhatToDo, MenuFight, MenuRun, ResultNextOpponent, ResultRematch, ResultRetry, ResultTitle, QuitAsk, QuitYes, QuitNo, InfoType, InfoPower, InfoAccuracy,
+                PromptWhatToDo, MenuFight, MenuRun, ResultNextOpponent, ResultRematch, ResultRetry, ResultTitle, QuitAsk, QuitYes, QuitNo, FaintAsk, FaintCheer, FaintFinish, InfoType, InfoPower, InfoAccuracy,
             }
             .Concat(((PokemonType[])Enum.GetValues(typeof(PokemonType))).Select(TypeName))
             .ToArray();
@@ -142,6 +149,8 @@ namespace Pokepedia.App.Battle
                     return One(b.WinnerSide == BattleState.Player ? BattleTextKeys.Won : BattleTextKeys.Lost);
                 case Revived r:
                     return new[] { MessageLine.Of(BattleTextKeys.Cheer, NameOf(r.Side)), MessageLine.Of(BattleTextKeys.CheerRevived, NameOf(r.Side)) };
+                case TrainerThrewBall t:
+                    return new[] { MessageLine.Of(BattleTextKeys.TrainerThrew), MessageLine.Of(BattleTextKeys.BallHit, NameOf(t.TargetSide)) };
                 default:
                     throw new NotSupportedException($"no message for {e.GetType().Name}");
             }

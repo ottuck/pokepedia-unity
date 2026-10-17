@@ -69,6 +69,8 @@ namespace Pokepedia.Presentation.Battle
             Refresh();
         }
 
+        public bool Visible => visible;
+
         public void SetVisible(bool value)
         {
             visible = value;

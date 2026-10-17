@@ -32,4 +32,7 @@ namespace Pokepedia.Domain.Battle
 
     /// <summary>응원으로 다시 일어섰다 (데모 응원 부활, PROJECT.md 5.3). HP 가 Hp/MaxHp 로 돌아오고 공격이 강해진다.</summary>
     public sealed record Revived(int Side, int Hp, int MaxHp) : BattleEvent;
+
+    /// <summary>쓰러진 플레이어 대신 트레이너가 몬스터볼을 던져 TargetSide 를 맞혔다 (BattleSession.TrainerFinish, 5.3). 뒤에 Fainted·BattleEnded 가 온다.</summary>
+    public sealed record TrainerThrewBall(int TargetSide) : BattleEvent;
 }
