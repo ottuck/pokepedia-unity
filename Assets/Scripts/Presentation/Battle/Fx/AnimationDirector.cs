@@ -235,7 +235,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                 _ => "effect",
             };
 
-            ScheduleMoveSounds(fx, typeName, prof.WindupSec);
+            ScheduleMoveSounds(fx, typeName, prof.WindupSec, anim.MoveSfxFor(move.Move.Id));
             host.StartCoroutine(AttackCamera(attacker, target, (float)ReleaseSec(fx, prof.WindupSec)));
 
             Vector2 toTarget = (target.Feet - attacker.Feet).normalized;
@@ -563,20 +563,23 @@ namespace Pokepedia.Presentation.Battle.Fx
             host.StartCoroutine(world.CameraTo(BattleWorld.Toward(target.Center, 0.3f), 1.08f, 0.16f));
         }
 
-        void ScheduleMoveSounds(string fx, string typeName, double windupSec)
+        /// <param name="sfxId">기술 전용 공격음(animation.json moveSfx), 없으면 null → 타입 공격음</param>
+        void ScheduleMoveSounds(string fx, string typeName, double windupSec, string sfxId)
         {
             bool water = IsWaterFx(fx);
             double release = ReleaseSec(fx, windupSec);
             bool charge = fx != "contact" && !water && windupSec >= ChargeSoundMinSec;
-            bool hasMove = SoundBank.HasMoveSound(typeName);
-            float cue = Mathf.Max(0, (float)release - (hasMove ? SoundBank.MoveLead(typeName) : 0));
+            bool hasMove = sfxId != null || SoundBank.HasMoveSound(typeName);
+            float lead = sfxId != null ? SoundBank.MoveSfxLead(sfxId) : hasMove ? SoundBank.MoveLead(typeName) : 0;
+            float cue = Mathf.Max(0, (float)release - lead);
 
             if (charge) sound.PlayStoppable(SfxKind.Charge);
             if (!charge && !hasMove) return;
             host.StartCoroutine(After(cue, () =>
             {
                 if (charge) sound.StopStoppable();
-                if (hasMove) sound.Move(typeName);
+                if (sfxId != null) sound.MoveSfx(sfxId);
+                else if (hasMove) sound.Move(typeName);
             }));
         }
 

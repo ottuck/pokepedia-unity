@@ -3,9 +3,9 @@ using System;
 namespace Pokepedia.Presentation.Audio.Synth
 {
     /// <summary>
-    /// 보관한 속성 공격음: M3-3 에서 2안 중 고르지 않은 쪽. 지금 게임은 쓰지 않지만(굽지도 않는다)
-    /// 속성마다 두 번째 기술을 추가할 때 그대로 쓸 수 있는 품질이라 남겨 둔다(사용자 요청, 2026-10-17).
-    /// 쓰려면 AudioBaker 에서 <see cref="RenderAlternate"/> 로 구워 키를 연결한다. 들어 보기: Tools/audio/render 의 alt_*.wav.
+    /// 보관한 속성 공격음: 속성마다 두 안 중 고르지 않은 쪽. 같은 속성의 두 번째 기술에 쓸 수 있는 품질이라 남겨 둔다.
+    /// 쓰려면 animation.json 의 moveSfx 에 기술 id → 이 id 를 적는다(AudioBaker 가 굽는다).
+    /// 들어 보기: Tools/audio/render 의 alt_*.wav.
     /// 착탄 시각은 만들 때 맞춘 연출 기준(L = 0.8): 물줄기·효과형 고리 0.62L, 발사형 구체 0.44L, 접촉 ≈ 0.12L,
     /// 전기 방전은 크랙이 0.22L(자체 충전 뒤).
     /// </summary>

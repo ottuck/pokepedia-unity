@@ -27,5 +27,6 @@
     "dark":     { "primary": "#705848", "secondary": "#C8B8A8" },
     "steel":    { "primary": "#B8B8D0", "secondary": "#F0F0F8" },
     "fairy":    { "primary": "#EE99AC", "secondary": "#FFE0EC" }
-  }
+  },
+  "moveSfx": { "tackle": "tackle", "water_pledge": "water_geyser" }
 }
