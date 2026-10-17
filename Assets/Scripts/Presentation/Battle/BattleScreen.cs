@@ -156,6 +156,7 @@ namespace Pokepedia.Presentation.Battle
             sides[BattleState.Player] = MakeSide(srt, "Player", new Vector2(66, 148), 122, 100, 112, 46, true);
             vfx = new VfxLayer(world, srt, particleMaterial);
             director = new AnimationDirector(this, sides, vfx, sound, animation, catalog, world, lighting);
+            vsIntro = new VsIntro(this, srt, font, sound, vfx);
 
             var msgInner = Ui.Box(srt, "MessageBox", 2, 156, 236, 58);
             message = new MessageBox(msgInner, font);
@@ -218,10 +219,26 @@ namespace Pokepedia.Presentation.Battle
             world.Backdrop?.SetWeather(1, 0);
             lighting.SetAmbient(theme.Ambient);
             sound.PlayMusic(SoundBank.BattleMusicKey); // 판마다 처음부터
-            yield return PlayThenPrompt(start());
+            var events = start();   // 새 상대가 정해진 뒤에 VS 장면을 그린다
+            yield return PlayVs();
+            yield return PlayThenPrompt(events);
+        }
+
+        /// <summary>도입 VS 장면 (M5): 두 포켓몬의 앞모습·이름·첫 타입 색은 데이터에서 가져온다.</summary>
+        IEnumerator PlayVs()
+        {
+            yield return vsIntro.Play(VsSide(SpeciesOf(BattleState.Player)), VsSide(SpeciesOf(BattleState.Npc)));
+        }
+
+        VsIntro.Side VsSide(int speciesId)
+        {
+            var info = catalog.GetSpecies(speciesId);
+            var tv = animation.TypeFor(info.Species.Types[0]);
+            return new VsIntro.Side(SpriteSheet.Load(info.Sprites.Front), names.Species(speciesId), Ui.Hex(tv.PrimaryRgb), Ui.Hex(tv.SecondaryRgb));
         }
 
         Coroutine victory;   // 진행 중인 승리 연출 (NewBattle 이 멈춘다)
+        VsIntro vsIntro;
 
         IEnumerator PlayThenPrompt(IReadOnlyList<BattleEvent> events)
         {
@@ -337,7 +354,7 @@ namespace Pokepedia.Presentation.Battle
             var effects = AnimationDirector.LabEffects;
             if (labMenu == null)
             {
-                int count = effects.Length + 2;
+                int count = effects.Length + 3;   // 전용 연출 + VS + Victory + 결과 버튼
                 var cells = new Vector3[count];
                 for (int i = 0; i < count; i++) cells[i] = new Vector3(4 + (i % 3) * 76, 4 + (i / 3) * 17, 74);
                 var inner = Ui.Box(hud, "LabMenu", 2, 156, 236, 58);
@@ -348,7 +365,7 @@ namespace Pokepedia.Presentation.Battle
                 labMenu.Chosen += _ => sound.Play(SfxKind.Confirm);
                 vfx.BringToFront();
             }
-            var labels = effects.Select(e => e.Label).Concat(new[] { "Victory", LabOutcomes[labOutcome] }).ToArray();
+            var labels = effects.Select(e => e.Label).Concat(new[] { "VS", "Victory", LabOutcomes[labOutcome] }).ToArray();
             SetMenu(labMenu);
             labMenu.Show(labels, labIndex);
         }
@@ -357,7 +374,7 @@ namespace Pokepedia.Presentation.Battle
         {
             labIndex = i;
             var effects = AnimationDirector.LabEffects;
-            if (i == effects.Length + 1) { labOutcome = (labOutcome + 1) % LabOutcomes.Length; ShowLabMenu(); return; }
+            if (i == effects.Length + 2) { labOutcome = (labOutcome + 1) % LabOutcomes.Length; ShowLabMenu(); return; }
             labMenu.Hide();
             SetMenu(null);
             StartCoroutine(PlayLab(i));
@@ -367,6 +384,10 @@ namespace Pokepedia.Presentation.Battle
         {
             var effects = AnimationDirector.LabEffects;
             if (i == effects.Length)
+            {
+                yield return PlayVs();
+            }
+            else if (i == effects.Length + 1)
             {
                 yield return director.Victory(BattleState.Player);
                 yield return VfxLayer.Wait(3f);

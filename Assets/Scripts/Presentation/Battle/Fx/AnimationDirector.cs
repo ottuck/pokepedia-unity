@@ -25,9 +25,7 @@ namespace Pokepedia.Presentation.Battle.Fx
             ("thunder_fork", "TB-B fork", BattleState.Player),
             ("lightning_strike", "TB-C sky", BattleState.Player),
             ("hydro_beam", "HP-A beam", BattleState.Npc),
-            ("hydro_twin", "HP-B twin", BattleState.Npc),
             ("hydro_burst", "HP-C 3x", BattleState.Npc),
-            ("water_cannon", "HP-D old", BattleState.Npc),
         };
 
         readonly MonoBehaviour host;
@@ -50,7 +48,7 @@ namespace Pokepedia.Presentation.Battle.Fx
 
         static Color Rgb(int rgb) => new Color(((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f, (rgb & 0xFF) / 255f);
 
-        static bool IsWaterFx(string fx) => fx == "water_cannon" || fx.StartsWith("hydro_", StringComparison.Ordinal);
+        static bool IsWaterFx(string fx) => fx.StartsWith("hydro_", StringComparison.Ordinal);
 
         // ------------------------------------------------------------------ 등장 · 기절 · 승리
         public IEnumerator SendOut(int side, SpeciesInfo info)
@@ -220,12 +218,12 @@ namespace Pokepedia.Presentation.Battle.Fx
                     }
                     break;
 
-                // ---------------- 하이드로펌프 후보 (A 굵은 빔, B 쌍포, C 3연발, D 예전 물줄기)
+                // ---------------- 하이드로펌프(A 물줄기)·물대포(C 3연발)
                 case "hydro_beam":
                 {
                     bool mouth = FromMouth(prof, side);
                     if (mouth) attacker.Animator.Hold(MouthFrame);
-                    var muzzle = Muzzle(attacker, prof, side, 0);
+                    var muzzle = Muzzle(attacker, prof, side);
                     var impact = missed ? target.Center + new Vector2(40, -16) : Surface(target, muzzle);
                     var away = (impact - muzzle).normalized;
                     host.StartCoroutine(lighting.Pulse(muzzle, c1, 60, 1.2f, 0.4f));
@@ -247,34 +245,11 @@ namespace Pokepedia.Presentation.Battle.Fx
                     break;
                 }
 
-                case "hydro_twin":
-                {
-                    var left = Muzzle(attacker, null, side, -1);
-                    var right = Muzzle(attacker, null, side, 1);
-                    var mid = Muzzle(attacker, null, side, 0);
-                    var impact = missed ? target.Center + new Vector2(40, -16) : Surface(target, mid);
-                    var away = (impact - mid).normalized;
-                    yield return Recoil(attacker, -toTarget * 4, prof.WindupSec * 0.7f);
-                    host.StartCoroutine(lighting.Pulse(left, c1, 70, 1.4f, 0.8f));
-                    host.StartCoroutine(lighting.Pulse(right, c1, 70, 1.4f, 0.8f));
-                    host.StartCoroutine(Recoil(attacker, -toTarget * 7, 0.7f));
-                    host.StartCoroutine(vfx.WaterJet(left, impact, c1, c2, 11, 0.1f, 0.5f, !missed));
-                    if (missed) yield return Parallel(vfx.WaterJet(right, impact, c1, c2, 11, 0.1f, 0.5f, false), Dodge(target));
-                    else
-                    {
-                        host.StartCoroutine(vfx.Shake(3, 0.6f));
-                        host.StartCoroutine(Shove(target, away * 12, 0.6f));
-                        yield return vfx.WaterJet(right, impact, c1, c2, 11, 0.1f, 0.5f);
-                        HeavySplash(impact, -away, c1, c2, 1.3f);
-                    }
-                    break;
-                }
-
                 case "hydro_burst":
                 {
                     bool mouth = FromMouth(prof, side);
                     if (mouth) attacker.Animator.Hold(MouthFrame);
-                    var muzzle = Muzzle(attacker, prof, side, 0);
+                    var muzzle = Muzzle(attacker, prof, side);
                     var dest = missed ? target.Center + new Vector2(34, -14) : target.Center;
                     for (int k = 0; k < 3; k++)
                     {
@@ -291,19 +266,6 @@ namespace Pokepedia.Presentation.Battle.Fx
                     attacker.Animator.Release();
                     break;
                 }
-
-                case "water_cannon":
-                    host.StartCoroutine(lighting.Pulse(attacker.Center, c1, 60, 1.1f, 0.55f));
-                    yield return Recoil(attacker, -toTarget * 5, prof.WindupSec);
-                    yield return vfx.Stream(attacker.Center, missed ? target.Center + new Vector2(30, -10) : target.Center,
-                                            c1, c2, 0.5f, 6, 260, 4, 3);
-                    if (missed) yield return Dodge(target);
-                    else
-                    {
-                        vfx.Burst(target.Center, c1, c2, 36, 40, 120, 0.55f, 3, 260, 4);
-                        host.StartCoroutine(lighting.Pulse(target.Center, c1, 90, 1.6f, 0.55f));
-                    }
-                    break;
 
                 // ---------------- 공통 타임라인
                 case "contact":
@@ -357,14 +319,14 @@ namespace Pokepedia.Presentation.Battle.Fx
 
         /// <summary>
         /// 물 기술의 발사 위치. 앞모습(상대 쪽)이고 프로필에 입 위치(animation.json 의 mouth)가 있으면 입 바로 앞,
-        /// 아니면 몸 위쪽(뒷모습은 입이 안 보인다). lane 은 쌍포용 좌우(-1, 0, 1, 쌍포는 등껍질 대포라 입을 쓰지 않는다).
+        /// 아니면 몸 위쪽(뒷모습은 입이 안 보인다).
         /// 스프라이트 크기에 비례하므로 다른 종에도 그럴듯하게 맞는다.
         /// </summary>
-        static Vector2 Muzzle(BattleSideView v, AnimationProfile prof, int side, int lane)
+        static Vector2 Muzzle(BattleSideView v, AnimationProfile prof, int side)
         {
             if (FromMouth(prof, side))
                 return v.Center + new Vector2(Mathf.Round(v.Size.x * (float)prof.Mouth.X), Mathf.Round(v.Size.y * (float)prof.Mouth.Y));
-            return v.Center + new Vector2(Mathf.Round(v.Size.x * 0.2f * lane), -Mathf.Round(v.Size.y * 0.22f));
+            return v.Center + new Vector2(0, -Mathf.Round(v.Size.y * 0.22f));
         }
 
         /// <summary>animation.json 의 mouth 는 앞모습 첫 프레임 기준이다. 입에서 쏘는 동안 이 프레임에 고정해야 입과 발사 위치가 맞는다(머리가 프레임마다 크게 움직인다).</summary>
@@ -421,7 +383,7 @@ namespace Pokepedia.Presentation.Battle.Fx
         void ScheduleMoveSounds(string fx, string typeName, double windupSec)
         {
             bool water = IsWaterFx(fx);
-            double release = fx == "contact" ? windupSec * 0.5 : water && fx != "water_cannon" ? windupSec * 0.7 : windupSec;
+            double release = fx == "contact" ? windupSec * 0.5 : water ? windupSec * 0.7 : windupSec;
             bool charge = fx != "contact" && !water && windupSec >= ChargeSoundMinSec;
             bool hasMove = SoundBank.HasMoveSound(typeName);
             float cue = Mathf.Max(0, (float)release - (hasMove ? SoundBank.MoveLead(typeName) : 0));
