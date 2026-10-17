@@ -26,7 +26,10 @@
     "razor_leaf": "Razor Leaf",
     "sludge_bomb": "Sludge Bomb",
     "shadow_ball": "Shadow Ball",
-    "psychic": "Psychic"
+    "psychic": "Psychic",
+    "thunder": "Thunder",
+    "water_gun": "Water Gun",
+    "confusion": "Confusion"
   },
   "battle": {
     "wild_appeared": "A wild {0} appeared!",

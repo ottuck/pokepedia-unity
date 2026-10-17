@@ -7,5 +7,8 @@
   { "id": "razor_leaf",   "type": "grass",    "category": "physical", "power": 35, "accuracy": 95,  "nameKey": "move.razor_leaf",   "animKind": "projectile", "role": "signature" },
   { "id": "sludge_bomb",  "type": "poison",   "category": "special",  "power": 35, "accuracy": 95,  "nameKey": "move.sludge_bomb",  "animKind": "projectile", "role": "signature" },
   { "id": "shadow_ball",  "type": "ghost",    "category": "special",  "power": 35, "accuracy": 95,  "nameKey": "move.shadow_ball",  "animKind": "effect",     "role": "signature" },
-  { "id": "psychic",      "type": "psychic",  "category": "special",  "power": 35, "accuracy": 95,  "nameKey": "move.psychic",      "animKind": "effect",     "role": "signature" }
+  { "id": "psychic",      "type": "psychic",  "category": "special",  "power": 35, "accuracy": 95,  "nameKey": "move.psychic",      "animKind": "effect",     "role": "signature" },
+  { "id": "thunder",      "type": "electric", "category": "special",  "power": 45, "accuracy": 70,  "nameKey": "move.thunder",      "animKind": "effect",     "role": "secondary" },
+  { "id": "water_gun",    "type": "water",    "category": "special",  "power": 25, "accuracy": 100, "nameKey": "move.water_gun",    "animKind": "projectile", "role": "secondary" },
+  { "id": "confusion",    "type": "psychic",  "category": "special",  "power": 28, "accuracy": 100, "nameKey": "move.confusion",    "animKind": "effect",     "role": "secondary" }
 ]

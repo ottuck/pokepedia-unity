@@ -18,10 +18,10 @@ namespace Pokepedia.Presentation.Battle
     /// </summary>
     public sealed class BattleWorld
     {
-        // 그리는 순서 (SpriteRenderer.sortingOrder). 숫자가 클수록 위. 배경 레이어는 BattleBackdrop 이 1~7 을 쓴다.
+        // 그리는 순서 (SpriteRenderer.sortingOrder). 숫자가 클수록 위. 배경 레이어는 BattleBackdrop 이 0~11 을 쓴다.
         public const int SortBackground = -10;
         public const int SortPlatform = 10;
-        public const int SortShadow = 11;
+        public const int SortShadow = 12;
         public const int SortSprite = 20;
         public const int SortFlash = 21;
         public const int SortFx = 30;

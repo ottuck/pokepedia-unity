@@ -11,6 +11,7 @@ namespace Pokepedia.Content
     /// 종(species.json 의 animProfile 키)별 연출 데이터 (PROJECT.md 5.2: 포켓몬별 애니메이션을 만들지 않고 강도·속도를 데이터로 조정).
     /// MoveFx: 기술 id → 전용 이펙트 id (Showcase 오버라이드, 예: pikachu 의 thunderbolt → "lightning_strike").
     /// 없으면 화면이 기술의 animKind(접촉/발사/효과) 기본 타임라인을 쓴다.
+    /// Mouth: 앞모습 스프라이트에서 입의 위치(없으면 null). 물 기술의 발사 위치로 쓴다.
     /// </summary>
     public sealed record AnimationProfile(
         string Key,
@@ -18,7 +19,11 @@ namespace Pokepedia.Content
         int LungePx,
         int HitShakePx,
         int KnockbackPx,
-        IReadOnlyDictionary<string, string> MoveFx);
+        IReadOnlyDictionary<string, string> MoveFx,
+        SpriteAnchor Mouth = null);
+
+    /// <summary>스프라이트 위의 한 점: 가운데에서의 거리를 스프라이트 폭·높이의 비율로 (-0.5 ~ 0.5, x 는 오른쪽, y 는 아래가 +).</summary>
+    public sealed record SpriteAnchor(double X, double Y);
 
     /// <summary>타입별 이펙트 색 (0xRRGGBB). 공통 이펙트 프리팹 하나 + 타입별 색 파라미터 (PROJECT.md 5.2).</summary>
     public sealed record TypeVisual(PokemonType Type, int PrimaryRgb, int SecondaryRgb);
@@ -40,8 +45,9 @@ namespace Pokepedia.Content
 
         static readonly string[] TopFields = { "defaults", "profiles", "types" };
         static readonly string[] DefaultsFields = { "windupSec", "lungePx", "hitShakePx", "knockbackPx" };
-        static readonly string[] ProfileFields = { "windupSec", "lungePx", "hitShakePx", "knockbackPx", "moveFx" };
+        static readonly string[] ProfileFields = { "windupSec", "lungePx", "hitShakePx", "knockbackPx", "moveFx", "mouth" };
         static readonly string[] TypeFields = { "primary", "secondary" };
+        static readonly string[] AnchorFields = { "x", "y" };
 
         static readonly IReadOnlyDictionary<string, string> NoMoveFx =
             new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
@@ -150,13 +156,22 @@ namespace Pokepedia.Content
                 moveFx = new ReadOnlyDictionary<string, string>(map);
             }
 
+            SpriteAnchor mouth = null;
+            if (o.Has("mouth"))
+            {
+                var m = o.Object("mouth", o.Where + ": mouth");
+                m.OnlyFields(AnchorFields);
+                mouth = new SpriteAnchor(m.Double("x", -0.5, 0.5), m.Double("y", -0.5, 0.5));
+            }
+
             return new AnimationProfile(
                 key,
                 o.Has("windupSec") ? WindupSec(o) : d.WindupSec,
                 o.Has("lungePx") ? Px(o, "lungePx") : d.LungePx,
                 o.Has("hitShakePx") ? Px(o, "hitShakePx") : d.HitShakePx,
                 o.Has("knockbackPx") ? Px(o, "knockbackPx") : d.KnockbackPx,
-                moveFx);
+                moveFx,
+                mouth);
         }
 
         static Dictionary<PokemonType, TypeVisual> ParseTypes(Obj o)

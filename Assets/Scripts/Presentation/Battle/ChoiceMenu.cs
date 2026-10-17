@@ -43,6 +43,7 @@ namespace Pokepedia.Presentation.Battle
                 var cursor = Ui.Label(parent, "Cursor" + i, font, c.x, c.y, 12, 14);
                 cursor.text = "▶";
                 var label = Ui.Label(parent, "Item" + i, font, c.x + 12, c.y, c.z - 12, 14);
+                label.textWrappingMode = TextWrappingModes.NoWrap;   // 칸보다 긴 이름이 다음 줄로 넘어가 아래 칸과 겹치지 않게 (한 줄 유지)
                 label.raycastTarget = true;
                 var button = label.gameObject.AddComponent<Button>();
                 button.transition = Selectable.Transition.None;

@@ -26,7 +26,10 @@
     "razor_leaf": "잎날가르기",
     "sludge_bomb": "오물폭탄",
     "shadow_ball": "섀도볼",
-    "psychic": "사이코키네시스"
+    "psychic": "사이코키네시스",
+    "thunder": "번개",
+    "water_gun": "물대포",
+    "confusion": "염동력"
   },
   "battle": {
     "wild_appeared": "야생의 {0}이(가) 나타났다!",

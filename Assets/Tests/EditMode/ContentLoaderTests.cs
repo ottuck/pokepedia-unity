@@ -25,7 +25,9 @@ namespace Pokepedia.Tests
         static readonly string Moves = "[" + string.Join(",",
             MoveJson("tackle", "normal", "basic", "physical", 16, 100, "contact"),
             MoveJson("thunderbolt", "electric", "signature"),
+            MoveJson("thunder", "electric", "secondary", power: 45, accuracy: 70, animKind: "effect"),
             MoveJson("flamethrower", "fire", "signature"),
+            MoveJson("ember", "fire", "secondary"),
             MoveJson("wing_attack", "flying", "signature", "physical", animKind: "contact")) + "]";
 
         static readonly string Species = "[" + string.Join(",",
@@ -70,11 +72,12 @@ namespace Pokepedia.Tests
         }
 
         [Test]
-        public void MoveSet_IsBasicThenOneSignaturePerType()
+        public void MoveSet_IsBasicPlusTwoTypeMoves()
         {
-            // 기술은 타입에서 자동 배정 (PROJECT.md 6.3)
+            // 기술은 타입에서 자동 배정 (PROJECT.md 6.3): 기본기 + 속성 기술 2개.
+            // 단일 타입은 그 타입의 대표 기술과 보조 기술, 이중 타입은 타입마다 대표 기술 하나씩 (보조 기술은 받지 않는다).
             var c = ContentLoader.Load(Species, Moves, Roster);
-            CollectionAssert.AreEqual(new[] { "tackle", "thunderbolt" }, c.MoveSetFor(25).Select(m => m.Move.Id));
+            CollectionAssert.AreEqual(new[] { "tackle", "thunderbolt", "thunder" }, c.MoveSetFor(25).Select(m => m.Move.Id));
             CollectionAssert.AreEqual(new[] { "tackle", "flamethrower", "wing_attack" }, c.MoveSetFor(6).Select(m => m.Move.Id));
         }
 
@@ -149,7 +152,7 @@ namespace Pokepedia.Tests
         }
 
         [Test]
-        public void ExactlyOneBasicMove_AndOneSignaturePerType()
+        public void ExactlyOneBasicMove_AndAtMostOneSignatureAndOneSecondaryPerType()
         {
             var none = "[" + MoveJson("thunderbolt", "electric", "signature") + "]";
             var two = "[" + MoveJson("tackle", "normal", "basic") + "," + MoveJson("pound", "normal", "basic") + "]";
@@ -157,6 +160,9 @@ namespace Pokepedia.Tests
             Fails(() => ContentLoader.Load("[]", none, "[]"));
             Fails(() => ContentLoader.Load("[]", two, "[]"));
             Fails(() => ContentLoader.Load("[]", twoSig, "[]"));
+            var twoSecondary = "[" + MoveJson("tackle", "normal", "basic") + "," + MoveJson("thunderbolt", "electric", "signature") + "," +
+                               MoveJson("thunder", "electric", "secondary") + "," + MoveJson("zap_cannon", "electric", "secondary") + "]";
+            Fails(() => ContentLoader.Load("[]", twoSecondary, "[]"));
         }
     }
 }

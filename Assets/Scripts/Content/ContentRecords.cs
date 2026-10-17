@@ -7,9 +7,10 @@ namespace Pokepedia.Content
 
     /// <summary>
     /// 기술의 역할. Basic = 모든 포켓몬이 받는 기본기(데이터 전체에 정확히 1개),
-    /// Signature = 그 기술 타입의 대표 기술(타입마다 최대 1개). 종의 기술은 이 역할로 자동 배정한다.
+    /// Signature = 그 기술 타입의 대표 기술(타입마다 최대 1개), Secondary = 그 타입의 보조 기술(타입마다 최대 1개, 단일 타입 종만 받는다).
+    /// 종의 기술은 이 역할로 자동 배정한다: 기본기 + 속성 기술 2개 (PROJECT.md 6.3).
     /// </summary>
-    public enum MoveRole { Basic, Signature }
+    public enum MoveRole { Basic, Signature, Secondary }
 
     /// <summary>roster.json 의 품질 등급 (PROJECT.md 5.2).</summary>
     public enum RosterTier { Showcase, Standard }

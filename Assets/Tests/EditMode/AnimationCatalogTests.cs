@@ -52,6 +52,14 @@ namespace Pokepedia.Tests
             Assert.AreEqual(0.15, p.WindupSec);
             Assert.AreEqual(10, p.LungePx);
             Assert.AreEqual(2, p.HitShakePx);
+            Assert.IsNull(p.Mouth);   // 입 위치는 기본값이 없다 (없으면 화면이 몸 기준 위치를 쓴다)
+        }
+
+        [Test]
+        public void Mouth_IsFractionOfSpriteFromCenter()
+        {
+            var p = Parse("{ 'blastoise': { 'mouth': { 'x': -0.47, 'y': -0.18 } } }").ProfileFor("blastoise");
+            Assert.AreEqual(new SpriteAnchor(-0.47, -0.18), p.Mouth);
         }
 
         [Test]
@@ -85,6 +93,7 @@ namespace Pokepedia.Tests
 
         [TestCase("'lungePx': 65", "lungePx")]       // 범위 밖
         [TestCase("'windupSec': '0.5'", "windupSec")] // 종류가 다름
+        [TestCase("'mouth': { 'x': -0.6, 'y': 0 }", "mouth")]   // 스프라이트 밖
         public void Profile_BadValue_NamesProfileAndField(string field, string fieldName)
         {
             FailsWith(Json("{ 'pikachu': { " + field + " } }"), "pikachu", fieldName);
