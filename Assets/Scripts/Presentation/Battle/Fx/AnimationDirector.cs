@@ -352,34 +352,49 @@ namespace Pokepedia.Presentation.Battle.Fx
                     break;
                 }
 
-                // ---------------- 물의맹세: 상대 발밑이 울리며 물거품이 끓다가 땅에서 물기둥이 솟구쳐 상대를 띄운다
+                // ---------------- 물의맹세: 상대 주변 땅이 울리며 물거품이 끓다가, 둘레에서 작은 물기둥들이 차례로 솟고
+                //                   마지막에 상대 발밑에서 가장 큰 물기둥이 솟구쳐 상대를 띄운다
                 case "hydro_geyser":
                 {
                     var spot = missed ? target.Feet + new Vector2(32, 0) : target.Feet;   // 빗나가면 옆자리에서 솟는다
+                    float span = Mathf.Max(18, Mathf.Round(target.Size.x * 0.75f));      // 둘레 물기둥이 퍼지는 폭(상대 몸에 비례)
                     float prep = (float)ReleaseSec(fx, prof.WindupSec);
                     host.StartCoroutine(Recoil(attacker, new Vector2(0, 3), prep));     // 웅크렸다가
                     host.StartCoroutine(vfx.Shake(1, prep));
-                    host.StartCoroutine(lighting.Pulse(spot, c1, 50, 0.9f, prep));
+                    host.StartCoroutine(lighting.Pulse(spot, c1, 60, 0.9f, prep));
                     for (float t = 0, next = 0; t < prep; t += Time.deltaTime)
                     {
                         if (t >= next)
                         {
-                            vfx.Spray(spot + new Vector2(UnityEngine.Random.Range(-14f, 14f), 0), new Vector2(0, -1), 25, c2, Color.white, 2, 25, 65, 0.3f, 2, 220);
-                            next += 0.04f;
+                            vfx.Spray(spot + new Vector2(UnityEngine.Random.Range(-span, span), UnityEngine.Random.Range(-6f, 4f)), new Vector2(0, -1), 25, c2, Color.white, 2, 25, 65, 0.3f, 2, 220);
+                            next += 0.03f;
                         }
                         yield return null;
                     }
-                    var top = spot - new Vector2(0, Mathf.Round(target.Size.y + 34));
+
+                    // 둘레: 왼쪽 → 오른쪽 → 뒤 → 앞 순서로 0.12초마다 작은 물기둥 (뒤쪽일수록 위, 짧게)
+                    var ring = new[]
+                    {
+                        new Vector3(-span, 3, 0.55f), new Vector3(span * 1.05f, -3, 0.6f),
+                        new Vector3(-span * 0.45f, -10, 0.45f), new Vector3(span * 0.55f, 7, 0.5f),
+                    };
+                    float colW = Mathf.Clamp(Mathf.Round(target.Size.x * 0.22f), 7, 11);
+                    host.StartCoroutine(vfx.Shake(2, ring.Length * 0.12f + 0.2f));
+                    foreach (var r in ring)
+                    {
+                        var at = spot + new Vector2(Mathf.Round(r.x), r.y);
+                        host.StartCoroutine(Column(at, Mathf.Round(target.Size.y * r.z + 18), colW, 0.5f, c1, c2, 0.5f));
+                        yield return VfxLayer.Wait(0.12f);
+                    }
+
+                    // 가운데: 가장 큰 물기둥이 상대를 띄운다
                     float width = Mathf.Clamp(Mathf.Round(target.Size.x * 0.4f), 12, 22);
                     host.StartCoroutine(vfx.Shake(3, 0.6f));
-                    host.StartCoroutine(lighting.Pulse(spot - new Vector2(0, Mathf.Round(target.Size.y / 2)), c1, 120, 1.9f, 0.8f));
-                    vfx.Spray(spot, new Vector2(0, -1), 70, c1, Color.white, 40, 60, 150, 0.6f, 3, 300);   // 땅을 뚫고 튀는 물
-                    vfx.Burst(spot + new Vector2(0, -2), new Color(0.55f, 0.5f, 0.4f, 0.9f), new Color(0.75f, 0.7f, 0.58f, 0.8f), 12, 10, 45, 0.45f, 2, 0, 10);   // 흙
-                    const float lift = 10;
+                    host.StartCoroutine(lighting.Pulse(spot - new Vector2(0, Mathf.Round(target.Size.y / 2)), c1, 130, 2.0f, 0.8f));
+                    const float lift = 12;
                     if (missed) host.StartCoroutine(Dodge(target));
                     else host.StartCoroutine(Move(target, Vector2.zero, new Vector2(0, -lift), 0.25f, true));   // 물기둥에 떠오른다(그림자는 바닥)
-                    yield return vfx.WaterJet(spot + new Vector2(0, 4), top, c1, c2, width, 0.12f, 0.55f);
-                    vfx.Spray(top, new Vector2(0, -1), 80, c1, c2, 40, 40, 120, 0.9f, 3, 320);   // 꼭대기에서 흩어져 떨어지는 물
+                    yield return Column(spot, Mathf.Round(target.Size.y + 38), width, 0.55f, c1, c2, 1f);
                     if (!missed)
                     {
                         HeavySplash(target.Center, new Vector2(0, -1), c1, c2, 0.7f);
@@ -492,6 +507,20 @@ namespace Pokepedia.Presentation.Battle.Fx
                 yield return null;
             }
             view.SetOffset(by);
+        }
+
+        /// <summary>
+        /// 땅에서 솟는 물기둥 하나 (물의맹세): 발밑에서 흙·물이 튀고 height 만큼 물줄기가 솟았다가, 꼭대기에서 흩어진 물이 떨어진다.
+        /// scale 은 튀는 물·흙의 양 (둘레의 작은 물기둥은 0.5).
+        /// </summary>
+        IEnumerator Column(Vector2 foot, float height, float width, float hold, Color c1, Color c2, float scale)
+        {
+            var top = foot - new Vector2(0, height);
+            vfx.Spray(foot, new Vector2(0, -1), 70, c1, Color.white, Mathf.RoundToInt(40 * scale), 60, 150 * scale, 0.6f, 3, 300);   // 땅을 뚫고 튀는 물
+            vfx.Burst(foot + new Vector2(0, -2), new Color(0.55f, 0.5f, 0.4f, 0.9f), new Color(0.75f, 0.7f, 0.58f, 0.8f), Mathf.RoundToInt(12 * scale), 10, 45, 0.45f, 2, 0, 10 * scale);   // 흙
+            host.StartCoroutine(lighting.Pulse(foot - new Vector2(0, height * 0.5f), c1, 70 * scale + 30, 1.2f, hold + 0.2f));
+            yield return vfx.WaterJet(foot + new Vector2(0, 4), top, c1, c2, width, 0.1f, hold);
+            vfx.Spray(top, new Vector2(0, -1), 80, c1, c2, Mathf.RoundToInt(40 * scale), 40, 120, 0.9f, 3, 320);   // 꼭대기에서 흩어져 떨어지는 물
         }
 
         /// <summary>물 기술 명중: 맞은 곳에서 되튀는 큰 물보라(back = 되튀는 방향) + 사방 물방울 + 흰 거품 + 빛 + 흔들림</summary>
