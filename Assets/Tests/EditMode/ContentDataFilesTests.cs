@@ -43,6 +43,15 @@ namespace Pokepedia.Tests
         }
 
         [Test]
+        public void RealData_EverySpeciesHasBasicPlusTwoTypeMoves()
+        {
+            // 사용자 결정(2026-10-17): 속성 기술 2개 + 몸통박치기 = 3개. 단일 타입 종은 보조 기술(secondary)이 있어야 한다.
+            var c = ContentLoader.Load(Read("Data", "species.json"), Read("Data", "moves.json"), Read("Data", "roster.json"));
+            foreach (var s in c.Species)
+                Assert.AreEqual(3, c.MoveSetFor(s.Id).Count, $"species {s.Id}");
+        }
+
+        [Test]
         public void EveryNameKey_ExistsInAllLocales()
         {
             var c = LoadCatalog();

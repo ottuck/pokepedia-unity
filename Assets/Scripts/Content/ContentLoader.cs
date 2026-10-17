@@ -87,7 +87,7 @@ namespace Pokepedia.Content
                 int power = o.Int("power", min: 1);
                 int accuracy = o.Int("accuracy", min: 1, max: 100);
                 var animKind = o.Enum("animKind", AnimKind.Contact, AnimKind.Projectile, AnimKind.Effect);
-                var role = o.Enum("role", MoveRole.Basic, MoveRole.Signature);
+                var role = o.Enum("role", MoveRole.Basic, MoveRole.Signature, MoveRole.Secondary);
 
                 result.Add(new MoveInfo(new Move(id, type, category, power, accuracy), o.String("nameKey"), animKind, role));
             }

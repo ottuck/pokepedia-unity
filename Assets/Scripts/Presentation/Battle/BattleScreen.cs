@@ -363,7 +363,7 @@ namespace Pokepedia.Presentation.Battle
             if (i == effects.Length)
             {
                 yield return director.Victory(BattleState.Player);
-                yield return VfxLayer.Wait(1.2f);
+                yield return VfxLayer.Wait(3f);
                 world.Backdrop?.SetWeather(1, 1.2f);
                 StartCoroutine(lighting.FadeAmbient(theme.Ambient, 1.2f));
             }

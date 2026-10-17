@@ -84,7 +84,7 @@ namespace Pokepedia.Presentation.Battle.Fx
         }
 
         /// <summary>
-        /// 승리: 비가 그치고 하늘이 따뜻하게 밝아진다(날씨·전역 조명이 2.5초에 걸쳐 바뀜). 이긴 쪽은 빛 번짐·반짝임 속에서
+        /// 승리: 비가 그치고 노을 진 맑은 하늘로 바뀐다(날씨·전역 조명이 1.4초에 걸쳐 바뀜). 이긴 쪽은 빛 번짐·반짝임 속에서
         /// 세 번 뛰고(그림자는 바닥에 남음), 카메라가 이긴 쪽으로 다가간다. 다음 판이 시작되면 BattleScreen 이 날씨를 되돌린다.
         /// </summary>
         public IEnumerator Victory(int side)
@@ -93,8 +93,8 @@ namespace Pokepedia.Presentation.Battle.Fx
             var gold = new Color(1f, 0.86f, 0.42f);
             if (world.Backdrop != null)
             {
-                world.Backdrop.SetWeather(0, 2.5f);
-                host.StartCoroutine(lighting.FadeAmbient(world.Backdrop.Theme.ClearAmbient, 2.5f, 1.3f));
+                world.Backdrop.SetWeather(0, 1.4f);
+                host.StartCoroutine(lighting.FadeAmbient(world.Backdrop.Theme.ClearAmbient, 1.4f));
             }
             host.StartCoroutine(world.PanTo(side == BattleState.Player ? -8 : 8, 0.7f));
             host.StartCoroutine(lighting.Pulse(view.Center, gold, 150, 1.9f, 1.3f));
@@ -159,8 +159,8 @@ namespace Pokepedia.Presentation.Battle.Fx
                 case "thunder_arc":
                 {
                     yield return Charge(attacker, c1, c2, prof.WindupSec, 26);
-                    var from = attacker.Center + new Vector2(0, -4);
-                    var to = missed ? target.Center + new Vector2(30, -8) : target.Center;
+                    var from = Edge(attacker, target.Center);
+                    var to = missed ? target.Center + new Vector2(30, -8) : Surface(target, from);
                     host.StartCoroutine(vfx.ScreenFlash(new Color(1f, 1f, 0.75f, 0.45f), 0.16f));
                     host.StartCoroutine(lighting.Pulse(from, c1, 70, 1.8f, 0.4f));
                     host.StartCoroutine(lighting.Pulse(to, c1, 130, 2.4f, 0.55f));
@@ -181,8 +181,8 @@ namespace Pokepedia.Presentation.Battle.Fx
                 case "thunder_fork":
                 {
                     yield return Charge(attacker, c1, c2, prof.WindupSec, 26);
-                    var from = attacker.Center + new Vector2(0, -4);
-                    var to = missed ? target.Center + new Vector2(30, -8) : target.Center;
+                    var from = Edge(attacker, target.Center);
+                    var to = missed ? target.Center + new Vector2(30, -8) : Surface(target, from);
                     host.StartCoroutine(lighting.Pulse(from, c1, 80, 2.0f, 0.6f));
                     // 잔가지 세 줄기가 먼저 뻗고, 마지막에 굵은 줄기 하나가 꽂힌다
                     for (int k = 0; k < 3; k++)
@@ -223,7 +223,7 @@ namespace Pokepedia.Presentation.Battle.Fx
                 // ---------------- 하이드로펌프 후보 (A 굵은 빔, B 쌍포, C 3연발, D 예전 물줄기)
                 case "hydro_beam":
                 {
-                    var muzzle = Muzzle(attacker, 0);
+                    var muzzle = Muzzle(attacker, prof, side, 0);
                     var impact = missed ? target.Center + new Vector2(40, -16) : Surface(target, muzzle);
                     var away = (impact - muzzle).normalized;
                     host.StartCoroutine(lighting.Pulse(muzzle, c1, 60, 1.2f, 0.4f));
@@ -245,9 +245,9 @@ namespace Pokepedia.Presentation.Battle.Fx
 
                 case "hydro_twin":
                 {
-                    var left = Muzzle(attacker, -1);
-                    var right = Muzzle(attacker, 1);
-                    var mid = Muzzle(attacker, 0);
+                    var left = Muzzle(attacker, null, side, -1);
+                    var right = Muzzle(attacker, null, side, 1);
+                    var mid = Muzzle(attacker, null, side, 0);
                     var impact = missed ? target.Center + new Vector2(40, -16) : Surface(target, mid);
                     var away = (impact - mid).normalized;
                     yield return Recoil(attacker, -toTarget * 4, prof.WindupSec * 0.7f);
@@ -268,7 +268,7 @@ namespace Pokepedia.Presentation.Battle.Fx
 
                 case "hydro_burst":
                 {
-                    var muzzle = Muzzle(attacker, 0);
+                    var muzzle = Muzzle(attacker, prof, side, 0);
                     var dest = missed ? target.Center + new Vector2(34, -14) : target.Center;
                     for (int k = 0; k < 3; k++)
                     {
@@ -349,11 +349,16 @@ namespace Pokepedia.Presentation.Battle.Fx
         }
 
         /// <summary>
-        /// 물 기술의 발사 위치: 몸 위쪽(거북왕은 등껍질 대포). lane 은 쌍포용 좌우(-1, 0, 1).
+        /// 물 기술의 발사 위치. 앞모습(상대 쪽)이고 프로필에 입 위치(animation.json 의 mouth)가 있으면 입 바로 앞,
+        /// 아니면 몸 위쪽(뒷모습은 입이 안 보인다). lane 은 쌍포용 좌우(-1, 0, 1, 쌍포는 등껍질 대포라 입을 쓰지 않는다).
         /// 스프라이트 크기에 비례하므로 다른 종에도 그럴듯하게 맞는다.
         /// </summary>
-        static Vector2 Muzzle(BattleSideView v, int lane)
-            => v.Center + new Vector2(Mathf.Round(v.Size.x * 0.2f * lane), -Mathf.Round(v.Size.y * 0.22f));
+        static Vector2 Muzzle(BattleSideView v, AnimationProfile prof, int side, int lane)
+        {
+            if (prof?.Mouth != null && side == BattleState.Npc)
+                return v.Center + new Vector2(Mathf.Round(v.Size.x * (float)prof.Mouth.X) - 2, Mathf.Round(v.Size.y * (float)prof.Mouth.Y));
+            return v.Center + new Vector2(Mathf.Round(v.Size.x * 0.2f * lane), -Mathf.Round(v.Size.y * 0.22f));
+        }
 
         /// <summary>
         /// 상대 몸의 표면 쪽 점: 가운데에서 공격이 오는 방향으로 몸 폭의 3할만큼 나온 곳. 물줄기·빔의 끝을 여기에 두면 몸을 뚫지 않고 부딪힌다.
@@ -362,6 +367,13 @@ namespace Pokepedia.Presentation.Battle.Fx
         {
             var toward = (from - target.Center).normalized;
             return target.Center + toward * Mathf.Round(Mathf.Min(target.Size.x, target.Size.y) * 0.3f);
+        }
+
+        /// <summary>공격자 몸 가장자리 바로 바깥(상대 쪽). 몸에서 뻗어 나가는 번개의 시작점 — 몸 안에서 시작하면 스프라이트와 겹쳐 보인다.</summary>
+        static Vector2 Edge(BattleSideView attacker, Vector2 toward)
+        {
+            var dir = (toward - attacker.Center).normalized;
+            return attacker.Center + dir * Mathf.Round(Mathf.Min(attacker.Size.x, attacker.Size.y) * 0.42f + 3);
         }
 
         /// <summary>맞는 동안 서서히 밀려난다 (물줄기 압력). 끝나면 HitReaction 이 제자리로 돌린다.</summary>

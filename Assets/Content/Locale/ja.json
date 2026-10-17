@@ -26,7 +26,10 @@
     "razor_leaf": "はっぱカッター",
     "sludge_bomb": "ヘドロばくだん",
     "shadow_ball": "シャドーボール",
-    "psychic": "サイコキネシス"
+    "psychic": "サイコキネシス",
+    "thunder": "かみなり",
+    "water_gun": "みずでっぽう",
+    "confusion": "ねんりき"
   },
   "battle": {
     "wild_appeared": "あっ！ やせいの {0}が とびだしてきた！",

@@ -8,6 +8,7 @@ namespace Pokepedia.Presentation.Battle
     public sealed class BackdropTheme
     {
         public Color[] Sky;                 // 위 → 지평선
+        public Color[] ClearSky;            // 승리 뒤 비가 그친 하늘 (노을, 위 → 지평선)
         public Color HorizonGlow;           // 구름 뒤 해가 비치는 지평선 쪽 빛
         public Color CloudDark, CloudMid, CloudLight;
         public Color RidgeFar, RidgeNear, RidgeLight, Mist;
@@ -24,6 +25,7 @@ namespace Pokepedia.Presentation.Battle
         public static BackdropTheme Storm => new BackdropTheme
         {
             Sky = new[] { Rgb(0x1E2536), Rgb(0x262F44), Rgb(0x313C54), Rgb(0x3E4B64), Rgb(0x505E77), Rgb(0x67748A), Rgb(0x818D9F) },
+            ClearSky = new[] { Rgb(0x4A72AE), Rgb(0x6C93C6), Rgb(0x9DB4D6), Rgb(0xD2C3C8), Rgb(0xF0C8A0), Rgb(0xF8D894), Rgb(0xFFEDC0) },
             HorizonGlow = Rgb(0xC6A88C),
             CloudDark = Rgb(0x1A2130), CloudMid = Rgb(0x2B3547), CloudLight = Rgb(0x5A677D),
             RidgeFar = Rgb(0x66788E), RidgeNear = Rgb(0x36455A), RidgeLight = Rgb(0x9AA9BA), Mist = Rgb(0x8A99AB),
@@ -33,8 +35,8 @@ namespace Pokepedia.Presentation.Battle
             Fog = Rgb(0xB9C7D6),
             BackFogAlpha = 0.24f, FrontFogAlpha = 0.09f,
             Rain = true,
-            Ambient = new Color(0.86f, 0.91f, 1f),
-            ClearAmbient = new Color(1f, 0.95f, 0.86f),
+            Ambient = new Color(0.8f, 0.85f, 0.96f),
+            ClearAmbient = new Color(1f, 0.96f, 0.9f),
             VignetteAlpha = 0.5f,
         };
 
@@ -54,10 +56,10 @@ namespace Pokepedia.Presentation.Battle
         const int BaseW = 240, BaseH = 216;
         const float RainRate = 170f;
 
-        // 그리는 순서: 하늘 → 먼 구름 → 해 번짐 → 먼 산 → 가까운 구름 → 가까운 산 → 골짜기 안개 → 숲(뒤) → 숲(앞) → 풀밭 → 물결
-        //            → [그림자 11, 포켓몬 20] → 안개(앞) 25 → 이펙트 30 → 비 40 → 비네트 50 → 번개 55
-        const int SortSky = 0, SortCloudFar = 1, SortSun = 2, SortRidgeFar = 3, SortCloudNear = 4, SortRidgeNear = 5, SortBackFog = 6;
-        const int SortForestBack = 7, SortForestFront = 8, SortGround = 9, SortRipple = 10;
+        // 그리는 순서: 하늘 → 맑은 하늘(승리 뒤) → 먼 구름 → 해 번짐 → 먼 산 → 가까운 구름 → 가까운 산 → 골짜기 안개 → 숲(뒤) → 숲(앞) → 풀밭 → 물결
+        //            → [그림자 12, 포켓몬 20] → 안개(앞) 25 → 이펙트 30 → 비 40 → 비네트 50 → 번개 55
+        const int SortSky = 0, SortClearSky = 1, SortCloudFar = 2, SortSun = 3, SortRidgeFar = 4, SortCloudNear = 5, SortRidgeNear = 6, SortBackFog = 7;
+        const int SortForestBack = 8, SortForestFront = 9, SortGround = 10, SortRipple = 11;
         const int SortFrontFog = 25, SortRain = 40, SortVignette = 50, SortLightning = 55;
 
         sealed class Layer
@@ -71,7 +73,7 @@ namespace Pokepedia.Presentation.Battle
 
         readonly BattleWorld world;
         readonly List<Layer> layers = new List<Layer>();
-        readonly SpriteRenderer lightning, sun, cloudNear, fogBack, fogFront;
+        readonly SpriteRenderer lightning, sun, cloudNear, cloudFar, clearSky, fogBack, fogFront;
         readonly SpriteRenderer[] ripples = new SpriteRenderer[12];
         readonly float[] rippleAge = new float[12];
         ParticleSystem rain;
@@ -89,9 +91,10 @@ namespace Pokepedia.Presentation.Battle
             Theme = theme;
             var root = world.Root;
 
-            Add("Sky", SkySprite(), new Vector2(120, 0), SortSky, 0.04f);
-            Add("CloudsFar", CloudSprite(240, 30, 11, 0.42f, 6, 3, theme.CloudMid, theme.CloudLight, theme.CloudLight), new Vector2(120, 6),
-                SortCloudFar, 0.08f, tile: 240, drift: 1.5f);
+            Add("Sky", SkySprite(theme.Sky, 0.55f), new Vector2(120, 0), SortSky, 0.04f);
+            clearSky = Add("ClearSky", SkySprite(theme.ClearSky, 0.8f), new Vector2(120, 0), SortClearSky, 0.04f).Item2;
+            cloudFar = Add("CloudsFar", CloudSprite(240, 30, 11, 0.42f, 6, 3, theme.CloudMid, theme.CloudLight, theme.CloudLight), new Vector2(120, 6),
+                SortCloudFar, 0.08f, tile: 240, drift: 1.5f).Item2;
             sun = Add("SunGlow", SunSprite(), new Vector2(120, 0), SortSun, 0.06f, lit: false).Item2;
             Add("RidgeFar", RidgeSprite(52, 19, 18, 26, 0.02f, theme.RidgeFar, false), new Vector2(120, Horizon - 50), SortRidgeFar, 0.12f);
             cloudNear = Add("CloudsNear", CloudSprite(240, 40, 23, 0.5f, 5, 2, theme.CloudDark, theme.CloudMid, theme.CloudLight), new Vector2(120, -6),
@@ -175,7 +178,9 @@ namespace Pokepedia.Presentation.Battle
             }
             fogBack.color = WithAlpha(Theme.Fog, Theme.BackFogAlpha * (0.45f + 0.55f * w));
             fogFront.color = WithAlpha(Theme.Fog, Theme.FrontFogAlpha * w);
-            cloudNear.color = WithAlpha(Color.white, 0.2f + 0.8f * w);
+            cloudNear.color = WithAlpha(Color.white, 0.1f + 0.9f * w);
+            cloudFar.color = WithAlpha(Color.white, 0.25f + 0.75f * w);
+            clearSky.color = WithAlpha(Color.white, 1 - w);
             sun.color = WithAlpha(Color.white, 0.12f + 0.8f * (1 - w));
         }
 
@@ -332,11 +337,10 @@ namespace Pokepedia.Presentation.Battle
 
         // ------------------------------------------------------------------ 레이어 그림
         /// <summary>하늘: 7색 그라디언트를 디더링으로 잇고, 낮은 주파수 노이즈로 띠를 깨며, 지평선 왼쪽에 구름 뒤 해의 은은한 빛을 얹는다.</summary>
-        Sprite SkySprite()
+        Sprite SkySprite(Color[] pal, float glow)
         {
             int h = Horizon + 10;
             var c = new PixelCanvas(W, h);
-            var pal = Theme.Sky;
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < W; x++)
                 {
@@ -344,7 +348,7 @@ namespace Pokepedia.Presentation.Battle
                     var col = Ramp(pal, v, x, y);
                     float dx = (x - W * 0.3f) / 120f, dy = (y - (h - 4)) / 30f;
                     float g = Mathf.Clamp01(1 - Mathf.Sqrt(dx * dx + dy * dy));
-                    if (g > 0) col = Mix(col, Theme.HorizonGlow, g * g * 0.55f, x, y, 5);
+                    if (g > 0) col = Mix(col, Theme.HorizonGlow, g * g * glow, x, y, 5);
                     c.Set(x, y, col);
                 }
             return c.ToSprite(TopCenter);
