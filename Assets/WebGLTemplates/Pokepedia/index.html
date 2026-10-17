@@ -4,13 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>{{{ PRODUCT_NAME }}}</title>
-    <!-- 시작 화면 글꼴: BATTLE 로고는 Bangers(만화 액션체), 영문 리본·TIP 은 Black Han Sans, 한글 버튼·이름 띠는 Noto Sans KR 900,
-         본문은 Pokepedia 와 같은 Noto Sans KR. (Black Han Sans 는 한글을 작게 쓰면 'ㅌ' 가운데 획이 붙어 "배틀"이 "배들"로 보여 한글에 쓰지 않는다)
-         가나는 Noto Sans JP. 필요한 글자 조각만 내려받고, 막히면 시스템 글꼴 -->
+    <!-- 시작·VS 화면 글꼴: Galmuri11(OFL, 같은 폴더의 Galmuri-OFL.txt). 로고·VS(영문)는 Pokepedia 퀴즈 로고와 같은 Bold,
+         한글은 Regular — Bold 는 '틀'의 'ㅌ' 윗줄 두 개가 붙어 "배틀"이 "배들"로 보인다(글리프 디자인, 크기와 무관).
+         Galmuri11.woff 는 게임 안 글꼴(Assets/Content/Fonts/Galmuri11.ttf)에서 한글·영문·기호만 뽑은 것(fontTools subset).
+         가나가 없어 일본어는 DotGothic16(Google Fonts, 가나를 그릴 때만 그 글자 조각을 받는다). 막히면 시스템 글꼴 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&family=Noto+Sans+JP:wght@700;900&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
     <style>
+      @font-face { font-family: "Galmuri11"; src: url("Galmuri11.woff") format("woff"); font-weight: 100 900; font-display: swap; }
+      @font-face { font-family: "Galmuri11 Bold"; src: url("Galmuri11-Bold.woff2") format("woff2"); font-weight: 100 900; font-display: swap;
+        unicode-range: U+0020-007E; }
       /* 10:9 게임 밖 여백(Pokepedia 가 크기를 딱 맞추면 거의 없다)은 어두운 화면 테두리 색 */
       html, body { margin: 0; padding: 0; height: 100%; background: #262a35; overflow: hidden; overscroll-behavior: none; touch-action: none; }
       /* 게임보이 비율(10:9)을 유지하며 가용 영역(안전 영역 제외)에 맞춘다 */
@@ -22,213 +26,151 @@
       #unity-canvas { width: 100%; height: 100%; display: block; background: #0b1030; outline: none; image-rendering: pixelated; }
 
       /*
-       * 시작 화면(로딩 → 시작 → 연결 중 / 연결 실패 / 띠부씰 없음). 레트로 도트는 게임 안(VS 화면부터)만 쓰고, 여기는 게임 타이틀답게
-       * (2026-10-17 사용자 피드백 "도트는 촌스럽다" → "평평한 그라데이션은 PPT 같다"): 게임 안 VS 장면과 같은 대각선 대결 구도 —
-       * 왼쪽 붉은 번개 폭풍(피카츄)과 오른쪽 깊은 바다(거북왕)가 빛나는 대각선에서 부딪히고, 뒤로 빛줄기가 돈다. 두 포켓몬은 크게,
-       * 화면 끝에 잘리게 마주 서고, 격투 게임식 BATTLE 엠블럼과 기울어진 두툼한 버튼. 상태와 문구는 Unity(TitleScreen)가 보낸다.
-       * 크기는 모두 게임 폭 기준(cqw)이라 데스크톱 프레임과 휴대폰에서 같은 짜임으로 줄고 는다.
+       * 시작 화면(로딩 → 시작 → 연결 중 / 연결 실패 / 띠부씰 없음)과 VS 장면. Pokepedia 퀴즈 타이틀의 형제 화면이다 —
+       * 같은 하늘·네모난 구름·반짝이·픽셀 테두리 로고에 부제만 "배틀". 피카츄와 거북왕이 실루엣으로 마주 보고 가운데에 도트 VS.
+       * 글상자·메뉴는 게임보이식. 퀴즈에서 넘어와도 한 게임처럼 이어지게 한다(대각선 대결 구도는 "AI 티가 난다"는 의견으로 바꿈).
+       * 상태와 문구는 Unity(TitleScreen)가 보낸다. 크기는 모두 게임 폭 기준(cqw)이라 데스크톱 프레임과 휴대폰에서 같은 짜임이다.
        */
-      /* overflow: clip — hidden 은 스크롤 상자라 화면이 바뀔 때(스크롤 고정) 저절로 아래로 밀려 있었다(VS 가 위로 올라가 보임) */
-      #title { position: absolute; inset: 0; overflow: hidden; overflow: clip; overflow-anchor: none; color: #fff; text-align: center; background: #0a0716;
-        font-family: "Noto Sans KR", "Noto Sans JP", "Apple SD Gothic Neo", "Hiragino Sans", "Malgun Gothic", "Yu Gothic", system-ui, sans-serif;
-        transition: opacity 0.45s ease, visibility 0.45s; -webkit-tap-highlight-color: transparent; user-select: none; }
+      /* overflow: clip — hidden 은 스크롤 상자라 화면이 바뀔 때(스크롤 고정) 저절로 아래로 밀려 있었다 */
+      /* 글자 크기는 Galmuri11 의 12px 격자 배수로 맞춘다(round). 12의 배수가 아니면 도트 줄이 합쳐져 'ㅌ' 가운데 획이 사라지고
+         "배틀"이 "배들"로 보인다. round() 를 모르는 브라우저는 앞의 값을 쓴다 */
+      #title { --ink: #1f1d1a; --paper: #f8f8f0;
+        position: absolute; inset: 0; overflow: hidden; overflow: clip; overflow-anchor: none; text-align: center; color: var(--ink);
+        background: linear-gradient(#7cc4ff 0%, #9fd5ff 55%, #d8efff 72%, #fff 100%);
+        font-family: "Galmuri11", "DotGothic16", "Apple SD Gothic Neo", "Malgun Gothic", "Hiragino Sans", "Yu Gothic", monospace;
+        image-rendering: pixelated; transition: opacity 0.45s ease, visibility 0.45s; -webkit-tap-highlight-color: transparent; user-select: none; }
+      :lang(ja) #title { font-family: "Galmuri11", "DotGothic16", "Hiragino Sans", "Yu Gothic", monospace; }
       #title[data-view="hidden"] { opacity: 0; visibility: hidden; pointer-events: none; }
-      /* 배경: 대각선으로 나뉜 두 세계 */
-      #title .side { position: absolute; inset: 0; }
-      #title .side.thunder { clip-path: polygon(0 0, 60% 0, 40% 100%, 0 100%);
-        background:
-          radial-gradient(45% 40% at 24% 66%, rgba(255, 214, 64, 0.85), rgba(255, 140, 0, 0.35) 45%, transparent 75%),
-          linear-gradient(160deg, #3b0d2a 0%, #7c1a1f 45%, #c2410c 80%, #f59e0b 100%); }
-      #title .side.tide { clip-path: polygon(60% 0, 100% 0, 100% 100%, 40% 100%);
-        background:
-          radial-gradient(48% 44% at 78% 60%, rgba(56, 189, 248, 0.7), rgba(14, 116, 144, 0.3) 50%, transparent 78%),
-          linear-gradient(200deg, #020617 0%, #0b2a52 45%, #0e5a8a 80%, #22a3c9 100%); }
-      /* 바다 쪽 물결 빛(코스틱), 번개 쪽 사선 번쩍임 */
-      #title .side.tide::after { content: ""; position: absolute; inset: -20%; opacity: 0.09; mix-blend-mode: screen;
-        background: repeating-radial-gradient(circle at 70% 120%, transparent 0 2.2cqw, rgba(186, 230, 253, 0.9) 2.4cqw 2.6cqw, transparent 2.8cqw 4.6cqw);
-        animation: tide 9s linear infinite; }
-      @keyframes tide { to { transform: translateY(-4.6cqw); } }
-      #title .side.thunder::after { content: ""; position: absolute; inset: 0; opacity: 0.35; mix-blend-mode: screen;
-        background: repeating-linear-gradient(115deg, transparent 0 7cqw, rgba(255, 236, 153, 0.5) 7cqw 7.3cqw, transparent 7.3cqw 15cqw);
-        animation: flicker 3.4s steps(1) infinite; }
-      @keyframes flicker { 0%, 100% { opacity: 0.25; } 8% { opacity: 0.7; } 10% { opacity: 0.2; } 12% { opacity: 0.55; } 40% { opacity: 0.3; } }
-      /* 가운데에서 도는 빛줄기 */
-      #title .rays { position: absolute; left: 50%; top: 42%; width: 190cqw; aspect-ratio: 1; translate: -50% -50%; mix-blend-mode: soft-light; opacity: 0.55;
-        background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.55) 0deg 5deg, transparent 5deg 15deg);
-        mask: radial-gradient(closest-side, #000 15%, transparent 72%); animation: spin 40s linear infinite; }
-      @keyframes spin { to { rotate: 360deg; } }
-      /* 두 세계가 부딪히는 대각선: 흰 빛 */
-      #title .seam { position: absolute; left: 50%; top: -10%; width: 1cqw; height: 120%; translate: -50% 0; rotate: 12.2deg;
-        background: linear-gradient(transparent, #fff 20%, #fff 80%, transparent);
-        box-shadow: 0 0 2cqw 0.8cqw rgba(255, 255, 255, 0.55), 0 0 6cqw 2cqw rgba(255, 220, 120, 0.35); animation: pulse 2.4s ease-in-out infinite; }
-      @keyframes pulse { 50% { opacity: 0.7; } }
-      /* 바닥(무대)과 가장자리 어둡게 */
-      #title .floor { position: absolute; left: -10%; right: -10%; bottom: -14%; height: 40%; border-radius: 50%;
-        background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), transparent); }
-      #title .vignette { position: absolute; inset: 0; pointer-events: none; z-index: 4;
-        background: radial-gradient(120% 95% at 50% 45%, transparent 55%, rgba(5, 3, 15, 0.7) 100%); }
-      /* 불꽃(왼쪽)과 거품(오른쪽) */
-      #title .spark, #title .bubble { position: absolute; bottom: -4%; z-index: 2; pointer-events: none; animation: rise linear infinite; }
-      #title .spark { width: 0.6cqw; height: 2.6cqw; border-radius: 1cqw; background: linear-gradient(#fff7c2, #ffd23f); box-shadow: 0 0 1.4cqw #ffcf33; rotate: 12deg; }
-      #title .bubble { width: 1.6cqw; aspect-ratio: 1; border-radius: 50%; border: 0.25cqw solid rgba(186, 230, 253, 0.85); background: rgba(186, 230, 253, 0.12); }
-      @keyframes rise { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-85cqw); opacity: 0; } }
-      /* 피카츄와 거북왕이 크게 마주 선다 (Pokepedia 아트워크, 못 받으면 그냥 뺀다) */
-      #title .mon { position: absolute; z-index: 3; pointer-events: none; animation: breathe 2.6s ease-in-out infinite; }
-      #title .mon.left { width: 44cqw; left: -3%; bottom: 3%; scale: -1 1;
-        filter: drop-shadow(0 0 0.5cqw #fff3b0) drop-shadow(0 0 3cqw rgba(255, 196, 0, 0.75)) drop-shadow(0 2cqw 2cqw rgba(0, 0, 0, 0.5)); }
-      #title .mon.right { width: 60cqw; right: -9%; bottom: 0; animation-delay: -1.3s;
-        filter: drop-shadow(0 0 0.5cqw #d9f3ff) drop-shadow(0 0 3cqw rgba(56, 189, 248, 0.7)) drop-shadow(0 2cqw 2cqw rgba(0, 0, 0, 0.5)); }
-      @keyframes breathe { 50% { translate: 0 -0.8cqw; } }
-      /*
-       * 엠블럼: 빨간 POKEPEDIA 리본 + Bangers(만화 액션체) BATTLE. 글자는 네 겹 — 진한 입체 그림자(depth), 흰 안쪽 테두리(rim),
-       * 노랑→주황 크롬 그라데이션(face), 가끔 쓸고 지나가는 빛(shine). 화면이 뜨면 크게 찍히듯 들어오고(slam) 뒤로 속도선이 뻗는다.
-       */
-      #title .logo { position: absolute; top: 4%; left: 0; right: 0; z-index: 5; display: flex; flex-direction: column; align-items: center;
-        animation: slam 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
-      @keyframes slam { 0% { transform: scale(2.4); opacity: 0; } 55% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
-      #title .ribbon { position: relative; z-index: 2; margin-bottom: -2.2cqw; padding: 0.6cqw 3cqw; transform: skewX(-14deg) rotate(-3deg);
-        background: linear-gradient(#ff5a4e, #d4251c); box-shadow: 0 0 0 0.45cqw #1a0b2e, 0 0.7cqw 0 0.45cqw #1a0b2e; }
-      #title .ribbon span { display: block; transform: skewX(14deg); font-family: "Black Han Sans", sans-serif; font-size: 4.2cqw;
-        letter-spacing: 0.3em; padding-left: 0.3em; color: #fff; text-shadow: 0 0.3cqw 0 #6b0f0a; }
-      #title .word { position: relative; font-family: "Bangers", "Black Han Sans", sans-serif; font-size: 26cqw; line-height: 1; letter-spacing: 0.04em;
-        transform: skewX(-8deg) rotate(-3deg); }
-      #title .word span { display: block; white-space: nowrap; }
-      #title .word .depth { color: #1a0b2e; -webkit-text-stroke: 2.4cqw #1a0b2e;
-        text-shadow: 0 0.5cqw 0 #1a0b2e, 0 1cqw 0 #1a0b2e, 0 1.5cqw 0 #1a0b2e, 0 2cqw 0 #1a0b2e, 0 2.4cqw 2.4cqw rgba(0, 0, 0, 0.6); }
-      #title .word .rim { position: absolute; inset: 0; color: #fff; -webkit-text-stroke: 1cqw #fff; }
-      #title .word .face { position: absolute; inset: 0; color: transparent; -webkit-background-clip: text; background-clip: text;
-        background-image: linear-gradient(#fffbe6 0%, #ffe680 40%, #ffb703 52%, #ff7a00 80%, #d94a00 100%); }
-      #title .word .shine { position: absolute; inset: 0; color: transparent; -webkit-background-clip: text; background-clip: text;
-        background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.95) 48%, transparent 56%) no-repeat;
-        background-size: 300% 100%; background-position: 100% 0; animation: glint 3s ease-in-out 0.8s infinite; }
-      @keyframes glint { 0%, 55% { background-position: 100% 0; } 90%, 100% { background-position: 0 0; } }
-      /* 로고 뒤로 뻗는 속도선 (찍히는 순간 한 번 크게, 그 뒤 은은하게) */
-      #title .streaks { position: absolute; left: 50%; top: 20%; width: 130cqw; height: 30cqw; translate: -50% -50%; rotate: -3deg; z-index: 4; pointer-events: none;
-        background: repeating-linear-gradient(transparent 0 1.6cqw, rgba(255, 244, 200, 0.55) 1.6cqw 1.9cqw, transparent 1.9cqw 3.4cqw);
-        mask: linear-gradient(90deg, transparent, #000 18%, transparent 40%, transparent 60%, #000 82%, transparent); opacity: 0.35;
-        animation: streak 0.7s ease-out both; }
-      @keyframes streak { 0% { opacity: 0; transform: scaleX(0.2); } 30% { opacity: 1; transform: scaleX(1.15); } 100% { opacity: 0.35; transform: scaleX(1); } }
-      /* 아래 영역: 로딩 / 버튼 / 안내 */
-      #title .panel { position: absolute; left: 0; right: 0; bottom: 9%; z-index: 6; display: flex; flex-direction: column; align-items: center; gap: 2.2cqw; padding: 0 6cqw; }
-      #title .message { margin: 0; max-width: 78cqw; padding: 2.4cqw 4cqw; white-space: pre-line; border-radius: 1.4cqw;
-        font-size: max(3cqw, 12px); line-height: 1.55; font-weight: 700; color: #fff;
-        background: linear-gradient(rgba(16, 12, 40, 0.92), rgba(10, 8, 26, 0.92)); border: 0.45cqw solid #ffd23f;
-        box-shadow: 0 0 0 0.45cqw #1a0b2e, 0 1.6cqw 3cqw rgba(0, 0, 0, 0.55); }
-      #title .actions { display: flex; gap: 3cqw; flex-wrap: wrap; justify-content: center; }
-      /* 게임 버튼: 기울어진 두툼한 판, 진한 테두리·아래 두께·빛이 쓸고 지나감 */
-      #title button { position: relative; font: inherit; font-family: "Noto Sans KR", "Noto Sans JP", sans-serif; font-weight: 900;
-        font-size: max(5cqw, 17px); letter-spacing: 0.05em; color: #2a1200; text-shadow: 0 0.25cqw 0 rgba(255, 255, 255, 0.55); cursor: pointer; border: 0; padding: 1.7cqw 7cqw 2cqw;
-        background: linear-gradient(#fff3a6 0%, #ffd23f 45%, #ffae00 100%); transform: skewX(-12deg); border-radius: 0.8cqw;
-        box-shadow: 0 0 0 0.5cqw #1a0b2e, 0 1.1cqw 0 0.5cqw #1a0b2e, 0 2cqw 3cqw rgba(0, 0, 0, 0.55), inset 0 -0.7cqw 0 rgba(180, 83, 9, 0.55);
-        overflow: hidden; transition: transform 0.12s ease, box-shadow 0.12s ease; }
-      #title button > span { display: inline-block; transform: skewX(12deg); }
-      #title button[data-action="start"] > span::before { content: "▶"; display: inline-block; margin-right: 0.45em; font-size: 0.72em; translate: 0 -0.08em; }
-      #title button::after { content: ""; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%; transform: skewX(-20deg);
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent); animation: shine 2.6s ease-in-out infinite; }
-      @keyframes shine { 0%, 55% { left: -40%; } 85%, 100% { left: 130%; } }
-      #title button.ghost { color: #fff; background: linear-gradient(#3b3f63, #23264a); box-shadow: 0 0 0 0.5cqw #0b0a1a, 0 1.1cqw 0 0.5cqw #0b0a1a, 0 2cqw 3cqw rgba(0, 0, 0, 0.5), inset 0 -0.7cqw 0 rgba(0, 0, 0, 0.35); }
-      #title button.ghost::after { display: none; }
-      #title button:hover { transform: skewX(-12deg) translateY(-0.3cqw); }
-      #title button:active { transform: skewX(-12deg) translateY(0.9cqw); box-shadow: 0 0 0 0.5cqw #1a0b2e, 0 0.2cqw 0 0.5cqw #1a0b2e, inset 0 -0.4cqw 0 rgba(180, 83, 9, 0.55); }
-      #title button:focus-visible { outline: 0.5cqw solid #fff; outline-offset: 1.2cqw; }
-      #title[data-view="idle"] [data-action="start"] { animation: bob 1.6s ease-in-out infinite; }
-      @keyframes bob { 50% { transform: skewX(-12deg) translateY(-0.5cqw) scale(1.03); } }
+      /* 굵게: Regular 글자를 도트 한 칸(1em/12)만큼 가로로만 겹친다. 세로 획만 두꺼워지고 'ㅌ' 사이의 가로 틈은 그대로 남는다 */
+      #title [data-action], #title .message, #title .tag, #title .pct, #title .tip, #title .footer { text-shadow: calc(1em / 12) 0 currentColor; }
+
+      /* 로고: 퀴즈 타이틀과 같은 두 겹 픽셀 테두리(번짐 없음) */
+      #title .logo, #title .vs { font-family: "Galmuri11 Bold", "Galmuri11", monospace; }
+      #title .logo { position: absolute; z-index: 3; left: 0; right: 0; top: 7cqw; margin: 0; font-size: 12.5cqw; font-size: max(12px, round(nearest, 12.5cqw, 12px)); font-weight: 900; line-height: 1;
+        letter-spacing: 0.02em; color: #c86cff;
+        text-shadow: 0.6cqw 0 #3b1466, -0.6cqw 0 #3b1466, 0 0.6cqw #3b1466, 0 -0.6cqw #3b1466, 0.6cqw 0.6cqw #3b1466,
+          -0.6cqw 0.6cqw #3b1466, 0.6cqw -0.6cqw #3b1466, -0.6cqw -0.6cqw #3b1466, 1.2cqw 1.2cqw #fff; }
+      #title .logo span { color: #ffd23f; }
+      #title .sub { position: absolute; z-index: 3; left: 0; right: 0; top: 21.5cqw; margin: 0; font-size: 4.2cqw; font-size: max(12px, round(nearest, 4.2cqw, 12px)); font-weight: 900;
+        letter-spacing: 0.35em; padding-left: 0.35em; color: #e3342f;
+        text-shadow: calc(1em / 12) 0 #e3342f, 0.4cqw 0.4cqw #fff, calc(1em / 12 + 0.4cqw) 0.4cqw #fff, -0.2cqw -0.2cqw #7a1411; }
+
+      /* 두 포켓몬: Pokepedia 아트워크를 실루엣으로(퀴즈와 같은 방식). 못 받으면 그냥 뺀다 */
+      #title .mon { position: absolute; z-index: 1; aspect-ratio: 1; object-fit: contain; pointer-events: none;
+        filter: brightness(0); opacity: 0.72; animation: bob 1.1s ease-in-out infinite; }
+      #title .mon.left { left: 6cqw; top: 46cqw; width: 28cqw; }
+      #title .mon.right { right: 5cqw; top: 41cqw; width: 34cqw; animation-delay: -0.55s; }
+      @keyframes bob { 50% { translate: 0 -1cqw; } }
+      #title .vs { position: absolute; z-index: 2; left: 50%; top: 55cqw; translate: -50% 0; font-size: 9cqw; font-size: max(12px, round(nearest, 9cqw, 12px)); font-weight: 900; line-height: 1; color: #ffd23f;
+        text-shadow: 0.5cqw 0 #7a1411, -0.5cqw 0 #7a1411, 0 0.5cqw #7a1411, 0 -0.5cqw #7a1411, 0.5cqw 0.5cqw #7a1411,
+          -0.5cqw 0.5cqw #7a1411, 0.5cqw -0.5cqw #7a1411, -0.5cqw -0.5cqw #7a1411, 1cqw 1cqw #fff; }
+
+      /* 반짝이(네 갈래 도트)와 지평선의 네모난 구름 */
+      #title .spark { position: absolute; z-index: 1; width: 1.25cqw; height: 1.25cqw; background: #ffe066;
+        box-shadow: 0 -1.25cqw #ffe066, 0 1.25cqw #ffe066, -1.25cqw 0 #ffe066, 1.25cqw 0 #ffe066; animation: twinkle 1.6s steps(2, jump-none) infinite; }
+      @keyframes twinkle { 0%, 100% { opacity: 0; transform: scale(0.6); } 50% { opacity: 1; transform: scale(1); } }
+      #title .clouds { position: absolute; z-index: 1; left: 0; right: 0; bottom: 13%; height: 15cqw;
+        background-image: radial-gradient(circle at 12% 70%, #fff 0 4.6cqw, transparent 4.7cqw), radial-gradient(circle at 20% 45%, #fff 0 5.4cqw, transparent 5.5cqw),
+          radial-gradient(circle at 30% 75%, #fff 0 4.2cqw, transparent 4.3cqw), radial-gradient(circle at 52% 60%, #fff 0 5cqw, transparent 5.1cqw),
+          radial-gradient(circle at 62% 40%, #fff 0 6.2cqw, transparent 6.3cqw), radial-gradient(circle at 74% 70%, #fff 0 4.6cqw, transparent 4.7cqw),
+          radial-gradient(circle at 90% 55%, #fff 0 5.4cqw, transparent 5.5cqw);
+        background-size: 50% 100%; animation: drift 30s linear infinite; }
+      @keyframes drift { to { background-position: -100% 0; } }
+
+      /* 아래 영역: 로딩 / 시작 / 안내 글상자 */
+      #title .panel { position: absolute; z-index: 4; left: 0; right: 0; bottom: 8cqw; display: flex; flex-direction: column; align-items: center; gap: 2cqw; padding: 0 4cqw; }
+      #title .footer { position: absolute; z-index: 4; left: 0; right: 0; bottom: 2.6cqw; font-size: max(2.4cqw, 9px); font-size: max(12px, round(nearest, max(2.4cqw, 9px), 12px)); font-weight: 700; }
+      #title button { font: inherit; color: inherit; background: none; border: 0; padding: 1.2cqw 2.4cqw; cursor: pointer; }
+      #title button:focus-visible { outline: 0.5cqw dashed var(--ink); outline-offset: 0.4cqw; }
+      /* 시작: 퀴즈의 PRESS START 처럼 깜박이는 글자 */
+      #title [data-action="start"] { font-size: max(4.8cqw, 15px); font-size: max(12px, round(nearest, max(4.8cqw, 15px), 12px)); font-weight: 900; letter-spacing: 0.12em; animation: blink 1s steps(1, end) infinite; }
+      #title [data-action="start"] > span::before { content: "▶ "; }
+      @keyframes blink { 50% { opacity: 0; } }
+      /* 로딩: 블록 막대(10칸) + 퍼센트, 아래에 TIP */
+      #title .loading { flex-direction: column; align-items: center; gap: 1.4cqw; }
+      #title .barrow { display: flex; align-items: center; gap: 2cqw; }
+      #title .blocks { display: flex; gap: 0.8cqw; padding: 0.8cqw; border: 0.8cqw solid var(--ink); background: var(--paper); }
+      #title .blocks i { width: 3cqw; height: 3.4cqw; box-shadow: inset 0 0 0 0.5cqw #c9c4b8; }
+      #title .blocks i.on { background: var(--ink); box-shadow: none; }
+      #title .pct { min-width: 10cqw; text-align: left; font-size: max(3.4cqw, 11px); font-size: max(12px, round(nearest, max(3.4cqw, 11px), 12px)); font-weight: 900; font-variant-numeric: tabular-nums; }
+      #title .tip { font-size: max(2.6cqw, 10px); font-size: max(12px, round(nearest, max(2.6cqw, 10px), 12px)); font-weight: 700; }
+      #title .tip::before { content: "TIP "; color: #e3342f; }
+      /* 게임보이 글상자: 진한 두 줄 테두리, 안에 메뉴 */
+      #title .box { width: 100%; box-sizing: border-box; border: 0.9cqw solid var(--ink); border-radius: 2cqw; background: var(--paper);
+        box-shadow: inset 0 0 0 1.6cqw var(--paper), inset 0 0 0 2.1cqw var(--ink); padding: 3.4cqw 5cqw; }
+      #title .message { margin: 0; font-size: max(3.6cqw, 12px); font-size: max(12px, round(nearest, max(3.6cqw, 12px), 12px)); font-weight: 700; line-height: 1.7; white-space: pre-line; word-break: keep-all; }
+      #title .actions { display: flex; justify-content: center; gap: 4cqw; margin-top: 1.4cqw; }
+      #title .box button { font-size: max(3.8cqw, 13px); font-size: max(12px, round(nearest, max(3.8cqw, 13px), 12px)); font-weight: 900; }
+      #title .box button > span::before { content: "▶ "; visibility: hidden; color: #e3342f; }
+      #title .box button:hover > span::before, #title .box button:focus-visible > span::before { visibility: visible; }
+
       /* 상태별로 보이는 것 */
-      #title .loading, #title .message, #title [data-action] { display: none; }
+      #title .loading, #title .box, #title [data-action] { display: none; }
       #title[data-view="loading"] .loading { display: flex; }
+      #title[data-view="connecting"] .box, #title[data-view="failed"] .box, #title[data-view="no_partner"] .box { display: block; }
       #title[data-view="idle"] [data-action="start"],
       #title[data-view="failed"] [data-action="retry"],
       #title[data-view="failed"] [data-action="demo"],
       #title[data-view="no_partner"] [data-action="demo"] { display: inline-block; }
-      #title[data-view="connecting"] .message,
-      #title[data-view="failed"] .message,
-      #title[data-view="no_partner"] .message { display: block; }
-      #title[data-view="connecting"] .message::after { content: ""; display: inline-block; width: 1em; text-align: left; animation: dots 1.2s steps(4) infinite; }
+      #title[data-view="connecting"] .actions { display: none; }
+      /* 글상자가 뜨면 가운데 VS 는 글상자 위로 반쯤 걸쳐 어수선해서 감춘다 */
+      #title[data-view="connecting"] .vs, #title[data-view="failed"] .vs, #title[data-view="no_partner"] .vs { display: none; }
+      #title[data-view="connecting"] .message::after { content: ""; display: inline-block; width: 1.5em; text-align: left; animation: dots 1.2s steps(4) infinite; }
       @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
-      /* 로딩: 기울어진 막대에 줄무늬가 흐른다, 아래에 TIP */
-      #title .loading { flex-direction: column; align-items: center; gap: 1.6cqw; width: 64cqw; }
-      #title .barrow { display: flex; align-items: center; gap: 2cqw; width: 100%; }
-      #title .bar { flex: 1; height: 2.6cqw; transform: skewX(-20deg); background: rgba(10, 8, 26, 0.85); border: 0.4cqw solid #1a0b2e;
-        box-shadow: 0 0 0 0.3cqw rgba(255, 255, 255, 0.25), 0 1cqw 2cqw rgba(0, 0, 0, 0.5); overflow: hidden; }
-      #title .fill { width: 0; height: 100%; transition: width 0.25s ease;
-        background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.35) 0 1cqw, transparent 1cqw 2cqw), linear-gradient(#ffe066, #ffae00);
-        background-size: 2.8cqw 100%, 100% 100%; animation: stripes 0.6s linear infinite; }
-      @keyframes stripes { to { background-position: 2.8cqw 0, 0 0; } }
-      #title .pct { min-width: 9cqw; text-align: right; font-size: max(3.6cqw, 13px); font-family: "Black Han Sans", sans-serif; color: #ffd23f;
-        text-shadow: 0 0.3cqw 0 #1a0b2e; font-variant-numeric: tabular-nums; }
-      #title .tip { display: flex; align-items: center; gap: 1.4cqw; font-size: max(2.4cqw, 11px); font-weight: 700; text-shadow: 0 0.2cqw 0.8cqw rgba(0, 0, 0, 0.8); }
-      #title .tip::before { content: "TIP"; font-family: "Black Han Sans", sans-serif; font-size: 0.9em; letter-spacing: 0.1em; padding: 0.3cqw 1.2cqw;
-        border-radius: 0.6cqw; background: #ffd23f; color: #1a0b2e; }
-      #title .footer { position: absolute; left: 0; right: 0; bottom: 2.6%; z-index: 6; font-size: max(1.9cqw, 10px); font-weight: 500; opacity: 0.6;
-        text-shadow: 0 0.2cqw 0.8cqw rgba(0, 0, 0, 0.9); }
+
       /*
-       * VS 장면(view = vs): 시작 화면과 같은 무대에서 이어진다. 로고·버튼은 사라지고 두 포켓몬이 양쪽에서 밀고 들어오며, 0.62초에
-       * 커다란 Bangers "VS"가 대각선 위에 찍히고(흰 번쩍임·흔들림) 이름 띠가 미끄러져 들어온다. 소리·시간·건너뛰기는 Unity 가 맡는다
-       * (BattleEventPlayer.PlayVs → HostBridge.ShowTitle). 그 뒤 Unity 가 hidden 을 보내면 옅어지며 도트 전투 화면이 드러난다.
+       * VS 장면(view = vs): 같은 하늘에서 이어진다. 로고·아래 영역이 사라지고, 0.62초에 흰 번쩍임과 함께 두 실루엣이 색을 되찾고
+       * (퀴즈의 "정답 공개"처럼) 가운데 VS 가 계단식으로 커지며 찍힌다. 이름은 전투 화면처럼 상대 오른쪽 위·플레이어 왼쪽 아래의
+       * 게임보이 글상자. 소리·시간·건너뛰기는 Unity 가 맡는다(BattleEventPlayer.PlayHtmlVs → HostBridge.ShowTitle).
+       * 그 뒤 Unity 가 hidden 을 보내면 옅어지며 도트 전투 화면이 드러난다.
        */
-      #title .vs-mark, #title .tag, #title .flash { display: none; }
-      #title[data-view="vs"] .vs-mark, #title[data-view="vs"] .tag, #title[data-view="vs"] .flash { display: block; }
-      #title[data-view="vs"] .logo, #title[data-view="vs"] .streaks, #title[data-view="vs"] .panel, #title[data-view="vs"] .footer { display: none; }
-      #title[data-view="vs"] { animation: shake 0.32s linear 0.62s; }
-      @keyframes shake { 20% { translate: -1cqw 0.6cqw; } 40% { translate: 1cqw -0.6cqw; } 60% { translate: -0.6cqw -0.4cqw; } 80% { translate: 0.6cqw 0.4cqw; } }
-      #title[data-view="vs"] .mon.left { animation: vs-left 0.5s cubic-bezier(0.2, 0.9, 0.2, 1) both; }
-      #title[data-view="vs"] .mon.right { animation: vs-right 0.5s cubic-bezier(0.2, 0.9, 0.2, 1) 0.06s both; }
-      @keyframes vs-left { from { translate: -70cqw 0; } to { translate: 3cqw -1cqw; } }
-      @keyframes vs-right { from { translate: 80cqw 0; } to { translate: -3cqw -1cqw; } }
-      #title .vs-mark { position: absolute; left: 50%; top: 46%; z-index: 6; translate: -50% -50%; font-family: "Bangers", "Black Han Sans", sans-serif;
-        font-size: 34cqw; line-height: 1; letter-spacing: 0.02em; animation: vs-slam 0.28s cubic-bezier(0.2, 1.4, 0.4, 1) 0.62s both; }
-      @keyframes vs-slam { 0% { transform: scale(3.2) rotate(-14deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-6deg); opacity: 1; } }
-      #title .vs-mark span { display: block; white-space: nowrap; }
-      #title .vs-mark .depth { color: #1a0b2e; -webkit-text-stroke: 3cqw #1a0b2e;
-        text-shadow: 0 0.6cqw 0 #1a0b2e, 0 1.2cqw 0 #1a0b2e, 0 1.8cqw 0 #1a0b2e, 0 2.4cqw 0 #1a0b2e, 0 3cqw 3cqw rgba(0, 0, 0, 0.6); }
-      #title .vs-mark .rim { position: absolute; inset: 0; color: #fff; -webkit-text-stroke: 1.2cqw #fff; }
-      #title .vs-mark .face { position: absolute; inset: 0; color: transparent; -webkit-background-clip: text; background-clip: text;
-        background-image: linear-gradient(#fffbe6 0%, #ffe680 40%, #ffb703 52%, #ff7a00 80%, #d94a00 100%); }
-      #title .flash { position: absolute; inset: 0; z-index: 7; background: #fff; opacity: 0; pointer-events: none; animation: vs-flash 0.4s ease-out 0.62s both; }
-      @keyframes vs-flash { 0% { opacity: 0; } 1% { opacity: 0.9; } 100% { opacity: 0; } }
-      /* 이름 띠: 상대는 오른쪽 위(파랑), 플레이어는 왼쪽 아래(노랑) */
-      #title .tag { position: absolute; z-index: 6; padding: 1cqw 6cqw; transform: skewX(-14deg); box-shadow: 0 0 0 0.5cqw #1a0b2e, 0 0.8cqw 0 0.5cqw #1a0b2e; }
-      #title .tag span { display: block; transform: skewX(14deg); font-family: "Noto Sans KR", "Noto Sans JP", sans-serif; font-weight: 900; font-size: 5.4cqw;
-        letter-spacing: 0.08em; color: #fff; text-shadow: 0 0.35cqw 0 #1a0b2e; white-space: nowrap; }
-      #title .tag.left { left: -3%; bottom: 7%; padding-left: 8cqw; background: linear-gradient(#ffd23f, #f59e0b); animation: tag-left 0.35s cubic-bezier(0.2, 0.9, 0.2, 1) 0.45s both; }
-      #title .tag.left span { color: #2a1200; text-shadow: 0 0.3cqw 0 rgba(255, 255, 255, 0.6); }
-      #title .tag.right { right: -3%; top: 6%; padding-right: 8cqw; background: linear-gradient(#38bdf8, #0369a1); animation: tag-right 0.35s cubic-bezier(0.2, 0.9, 0.2, 1) 0.5s both; }
-      @keyframes tag-left { from { translate: -60cqw 0; } to { translate: 0 0; } }
-      @keyframes tag-right { from { translate: 60cqw 0; } to { translate: 0 0; } }
-      @media (prefers-reduced-motion: reduce) { #title *, #title *::after { animation: none !important; } }
+      #title .tag, #title .flash { display: none; }
+      #title[data-view="vs"] .tag, #title[data-view="vs"] .flash { display: block; }
+      #title[data-view="vs"] .logo, #title[data-view="vs"] .sub, #title[data-view="vs"] .panel, #title[data-view="vs"] .footer { display: none; }
+      #title[data-view="vs"] .mon { animation: reveal 0.01s steps(1) 0.62s both, bob 1.1s ease-in-out 0.62s infinite; }
+      @keyframes reveal { from { filter: brightness(0); opacity: 0.72; } to { filter: none; opacity: 1; } }
+      #title[data-view="vs"] .vs { font-size: 13cqw; font-size: max(12px, round(nearest, 13cqw, 12px)); top: 52cqw; animation: slam 0.3s steps(3, end) 0.62s both; }
+      @keyframes slam { from { transform: scale(2.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      #title .flash { position: absolute; inset: 0; z-index: 6; background: #fff; opacity: 0; pointer-events: none; animation: flash 0.35s steps(3, end) 0.62s both; }
+      @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+      #title .tag { position: absolute; z-index: 5; border: 0.8cqw solid var(--ink); border-radius: 1.6cqw; background: var(--paper);
+        box-shadow: inset 0 0 0 1.2cqw var(--paper), inset 0 0 0 1.7cqw var(--ink); padding: 2.4cqw 4.4cqw; font-size: max(4.4cqw, 13px); font-size: max(12px, round(nearest, max(4.4cqw, 13px), 12px)); font-weight: 900;
+        white-space: nowrap; animation: tag 0.24s steps(3, end) 0.45s both; }
+      #title .tag.right { right: 5cqw; top: 8cqw; }
+      #title .tag.left { left: 5cqw; bottom: 8cqw; animation-delay: 0.5s; }
+      @keyframes tag { from { opacity: 0; translate: 0 2cqw; } to { opacity: 1; translate: 0 0; } }
+      @media (prefers-reduced-motion: reduce) { #title *, #title *::after { animation: none !important; } #title[data-view="vs"] .mon { filter: none; opacity: 1; } }
     </style>
   </head>
   <body>
     <div id="stage"><div id="frame">
       <canvas id="unity-canvas" tabindex="0"></canvas>
       <div id="title" data-view="loading">
-        <div class="side thunder"></div><div class="side tide"></div>
-        <div class="rays"></div><div class="seam"></div><div class="floor"></div>
-        <span class="spark" style="left:6%;animation-duration:3.2s;animation-delay:-0.4s"></span><span class="spark" style="left:14%;animation-duration:2.6s;animation-delay:-1.7s"></span><span class="spark" style="left:22%;animation-duration:3.6s;animation-delay:-2.3s"></span><span class="spark" style="left:30%;animation-duration:2.9s;animation-delay:-0.9s"></span><span class="spark" style="left:38%;animation-duration:3.3s;animation-delay:-2.9s"></span><span class="spark" style="left:10%;animation-duration:4.0s;animation-delay:-3.4s"></span><span class="spark" style="left:26%;animation-duration:2.4s;animation-delay:-0.2s"></span>
-        <span class="bubble" style="left:62%;animation-duration:5.2s;animation-delay:-0.6s;width:1.4cqw"></span><span class="bubble" style="left:70%;animation-duration:6.4s;animation-delay:-2.8s;width:2.2cqw"></span><span class="bubble" style="left:78%;animation-duration:4.6s;animation-delay:-1.1s;width:1.2cqw"></span><span class="bubble" style="left:86%;animation-duration:5.8s;animation-delay:-3.9s;width:1.8cqw"></span><span class="bubble" style="left:93%;animation-duration:6.8s;animation-delay:-0.2s;width:1.5cqw"></span><span class="bubble" style="left:66%;animation-duration:7.4s;animation-delay:-4.6s;width:1.0cqw"></span><span class="bubble" style="left:82%;animation-duration:5.0s;animation-delay:-2.0s;width:2.6cqw"></span>
+        <span class="spark" style="left:14%;top:30%"></span><span class="spark" style="left:84%;top:28%;animation-delay:.5s"></span>
+        <span class="spark" style="left:46%;top:72%;animation-delay:.9s"></span><span class="spark" style="left:60%;top:24%;animation-delay:.3s"></span>
+        <span class="spark" style="left:30%;top:40%;animation-delay:1.2s"></span>
         <img class="mon left" src="https://wrodjycecfjxkmepxqhb.supabase.co/storage/v1/object/public/pokemon-artwork/normal/025.webp" alt="" onerror="this.remove()">
         <img class="mon right" src="https://wrodjycecfjxkmepxqhb.supabase.co/storage/v1/object/public/pokemon-artwork/normal/009.webp" alt="" onerror="this.remove()">
-        <div class="vignette"></div>
-        <div class="tag right"><span data-name="npc"></span></div>
-        <div class="tag left"><span data-name="player"></span></div>
-        <div class="vs-mark" aria-hidden="true"><span class="depth">VS</span><span class="rim">VS</span><span class="face">VS</span></div>
+        <div class="vs" aria-hidden="true">VS</div>
+        <div class="clouds"></div>
+        <h1 class="logo">Poke<span>pedia</span></h1>
+        <p class="sub"></p>
+        <div class="tag right" data-name="npc"></div>
+        <div class="tag left" data-name="player"></div>
         <div class="flash"></div>
-        <div class="streaks"></div>
-        <div class="logo">
-          <div class="ribbon"><span>POKEPEDIA</span></div>
-          <div class="word"><span class="depth">BATTLE</span><span class="rim" aria-hidden="true">BATTLE</span><span class="face" aria-hidden="true">BATTLE</span><span class="shine" aria-hidden="true">BATTLE</span></div>
-        </div>
         <div class="panel">
           <div class="loading">
-            <div class="barrow"><div class="bar"><div class="fill"></div></div><div class="pct">0%</div></div>
+            <div class="barrow"><div class="blocks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="pct">0%</div></div>
             <div class="tip"></div>
           </div>
-          <p class="message"></p>
-          <div class="actions">
-            <button type="button" data-action="start"><span></span></button>
-            <button type="button" class="ghost" data-action="retry"><span></span></button>
-            <button type="button" data-action="demo"><span></span></button>
+          <div class="box">
+            <p class="message"></p>
+            <div class="actions">
+              <button type="button" data-action="retry"><span></span></button>
+              <button type="button" data-action="demo"><span></span></button>
+            </div>
           </div>
+          <button type="button" data-action="start"><span></span></button>
         </div>
         <div class="footer"></div>
       </div>
@@ -237,17 +179,18 @@
     <script>
       var canvas = document.querySelector("#unity-canvas");
       var title = document.querySelector("#title");
-      var loadingFill = title.querySelector(".fill");
+      var blocks = title.querySelectorAll(".blocks i");
       var loadingText = title.querySelector(".pct");
       // 로딩 문구 언어: Pokepedia 는 ?lang= 을 붙여 띄우고, 없으면 브라우저 언어. 시작 화면 문구는 Unity 가 로케일 파일에서 보낸다
       var lang = (new URLSearchParams(location.search).get("lang") || navigator.language || "ko").slice(0, 2);
       var TEXT = {
-        ko: { tip: "처음 불러올 때는 조금 걸려요. 다음부터는 빨라요.", ready: "준비 중…", failed: "불러오지 못했어요. 새로고침해 주세요.", footer: "© 2026 Pokepedia · 팬 프로젝트" },
-        en: { tip: "The first load takes a moment. It is faster next time.", ready: "Getting ready…", failed: "Could not load. Please refresh.", footer: "© 2026 Pokepedia · Fan project" },
-        ja: { tip: "はじめての よみこみは すこし じかんが かかります。", ready: "じゅんびちゅう…", failed: "よみこめませんでした。 リロードしてください。", footer: "© 2026 Pokepedia · ファンプロジェクト" }
+        ko: { sub: "배틀", tip: "처음 불러올 때는 조금 걸려요. 다음부터는 빨라요.", ready: "준비 중", failed: "불러오지 못했어요. 새로고침해 주세요.", footer: "© 2026 Pokepedia · 팬 프로젝트" },
+        en: { sub: "BATTLE", tip: "The first load takes a moment. It is faster next time.", ready: "Ready soon", failed: "Could not load. Please refresh.", footer: "© 2026 Pokepedia · Fan project" },
+        ja: { sub: "バトル", tip: "はじめての よみこみは すこし じかんが かかります。", ready: "じゅんびちゅう", failed: "よみこめませんでした。 リロードしてください。", footer: "© 2026 Pokepedia · ファンプロジェクト" }
       }[lang] || null;
-      if (!TEXT) TEXT = { tip: "The first load takes a moment. It is faster next time.", ready: "Getting ready…", failed: "Could not load. Please refresh.", footer: "© 2026 Pokepedia · Fan project" };
+      if (!TEXT) TEXT = { sub: "BATTLE", tip: "The first load takes a moment. It is faster next time.", ready: "Ready soon", failed: "Could not load. Please refresh.", footer: "© 2026 Pokepedia · Fan project" };
       document.documentElement.lang = lang === "en" || lang === "ja" ? lang : "ko";
+      title.querySelector(".sub").textContent = TEXT.sub;
       title.querySelector(".tip").textContent = TEXT.tip;
       title.querySelector(".footer").textContent = TEXT.footer;
 
@@ -341,8 +284,9 @@
           return false;
         },
       }, function (p) {
-        // 0~0.9 는 내려받기, 그 뒤는 엔진 초기화
-        loadingFill.style.width = Math.round(p * 100) + "%";
+        // 0~0.9 는 내려받기, 그 뒤는 엔진 초기화. 막대는 10칸 블록이 차례로 찬다
+        var on = Math.round(p * blocks.length);
+        for (var i = 0; i < blocks.length; i++) blocks[i].classList.toggle("on", i < on);
         loadingText.textContent = p >= 0.9 ? TEXT.ready : Math.round(p * 100) + "%";
       })
       .then(function (instance) {
