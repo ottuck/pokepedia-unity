@@ -12,6 +12,12 @@ mergeInto(LibraryManager.library, {
     }
   },
 
+  // Unity -> 웹 템플릿의 시작 화면(HTML). 템플릿이 window.pokeTitle 을 정의한다(없으면 무시).
+  HostBridge_ShowTitle: function (jsonPtr) {
+    var json = UTF8ToString(jsonPtr);
+    try { if (window.pokeTitle) window.pokeTitle.show(JSON.parse(json)); } catch (e) { console.error('[title] bad json', e); }
+  },
+
   HostBridge_GetSearch: function () {
     var s = window.location.search || '';
     var len = lengthBytesUTF8(s) + 1;

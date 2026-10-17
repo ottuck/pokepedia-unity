@@ -126,14 +126,6 @@ namespace Pokepedia.Presentation.Battle
             StartCoroutine(lab.Intro());
         }
 
-        /// <summary>타이틀 화면에 그림자로 세우는 Demo 두 포켓몬(앞모습 첫 프레임)</summary>
-        public (Sprite Player, Sprite Npc) DemoFronts()
-        {
-            LoadCatalog();
-            Sprite Front(int id) => SpriteSheet.Load(ctx.Catalog.GetSpecies(id).Sprites.Front).Frames[0];
-            return (Front(DemoPlayer), Front(DemoNpc));
-        }
-
         /// <summary>Collection 모드의 플레이어 후보 (보유 ∩ 플레이어 가능). 타이틀이 연결 직후 묻는다.</summary>
         public IReadOnlyList<PlayerChoice> CollectionPlayers(IEnumerable<App.Host.OwnedSticker> owned)
         {

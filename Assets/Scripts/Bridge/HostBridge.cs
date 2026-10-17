@@ -15,6 +15,7 @@ namespace Pokepedia.Bridge
 #if UNITY_WEBGL && !UNITY_EDITOR
         [DllImport("__Internal")] static extern void HostBridge_Post(string json);
         [DllImport("__Internal")] static extern IntPtr HostBridge_GetSearch();
+        [DllImport("__Internal")] static extern void HostBridge_ShowTitle(string json);
 #endif
 
         public event Action<InitMessage> InitReceived;
@@ -50,6 +51,26 @@ namespace Pokepedia.Bridge
             HostBridge_Post(json);
 #else
             Debug.Log("[HostBridge] (null) post " + json);
+#endif
+        }
+
+        /// <summary>시작 화면을 웹 템플릿(HTML)이 그리는지. WebGL 빌드에서만 true, 에디터는 Unity 화면으로 대신한다.</summary>
+        public bool HasHtmlTitle
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            get => true;
+#else
+            get => false;
+#endif
+        }
+
+        /// <summary>웹 템플릿의 시작 화면 상태를 바꾼다 (TitleScreen 이 문구까지 담아 보낸다)</summary>
+        public void ShowTitle(string json)
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            HostBridge_ShowTitle(json);
+#else
+            Debug.Log("[HostBridge] (null) title " + json);
 #endif
         }
 
