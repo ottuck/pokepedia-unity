@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using Pokepedia.Content;
 using Pokepedia.Presentation.UI;
@@ -10,7 +11,8 @@ namespace Pokepedia.Presentation.Battle
     /// <summary>
     /// 기술 메뉴 (시안 C, 2026-10-17 사용자 결정): 기술 3개(기본기 + 속성 기술 2개, PROJECT.md 6.3)를 큰 타입 색 버튼으로 나란히 둔다.
     /// 이름·위력·명중이 버튼 안에 있어 미리보기 탭 없이 한 번에 고르고, 버튼 전체가 눌림 영역이라 손가락으로 누르기 쉽다.
-    /// 고른 버튼은 흰 테두리로 2px 떠오른다. 버튼 그림은 타입 색으로 코드에서 그린다(도트 텍스처, 점 필터).
+    /// 한 번 누르면 바로 쓰므로 평소에는 세 버튼이 같은 모양이고, 누르는 순간 2px 눌렸다 튀어 오르며 흰 테두리가 번쩍인다(Press).
+    /// 키보드 방향키로 고를 때만 지금 버튼을 흰 테두리로 띄워 보여 준다. 버튼 그림은 타입 색으로 코드에서 그린다(도트 텍스처, 점 필터).
     /// 입력은 ChoiceMenu(커서 없음, 좌우로 이동)가 맡는다.
     /// </summary>
     public sealed class MoveCards
@@ -31,6 +33,8 @@ namespace Pokepedia.Presentation.Battle
 
         readonly AnimationCatalog animation;
         readonly Card[] cards = new Card[Count];
+        bool keyboardFocus;   // 방향키를 쓴 적이 있다: 지금 고른 버튼을 띄워 보여 준다
+        int highlighted;
 
         public ChoiceMenu Menu { get; }
         /// <summary>버튼 영역 전체 (바깥 탭 취소 판정용)</summary>
@@ -63,7 +67,8 @@ namespace Pokepedia.Presentation.Battle
             // 이름 라벨을 각 버튼 안으로 옮겨 버튼과 함께 떠오르게 한다(위치는 그대로, 맨 위에 그려짐)
             for (int i = 0; i < Count; i++) Menu.Label(i).rectTransform.SetParent(cards[i].Rt, true);
             for (int i = 0; i < Count; i++) Menu.Label(i).margin = new Vector4(2, 3, 2, 0);
-            Menu.Highlighted += Select;
+            Menu.Highlighted += i => { highlighted = i; Refresh(); };
+            Menu.Navigated += () => { keyboardFocus = true; Refresh(); };   // 방향키 이동에서만 불린다
             Menu.CancelOutside = new[] { Root };
         }
 
@@ -106,17 +111,28 @@ namespace Pokepedia.Presentation.Battle
             }
         }
 
-        void Select(int index)
+        void Refresh()
         {
-            for (int i = 0; i < Count; i++)
-            {
-                var c = cards[i];
-                bool on = i == index;
-                c.Bg.sprite = SpriteFor(c.Primary, on);
-                c.Shadow.sprite = SpriteFor(c.Primary, false);
-                c.Shadow.enabled = on;
-                c.Rt.anchoredPosition = new Vector2(Xs[i], on ? 0 : -Lift);
-            }
+            for (int i = 0; i < Count; i++) Show(i, keyboardFocus && i == highlighted, raised: keyboardFocus && i == highlighted);
+        }
+
+        void Show(int i, bool bright, bool raised, int pressed = 0)
+        {
+            var c = cards[i];
+            c.Bg.sprite = SpriteFor(c.Primary, bright);
+            c.Shadow.sprite = SpriteFor(c.Primary, false);
+            c.Shadow.enabled = raised;
+            c.Rt.anchoredPosition = new Vector2(Xs[i], raised ? 0 : -Lift - pressed);
+        }
+
+        /// <summary>누른 버튼의 짧은 반응(약 0.2초): 2px 눌리며 흰 테두리 → 제자리로 튀어 올랐다가 원래 모양. 끝나면 화면이 기술을 쓴다.</summary>
+        public IEnumerator Press(int i)
+        {
+            Show(i, bright: true, raised: false, pressed: 2);
+            yield return Fx.VfxLayer.Wait(0.08f);
+            Show(i, bright: true, raised: true);
+            yield return Fx.VfxLayer.Wait(0.1f);
+            Refresh();
         }
 
         static Sprite SpriteFor(Color primary, bool on)
