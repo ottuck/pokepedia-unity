@@ -20,6 +20,11 @@ namespace Pokepedia.Presentation.Battle
         /// <summary>마우스 클릭 또는 터치 시작 (Pointer 는 마우스·터치·펜을 모두 포함)</summary>
         public static bool PointerPressed => Pointer.current != null && Pointer.current.press.wasPressedThisFrame;
 
+        /// <summary>마지막 포인터가 터치인지 (터치는 마우스처럼 가리켜 볼 수 없어서 메뉴가 다르게 반응한다)</summary>
+        public static bool IsTouch => Pointer.current is Touchscreen;
+
+        public static UnityEngine.Vector2 PointerPosition => Pointer.current != null ? Pointer.current.position.ReadValue() : UnityEngine.Vector2.zero;
+
         /// <summary>메시지 넘기기: 확인 키 또는 화면 아무 곳 누르기</summary>
         public static bool Advance => Confirm || PointerPressed;
     }

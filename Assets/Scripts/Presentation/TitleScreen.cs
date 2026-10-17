@@ -42,6 +42,8 @@ namespace Pokepedia.Presentation
         void Start()
         {
             locale = LocaleTable.Parse(localeKo.text);
+            // 첫 화면부터 페이지 언어로: ?lang(Pokepedia) → 없으면 브라우저 언어. 연결 뒤에는 init.locale 이 다시 정한다.
+            SwitchLocale(bridge != null && bridge.Lang != null ? bridge.Lang : SystemLocale());
             handshake = new HostHandshake(bridge);
             handshake.StateChanged += OnStateChanged;
             labRequested = bridge != null && bridge.IsLabMode;
@@ -136,6 +138,14 @@ namespace Pokepedia.Presentation
             demoButton.gameObject.SetActive(false);
             status.text = "";
         }
+
+        static string SystemLocale() => Application.systemLanguage switch
+        {
+            SystemLanguage.Korean => "ko",
+            SystemLanguage.Japanese => "ja",
+            SystemLanguage.Unknown => "ko",   // 알 수 없으면 지금까지처럼 한국어
+            _ => "en",
+        };
 
         void SwitchLocale(string code)
         {

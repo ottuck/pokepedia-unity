@@ -62,6 +62,7 @@ namespace Pokepedia.Presentation.Battle
             public const string Run = BattleTextKeys.MenuRun;
             public const string WhatToDo = BattleTextKeys.PromptWhatToDo;
             public const string NextOpponent = BattleTextKeys.ResultNextOpponent;
+            public const string Rematch = BattleTextKeys.ResultRematch;
             public const string Retry = BattleTextKeys.ResultRetry;
             public const string ToTitle = BattleTextKeys.ResultTitle;
             public const string InfoPower = BattleTextKeys.InfoPower;
@@ -77,6 +78,7 @@ namespace Pokepedia.Presentation.Battle
         Action<bool> onBattleEnded;   // Collection: 한 판의 승패를 호스트에 알린다 (battleEnded, 9.2)
         ChoiceMenu activeMenu;
         bool lastWin;
+        bool oneOpponent;   // 상대 후보가 1마리: 이겨도 같은 상대라 [다음 상대] 대신 [한 번 더 싸운다]
         int lastMoveIndex;
 
         /// <summary>지금 무엇을 하는 중인지. 입력 처리기는 맞는 상태일 때만 동작한다(중복 입력·연출 중 입력 방지).</summary>
@@ -87,6 +89,7 @@ namespace Pokepedia.Presentation.Battle
         {
             Prepare(localeCode, onExit);
             ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, NewRandom(), BattleMode.Demo, DemoPlayer, () => DemoNpc);
+            oneOpponent = true;
             StartCoroutine(NewBattle(ctx.Session.Start));
         }
 
@@ -101,6 +104,7 @@ namespace Pokepedia.Presentation.Battle
             ctx.PlayerShiny = choice.Shiny;
             var random = NewRandom();
             bool canEscape = OpponentPicker.CandidateCount(ctx.Catalog, choice.SpeciesId) > 1;
+            oneOpponent = !canEscape;
             ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, random, BattleMode.Collection, choice.SpeciesId,
                                             OpponentPicker.Weighted(ctx.Catalog, random, choice.SpeciesId), canEscape);
             StartCoroutine(NewBattle(ctx.Session.Start));
@@ -261,7 +265,8 @@ namespace Pokepedia.Presentation.Battle
             lastWin = ctx.Session.State.Winner == BattleState.Player;
             onBattleEnded?.Invoke(lastWin);
             SetMenu(hud.ResultMenu);
-            hud.ResultMenu.Show(new[] { ctx.Locale.Get(lastWin ? Keys.NextOpponent : Keys.Retry), ctx.Locale.Get(Keys.ToTitle) });
+            var again = !lastWin ? Keys.Retry : oneOpponent ? Keys.Rematch : Keys.NextOpponent;
+            hud.ResultMenu.Show(new[] { ctx.Locale.Get(again), ctx.Locale.Get(Keys.ToTitle) });
         }
 
         void OnResult(int i)

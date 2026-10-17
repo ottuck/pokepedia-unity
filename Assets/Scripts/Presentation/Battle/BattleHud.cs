@@ -82,14 +82,18 @@ namespace Pokepedia.Presentation.Battle
                 new[] { new Vector3(6, 8, 80), new Vector3(6, 28, 80) }, 1);
             ActionMenu.Hide();
 
-            var moveInner = Ui.Box(srt, "MoveMenu", 2, 156, 158, 58);
+            var moveInner = Ui.Box(srt, "MoveMenu", 2, 156, 124, 58);
             MoveMenu = new ChoiceMenu(moveInner.parent.gameObject, moveInner, font,
-                new[] { new Vector3(4, 8, 76), new Vector3(78, 8, 76), new Vector3(4, 28, 76), new Vector3(78, 28, 76) }, 2);
+                // 기술은 기본기 + 속성 기술 2개로 최대 3개(PROJECT.md 6.3)라 한 줄에 하나씩 둔다. 2×2 칸에서는 긴 영어 이름(Thunderbolt)이 잘렸다
+                new[] { new Vector3(4, 4, 116), new Vector3(4, 18, 116), new Vector3(4, 32, 116) }, 1);
             MoveMenu.Hide();
-            var infoInner = Ui.Box(srt, "MoveInfo", 160, 156, 78, 58);
+            var infoInner = Ui.Box(srt, "MoveInfo", 126, 156, 112, 58);   // 넓혀서 "Accuracy 100"·"めいちゅう 100"이 한 줄에
             MoveInfoBox = infoInner.parent.gameObject;
-            MoveInfo = Ui.Label(infoInner, "Info", font, 5, 4, 68, 50);
+            MoveInfo = Ui.Label(infoInner, "Info", font, 5, 4, 102, 50);
             MoveInfoBox.SetActive(false);
+            // 휴대폰: 기술을 한 번 눌러 타입·위력·명중을 보고 한 번 더 눌러 쓴다. 기술 메뉴와 정보 상자 바깥을 누르면 뒤로.
+            MoveMenu.PreviewOnTouch = true;
+            MoveMenu.CancelOutside = new[] { (RectTransform)moveInner.parent, (RectTransform)infoInner.parent };
 
             var resInner = Ui.Box(srt, "ResultMenu", 96, 108, 142, 46);
             ResultMenu = new ChoiceMenu(resInner.parent.gameObject, resInner, font,
