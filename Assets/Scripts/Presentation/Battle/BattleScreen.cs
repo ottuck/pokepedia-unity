@@ -175,7 +175,6 @@ namespace Pokepedia.Presentation.Battle
             hud.ActionMenu.Chosen += OnAction;
             hud.MoveMenu.Chosen += OnMove;
             hud.MoveMenu.Cancelled += ShowActionMenu;
-            hud.MoveMenu.Highlighted += ShowMoveInfo;
             hud.ResultMenu.Chosen += OnResult;
         }
 
@@ -203,7 +202,6 @@ namespace Pokepedia.Presentation.Battle
         void SetMenu(ChoiceMenu menu)
         {
             foreach (var m in new[] { hud.ActionMenu, hud.MoveMenu, hud.ResultMenu }) if (m != menu) m.Hide();
-            hud.MoveInfoBox.SetActive(menu == hud.MoveMenu);
             activeMenu = menu;
         }
 
@@ -238,16 +236,9 @@ namespace Pokepedia.Presentation.Battle
         {
             hud.Message.Clear();
             SetMenu(hud.MoveMenu);
-            hud.SetMoveTypes(ctx.Session.PlayerMoveInfos.Select(m => m.Move.Type).ToArray());
+            hud.Moves.SetMoves(ctx.Session.PlayerMoveInfos, ctx.Locale.Get(Keys.InfoPower), ctx.Locale.Get(Keys.InfoAccuracy));
             hud.MoveMenu.Show(ctx.Session.PlayerMoveInfos.Select(m => ctx.Locale.Get(m.NameKey)).ToArray(), lastMoveIndex);
-        }
-
-        void ShowMoveInfo(int i)
-        {
-            var infos = ctx.Session.PlayerMoveInfos;
-            if (i < 0 || i >= infos.Count) return;
-            var m = infos[i].Move;
-            hud.ShowMoveInfo(m.Type, ctx.Locale.Get(Keys.Type(m.Type)), ctx.Locale.Get(Keys.InfoPower), m.Power, ctx.Locale.Get(Keys.InfoAccuracy), m.Accuracy);
+            hud.Moves.FitNames();
         }
 
         void OnMove(int i)
