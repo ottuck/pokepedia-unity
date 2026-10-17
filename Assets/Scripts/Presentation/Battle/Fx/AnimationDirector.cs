@@ -30,7 +30,11 @@ namespace Pokepedia.Presentation.Battle.Fx
             ("contact", "Tackle", BattleState.Player),
             ("contact", "Tackle(N)", BattleState.Npc),
             (TrainerBallLabId, "Ball", BattleState.Npc),
+            (ReviveLabId, "Revive", BattleState.Player),
         };
+
+        /// <summary>실험실 전용: 응원 부활(빛기둥) 연출을 재생한다</summary>
+        public const string ReviveLabId = "revive";
 
         /// <summary>실험실 전용: 기술이 아니라 "트레이너가 처리한다"의 몬스터볼(TrainerBall)을 재생한다</summary>
         public const string TrainerBallLabId = "trainer_ball";
@@ -120,8 +124,8 @@ namespace Pokepedia.Presentation.Battle.Fx
         }
 
         /// <summary>
-        /// 응원 부활 (PROJECT.md 5.3): 카메라가 쓰러진 쪽으로 다가가고, 하늘에서 금빛 빛기둥이 내려오며 화면 전체에 성스러운 깃털이
-        /// 흩날린다. 빛 속에서 포켓몬이 아래에서 떠오르며 다시 나타나고, 금빛으로 화면이 번쩍인 뒤 HP 가 다시 찬다(hpAnimation).
+        /// 응원 부활 (PROJECT.md 5.3): 카메라가 쓰러진 쪽으로 다가가고, 하늘에서 금빛 빛기둥이 내려온다(깃털은 도트로는 작아 나뭇잎처럼
+        /// 보여 뺐다). 빛 속에서 포켓몬이 아래에서 떠오르며 다시 나타나고, 금빛으로 화면이 번쩍인 뒤 HP 가 다시 찬다(hpAnimation).
         /// </summary>
         public IEnumerator Revive(int side, Func<IEnumerator> hpAnimation)
         {
@@ -131,7 +135,6 @@ namespace Pokepedia.Presentation.Battle.Fx
             sound.Play(SfxKind.Charge);
             host.StartCoroutine(world.CameraTo(BattleWorld.Toward(view.Center, 0.25f), 1.08f, 0.8f));
             host.StartCoroutine(vfx.LightShaft(view.Feet, 46, holy, 2.6f));
-            host.StartCoroutine(vfx.Feathers(26, 3.2f, gold));
             host.StartCoroutine(lighting.Pulse(view.Center, gold, 170, 2.0f, 2.4f));
             yield return VfxLayer.Wait(0.55f);
 

@@ -1,13 +1,14 @@
 {
   "title": {
-    "name": "ポケペディア バトル",
-    "start": "スタート",
+    "subtitle": "バトル",
+    "press_start": "PRESS START",
     "retry": "もういちど",
     "try_demo": "デモを あそぶ",
     "demo_mode": "デモモード\nピカチュウ vs カメックス",
     "connecting": "ポケペディアに せつぞくちゅう…",
     "connect_failed": "せつぞく できませんでした。",
-    "no_partner": "クイズで {0}の シールを てにいれると\nじぶんの ポケモンで バトルできるよ"
+    "no_partner": "クイズで {0}の シールを てにいれると\nじぶんの ポケモンで バトルできるよ",
+    "footer": "© 2026 Pokepedia · ファンプロジェクト"
   },
   "species": {
     "003": "フシギバナ",

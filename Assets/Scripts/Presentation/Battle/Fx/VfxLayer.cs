@@ -469,26 +469,7 @@ namespace Pokepedia.Presentation.Battle.Fx
         }
 
         // ------------------------------------------------------------------ 응원 부활 (성스러운 빛)
-        Sprite feather, shaft;
-
-        /// <summary>깃털 7×13 도트: 가운데 깃대, 양쪽 깃은 위가 넓고 아래로 좁아지며, 깃대 아래 2px 은 깃 없이 둔다.</summary>
-        static Sprite MakeFeather()
-        {
-            const int w = 7, h = 13;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
-            for (int y = 0; y < h; y++)
-                for (int x = 0; x < w; x++)
-                {
-                    int dx = Mathf.Abs(x - 3);
-                    float k = (y - 2) / (float)(h - 3);                 // 0 = 깃 아래 끝, 1 = 깃 위 끝 (텍스처 y=0 이 아래)
-                    int half = y < 2 ? 0 : Mathf.RoundToInt(3 * Mathf.Sin(Mathf.PI * Mathf.Clamp01(k * 0.95f + 0.05f)));
-                    bool on = dx == 0 || (dx <= half && y >= 2);
-                    if (on && dx == half && dx > 0 && (y + dx) % 3 == 0) on = false;   // 가장자리를 군데군데 비워 깃 결이 보이게
-                    tex.SetPixel(x, y, on ? (dx == 0 ? new Color(0.85f, 0.8f, 0.6f) : Color.white) : Color.clear);
-                }
-            tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 1f);
-        }
+        Sprite shaft;
 
         /// <summary>빛기둥 텍스처 32×64: 가운데가 진하고 가장자리로 갈수록 옅다(4단계 계단), 아래 끝은 옅어진다. 위 가운데 기준.</summary>
         static Sprite MakeShaft()
@@ -523,45 +504,6 @@ namespace Pokepedia.Presentation.Battle.Fx
                 yield return null;
             }
             Object.Destroy(r.gameObject);
-        }
-
-        /// <summary>화면 전체에 성스러운 깃털 count 개가 좌우로 흔들리며 천천히 내려온다 (위치는 정수 픽셀, 기울기는 15° 단위).</summary>
-        public IEnumerator Feathers(int count, float seconds, Color tint)
-        {
-            if (feather == null) feather = MakeFeather();
-            var rs = new SpriteRenderer[count];
-            var x0 = new float[count]; var y0 = new float[count]; var speed = new float[count];
-            var sway = new float[count]; var phase = new float[count]; var delay = new float[count];
-            var baseColor = new Color[count];
-            for (int i = 0; i < count; i++)
-            {
-                rs[i] = world.NewRenderer(fx, "Feather" + i, feather, BattleWorld.SortFx + 6);
-                rs[i].enabled = false;
-                x0[i] = Random.Range(6f, PixelCanvasScaler.BaseWidth - 6f);
-                y0[i] = Random.Range(-50f, -8f);
-                speed[i] = Random.Range(30f, 52f);
-                sway[i] = Random.Range(5f, 12f);
-                phase[i] = Random.Range(0f, Mathf.PI * 2);
-                delay[i] = Random.Range(0f, seconds * 0.35f);
-                baseColor[i] = Color.Lerp(Color.white, tint, Random.Range(0f, 0.45f));
-            }
-            for (float t = 0; t < seconds; t += Time.deltaTime)
-            {
-                for (int i = 0; i < count; i++)
-                {
-                    float tt = t - delay[i];
-                    if (tt < 0) continue;
-                    float s = Mathf.Sin(phase[i] + tt * 2.2f);
-                    rs[i].enabled = true;
-                    rs[i].transform.localPosition = ToLocal(new Vector2(Mathf.Round(x0[i] + s * sway[i]), Mathf.Round(y0[i] + speed[i] * tt)));
-                    rs[i].transform.localEulerAngles = new Vector3(0, 0, Mathf.Round(s * 2) * 15);
-                    var c = baseColor[i];
-                    c.a = Mathf.Min(1, tt / 0.3f) * Mathf.Min(1, (seconds - t) / 0.6f);
-                    rs[i].color = c;
-                }
-                yield return null;
-            }
-            foreach (var r in rs) Object.Destroy(r.gameObject);
         }
 
         // ------------------------------------------------------------------ 트레이너가 처리한다 (몬스터볼)
