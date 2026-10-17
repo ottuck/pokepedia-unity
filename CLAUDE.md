@@ -4,8 +4,9 @@ Pokepedia의 퀴즈 → 컬렉션 → **배틀** 중 배틀을 맡는 Unity 6.3 
 
 ## 문서
 
-- [docs/ROADMAP.md](docs/ROADMAP.md): 마일스톤 현황, 진행 기록, M0 결과. **작업 전에 현재 상태를 확인하고, 단계가 바뀌거나 완료·주요 결정이 생기면 여기에 기록한다**(해당 PR에 포함).
-- [docs/PROJECT.md](docs/PROJECT.md): 기획·설계·Pokepedia 연동 규약(9.2). 13장 확정, 14장 미정, **15장 에이전트 지침**.
+- [docs/ROADMAP.md](docs/ROADMAP.md): 현재 상태, 마일스톤, 보관 목록. **작업 전에 현재 상태를 확인하고, 단계나 할 일이 바뀌면 같은 PR에서 고친다.**
+- [docs/PROJECT.md](docs/PROJECT.md): 기획·설계·Pokepedia 연동 규약(9.2). 13장 확정, 14장 미정, **15장 에이전트 지침**. 결정이 생기면 해당 절의 사양을 고쳐 쓴다(한 줄 근거만).
+- 문서에는 **지금의 사양·결정·주의점만** 둔다. 날짜별 경위, 고르지 않은 후보 비교, 진행 메모, 측정 일지는 남기지 않는다(그건 커밋·PR 기록이 맡는다). PROJECT.md 절 번호는 코드 주석이 참조하므로 바꾸지 않는다.
 - [README.md](README.md): 구조, 처음 설정, 웹 빌드·로컬 실행 명령.
 
 ## 지킬 것 (상세는 PROJECT.md 15장)
@@ -30,7 +31,7 @@ unity test . --mode EditMode          # Unity EditMode 테스트 (Unity CLI)
 ## CI
 
 - 워크플로는 `domain-tests` 하나(ubuntu, .NET 8, `dotnet test Tests.Dotnet`). **Unity 빌드·테스트는 CI에 없고** 로컬에서 확인한다.
-- **Actions 사용 시간은 최소로 쓴다**(비공개 저장소 무료 한도를 넘긴 적이 있다, 2026-10-17). 그래서 **PR에서만** 돌고(브랜치 push·main 병합 push에서는 안 돈다), 초안(draft) PR에서는 돌지 않으며, 같은 PR의 새 push는 이전 실행을 취소한다.
+- **Actions 사용 시간은 최소로 쓴다**(비공개 저장소 무료 한도를 넘긴 적이 있다). 그래서 **PR에서만** 돌고(브랜치 push·main 병합 push에서는 안 돈다), 초안(draft) PR에서는 돌지 않으며, 같은 PR의 새 push는 이전 실행을 취소한다.
 - 경로 필터가 있어 `Domain`·`Content`·`Application`·`Assets/Tests/EditMode`·`Tests.Dotnet`·워크플로 파일이 바뀔 때만 돈다. **문서·에셋·화면 코드만 바꾼 PR에는 체크가 없는 게 정상**이다.
 - CI 경로 파일이 있는 작업은 **로컬에서 `dotnet test`가 통과한 뒤 문서까지 한 번에 push**하고, PR을 연 뒤의 추가 push를 줄인다(push마다 한 번씩 돈다).
 - 결제·한도 문제로 체크가 시작조차 안 되면(주석에 "spending limit" 등) 코드 실패가 아니다. 로컬 결과를 붙여 사용자에게 알리고 병합 여부를 묻는다.
@@ -45,7 +46,7 @@ unity test . --mode EditMode          # Unity EditMode 테스트 (Unity CLI)
    - **CI 경로 파일이 하나라도 있는 PR**(주석만 바꿔도 해당)은 이후 문서만 추가 push해도 `pull_request` 체크가 다시 도므로, **마지막 push의 체크가 통과한 뒤** 병합한다. 통과하면 병합하는 것이 기본이며 따로 묻지 않는다.
    - 이 저장소는 GitHub auto-merge를 쓸 수 없다(설정을 켜도 `false`로 유지됨, 비공개 저장소의 플랜 제한으로 추정). 그래서 push 후 앱의 `get_status`로 체크를 확인하고(`gh`로 폴링하지 않는다), 통과했으면 `gh pr merge <번호> --squash --delete-branch`로 직접 병합한다. 아직 도는 중이면 다른 일을 한 뒤 다시 확인한다.
 4. 다음은 큰 문제이니 병합하지 말고 알린다: CI 실패, 충돌, 요구사항 해석이 불확실, 되돌리기 어려운 변경(외부 서비스 설정·권한·DNS·결제, 리소스 삭제), 14장 미정 사항 확정.
-   - **별문제 없는 것은 허락을 묻지 않고 끝까지 진행한다(사용자 지시, 2026-10-17: "작업만 끊길 뿐").** 확인 질문으로 작업을 멈추지 않는다. 병합한 Release 빌드를 로컬에서 확인한 뒤 `battle.pokepedia.dev`에 배포하는 것도 일상 작업이다(이전 배포로 되돌릴 수 있다). Pokepedia 저장소 PR도 그 저장소 `CLAUDE.md`의 머지 정책을 지키는 선에서 같다.
+   - **별문제 없는 것은 허락을 묻지 않고 끝까지 진행한다(사용자 지시).** 확인 질문으로 작업을 멈추지 않는다. 병합한 Release 빌드를 로컬에서 확인한 뒤 `battle.pokepedia.dev`에 배포하는 것도 일상 작업이다(이전 배포로 되돌릴 수 있다). Pokepedia 저장소 PR도 그 저장소 `CLAUDE.md`의 머지 정책을 지키는 선에서 같다.
 5. `gh pr merge`가 자동 모드 분류기에 막히면 우회하지 않고 알린다. 에이전트가 스스로 권한 규칙을 추가하지 않는다(사용자가 `Bash(gh pr merge:*)`를 허용해야 한다).
 
 ## Unity 에디터와 병렬 작업

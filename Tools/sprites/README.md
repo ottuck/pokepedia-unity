@@ -25,7 +25,7 @@ macOS/Linux에서는 `py -3` 대신 `python3`, `.venv/Scripts/python` 대신 `.v
 
 ## 매니페스트 갱신
 
-지금 매니페스트에는 공개 중인 피카츄(25)·거북왕(9)만 있습니다(2026-10-17, 빌드 용량 때문에 Standard 4종 리자몽 6·이상해꽃 3·팬텀 94·뮤츠 150을 뺌). 다시 넣으려면 `--ids 25,9,6,3,94,150`으로 갱신합니다.
+지금 매니페스트에는 공개 중인 피카츄(25)·거북왕(9)만 있습니다(보관 중인 Standard 4종 리자몽 6·이상해꽃 3·팬텀 94·뮤츠 150은 빌드에서 뺌). 다시 넣으려면 `--ids 25,9,6,3,94,150`으로 갱신합니다.
 
 로스터를 바꾸거나 원본 저장소의 새 커밋으로 올릴 때 실행합니다.
 
@@ -71,7 +71,7 @@ Tools/sprites/.venv/Scripts/python -I Tools/sprites/fetch_sprites.py --update-ma
 | `frames[]` | 재생 순서대로 나열한 타임라인입니다. `x,y`는 시트 좌상단 원점 픽셀, `w,h`는 셀 크기, `delayMs`는 해당 프레임의 표시 시간입니다. dedupe 때문에 같은 `x,y`가 여러 번 나올 수 있습니다 |
 | `metrics` | 변환 검증 지표: 알파 이진 여부, 화면 모서리 투명 여부, 불투명 픽셀 수 범위, 고유 색 수, 발 위치 흔들림 등 |
 
-Unity에서 좌표를 쓸 때는 시트 좌상단 원점이므로 `rect.y = sheet.h - y - h`로 뒤집어야 합니다. PPU는 16입니다(카메라가 160×144px = 10×9 unit을 보여 주므로 도트 1px이 화면 1px).
+Unity에서 좌표를 쓸 때는 시트 좌상단 원점이므로 `rect.y = sheet.h - y - h`로 뒤집어야 합니다. 런타임(`SpriteSheet`)은 PPU 1로 만듭니다(월드 1 unit = 기준 해상도 240×216의 1px).
 
 수동 실행 옵션은 `convert_gif.py --help`에서 확인할 수 있습니다. `--align perframe`, `--layout row`, `--no-dedupe`, `--rgba`, `--preview`(마젠타 배경 미리보기, Assets 밖 폴더로 출력 권장)를 지원합니다.
 
