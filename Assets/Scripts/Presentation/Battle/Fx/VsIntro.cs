@@ -16,6 +16,8 @@ namespace Pokepedia.Presentation.Battle.Fx
     /// 배틀 도입 VS 장면 (PROJECT.md 5.3·5.5, M5). HUD 위에 덮는 오버레이라 월드·후처리와 상관없이 그려진다.
     /// 공통 흐름: 배경이 들어오고 → 두 포켓몬이 실루엣으로 자리를 잡고 → "VS"가 찍히는 순간 번쩍이며 색이 돌아오고 → 옅어지며 전투 화면.
     /// 확인 입력으로 건너뛴다. 배경은 대각선으로 갈린 타입 색 띠다(후보 B·C 와 비교해 사용자가 A 를 골랐다, 2026-10-17).
+    /// 대각선은 좌우로 가른다: 왼쪽 플레이어 · 오른쪽 상대, 위 60% → 아래 40% (HTML 시작 화면의 대결 구도와 같은 각도라 이어 보인다,
+    /// 2026-10-17 사용자 제안. 처음에는 위·아래로 갈랐다).
     /// 모든 그림은 코드로 그린 도트이고 크기는 정수 배율로만 바꾼다.
     /// </summary>
     public sealed class VsIntro
@@ -66,8 +68,8 @@ namespace Pokepedia.Presentation.Battle.Fx
 
             var (npcBox, npcSprite) = Pokemon(root, "NpcPokemon", npc.Sheet, flip: false);
             var (playerBox, playerSprite) = Pokemon(root, "PlayerPokemon", player.Sheet, flip: true);   // 앞모습은 왼쪽을 보므로 플레이어는 뒤집어 상대를 보게
-            var npcName = NameLabel(root, "NpcName", npc.Name, scene.NpcName.x, scene.NpcName.y, TextAlignmentOptions.TopLeft);
-            var playerName = NameLabel(root, "PlayerName", player.Name, scene.PlayerName.x, scene.PlayerName.y, TextAlignmentOptions.TopRight);
+            var npcName = NameLabel(root, "NpcName", npc.Name, scene.NpcName.x, scene.NpcName.y, TextAlignmentOptions.TopRight);
+            var playerName = NameLabel(root, "PlayerName", player.Name, scene.PlayerName.x, scene.PlayerName.y, TextAlignmentOptions.TopLeft);
             var vs = VsLabel(root, scene.VsCenter);
             vs.gameObject.SetActive(false);
 
@@ -125,22 +127,22 @@ namespace Pokepedia.Presentation.Battle.Fx
         }
 
         // ================================================================== 대각선 띠
-        /// <summary>대각선(갈라지는 선)의 y: 왼쪽 아래에서 오른쪽 위로 올라간다. 위쪽이 상대 띠, 아래쪽이 플레이어 띠.</summary>
-        static float DividerY(float x) => 140 - x * 64f / W;
+        /// <summary>대각선(갈라지는 선)의 x: 위 60% 에서 아래 40% 로 내려온다. 왼쪽이 플레이어 띠, 오른쪽이 상대 띠.</summary>
+        static float DividerX(float y) => W * 0.6f - y * (W * 0.2f) / H;
 
         Scene Diagonal(RectTransform root, Side player, Side npc, Vector2 npcSize, Vector2 playerSize, List<Object> owned)
         {
-            var npcBand = MakeImage(root, "NpcBand", Canvas(W, H, (x, y) => DiagonalBand(x, y, npc, top: true)), owned);
-            var playerBand = MakeImage(root, "PlayerBand", Canvas(W, H, (x, y) => DiagonalBand(x, y, player, top: false)), owned);
-            var divider = MakeImage(root, "Divider", Canvas(W, H, (x, y) => Mathf.Abs(y - DividerY(x)) <= 1.5f ? Color.white : Color.clear), owned);
-            var lines = SpeedLines(root, npc, player, (6, 70), (150, 208));
+            var npcBand = MakeImage(root, "NpcBand", Canvas(W, H, (x, y) => DiagonalBand(x, y, npc, right: true)), owned);
+            var playerBand = MakeImage(root, "PlayerBand", Canvas(W, H, (x, y) => DiagonalBand(x, y, player, right: false)), owned);
+            var divider = MakeImage(root, "Divider", Canvas(W, H, (x, y) => Mathf.Abs(x - DividerX(y)) <= 1.5f ? Color.white : Color.clear), owned);
+            var lines = SpeedLines(root, npc, player, (8, 206), (8, 206), DividerX);
             return new Scene
             {
-                // 상대는 오른쪽 끝에 붙여(크면 오른쪽이 화면 밖으로 조금 잘린다) 가운데 VS 자리를 비운다
-                NpcHome = new Vector2(Mathf.Max(W - 8 - npcSize.x, W - 128), Mathf.Max(2, DividerY(W - 64) - npcSize.y + 18)),
-                PlayerHome = new Vector2(8, Mathf.Min(H - playerSize.y - 4, DividerY(8 + playerSize.x / 2) - 10)),
+                // 상대는 오른쪽 위(크면 오른쪽이 화면 밖으로 조금 잘린다), 플레이어는 왼쪽 아래 — 가운데 대각선의 VS 자리를 비운다
+                NpcHome = new Vector2(Mathf.Max(W - 8 - npcSize.x, W - 128), 26),
+                PlayerHome = new Vector2(8, H - playerSize.y - 4),
                 NpcFrom = new Vector2(90, 0), PlayerFrom = new Vector2(-90, 0),
-                NpcName = new Vector2(10, 12), PlayerName = new Vector2(W - 10 - 110, H - 26),
+                NpcName = new Vector2(W - 10 - 110, 8), PlayerName = new Vector2(10, H - 26),
                 Update = t =>
                 {
                     float k = Ease(Mathf.Clamp01(t / BgIn));
@@ -151,19 +153,23 @@ namespace Pokepedia.Presentation.Battle.Fx
             };
         }
 
-        static Color DiagonalBand(int x, int y, Side side, bool top)
+        static Color DiagonalBand(int x, int y, Side side, bool right)
         {
-            float d = y - DividerY(x);   // 음수 = 선 위
-            if (top ? d >= -1.5f : d <= 1.5f) return Color.clear;
+            float d = x - DividerX(y);   // 음수 = 선 왼쪽
+            if (right ? d <= 1.5f : d >= -1.5f) return Color.clear;
             // 바깥(화면 끝)은 어둡고 대각선 쪽은 밝다 — 디더링으로 3단계를 섞는다
-            return Ramp3(side.Main, Mathf.Clamp01(1 - Mathf.Abs(d) / 110f) * 2f, x, y);
+            return Ramp3(side.Main, Mathf.Clamp01(1 - Mathf.Abs(d) / 120f) * 2f, x, y);
         }
 
         // ================================================================== 공통 부품
-        /// <summary>띠 위를 흐르는 속도선. 위쪽 범위는 왼쪽으로, 아래쪽 범위는 오른쪽으로. 매 프레임 dt 를 넘겨 움직인다.</summary>
-        Action<float> SpeedLines(RectTransform root, Side npc, Side player, (int, int) topRange, (int, int) bottomRange, int count = 12)
+        /// <summary>
+        /// 띠 위를 흐르는 속도선: 상대 쪽(오른쪽)은 왼쪽으로, 플레이어 쪽(왼쪽)은 오른쪽으로 — 양쪽에서 대각선을 향해 몰려든다.
+        /// dividerX 를 주면 선은 자기 쪽 띠 안에서만 보인다. 매 프레임 dt 를 넘겨 움직인다.
+        /// </summary>
+        Action<float> SpeedLines(RectTransform root, Side npc, Side player, (int, int) topRange, (int, int) bottomRange, Func<float, float> dividerX = null, int count = 14)
         {
             var lines = new List<(RectTransform rt, float speed, float y)>();
+            var images = new List<Image>();
             for (int i = 0; i < count; i++)
             {
                 bool top = i % 2 == 0;
@@ -172,15 +178,22 @@ namespace Pokepedia.Presentation.Battle.Fx
                 var color = new Color(side.Accent.r, side.Accent.g, side.Accent.b, 0.75f);
                 var img = Ui.Fill(root, "Line" + i, Random.Range(0, W), y, Random.Range(12, 44), 1, color);
                 lines.Add((img.rectTransform, top ? -Random.Range(220, 360) : Random.Range(220, 360), y));
+                images.Add(img);
             }
             return dt =>
             {
-                foreach (var (rt, speed, y) in lines)
+                for (int i = 0; i < lines.Count; i++)
                 {
+                    var (rt, speed, y) = lines[i];
                     float x = rt.anchoredPosition.x + speed * dt;
                     if (speed < 0 && x < -50) x += W + 60;
                     if (speed > 0 && x > W + 10) x -= W + 60;
                     rt.anchoredPosition = new Vector2(Mathf.Round(x), -y);
+                    if (dividerX != null)
+                    {
+                        float edge = dividerX(y);
+                        images[i].enabled = speed < 0 ? x >= edge + 2 : x + rt.sizeDelta.x <= edge - 2;
+                    }
                 }
             };
         }
