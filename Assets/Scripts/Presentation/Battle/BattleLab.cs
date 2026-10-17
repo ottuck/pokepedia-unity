@@ -11,7 +11,7 @@ using UnityEngine;
 namespace Pokepedia.Presentation.Battle
 {
     /// <summary>
-    /// 연출 실험실 (주소에 ?lab, 또는 타이틀에서 L): 전용 연출·몸통박치기·VS 도입·승리 연출을 골라 반복 재생한다.
+    /// 연출 실험실 (주소에 ?lab, 또는 타이틀에서 L): 전용 연출·몸통박치기·VS 도입(A·B·C 후보를 돌아가며)·승리 연출을 골라 반복 재생한다.
     /// 결과 버튼으로 명중/빗나감/급소를 돌린다. HP 는 바뀌지 않는다. 고른 결과는 animation.json 의 moveFx 에 적는다.
     /// 개발용이라 배틀 흐름(BattleScreen)과 떼어 둔다.
     /// </summary>
@@ -28,6 +28,7 @@ namespace Pokepedia.Presentation.Battle
         readonly Action exit;
         ChoiceMenu menu;
         int index, outcome;
+        VsIntro.Style vsStyle = VsIntro.Default;   // VS 를 누를 때마다 A → B → C 로 돌아간다(후보 비교)
 
         public BattleLab(MonoBehaviour host, BattleHud hud, BattleContext ctx, BattleEventPlayer player,
                          Action<ChoiceMenu> showMenu, Action<bool> setPlaying, Action exit)
@@ -66,7 +67,7 @@ namespace Pokepedia.Presentation.Battle
                 hud.WireSounds(menu);
                 hud.Vfx.BringToFront();
             }
-            var labels = effects.Select(e => e.Label).Concat(new[] { "VS", "Victory", Outcomes[outcome] }).ToArray();
+            var labels = effects.Select(e => e.Label).Concat(new[] { VsIntro.Label(vsStyle), "Victory", Outcomes[outcome] }).ToArray();
             setPlaying(false);
             showMenu(menu);
             menu.Show(labels, index);
@@ -88,7 +89,8 @@ namespace Pokepedia.Presentation.Battle
             var effects = AnimationDirector.LabEffects;
             if (i == effects.Length)
             {
-                yield return player.PlayVs();
+                yield return player.PlayVs(vsStyle);
+                vsStyle = (VsIntro.Style)(((int)vsStyle + 1) % Enum.GetValues(typeof(VsIntro.Style)).Length);
             }
             else if (i == effects.Length + 1)
             {
