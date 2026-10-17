@@ -17,6 +17,7 @@ namespace Pokepedia.Presentation.Battle
         readonly List<TextMeshProUGUI> labels = new List<TextMeshProUGUI>();
         readonly List<TextMeshProUGUI> cursors = new List<TextMeshProUGUI>();
         readonly int columns;
+        readonly bool showCursor;
         int index;
 
         public event Action<int> Chosen;
@@ -44,17 +45,22 @@ namespace Pokepedia.Presentation.Battle
         /// <param name="root">보이기/숨기기 대상 (테두리 상자 전체)</param>
         /// <param name="parent">항목을 붙일 곳 (상자 안쪽)</param>
         /// <param name="cells">항목별 (x, y, w) — 부모 기준 픽셀 좌표</param>
-        public ChoiceMenu(GameObject root, RectTransform parent, TMP_FontAsset font, IReadOnlyList<Vector3> cells, int columns)
+        /// <param name="withCursor">▶ 커서를 그린다. false 면 고른 항목은 화면 쪽(Highlighted)이 표시한다 (기술 버튼)</param>
+        /// <param name="itemHeight">항목 높이 = 눌림 영역 높이</param>
+        public ChoiceMenu(GameObject root, RectTransform parent, TMP_FontAsset font, IReadOnlyList<Vector3> cells, int columns,
+                          bool withCursor = true, float itemHeight = 14, TextAlignmentOptions align = TextAlignmentOptions.TopLeft)
         {
             this.columns = Mathf.Max(1, columns);
             this.root = root;
+            showCursor = withCursor;
             for (int i = 0; i < cells.Count; i++)
             {
                 int captured = i;
                 var c = cells[i];
                 var cursor = Ui.Label(parent, "Cursor" + i, font, c.x, c.y, 12, 14);
                 cursor.text = "▶";
-                var label = Ui.Label(parent, "Item" + i, font, c.x + 12, c.y, c.z - 12, 14);
+                var label = withCursor ? Ui.Label(parent, "Item" + i, font, c.x + 12, c.y, c.z - 12, itemHeight, align)
+                                   : Ui.Label(parent, "Item" + i, font, c.x, c.y, c.z, itemHeight, align);
                 label.textWrappingMode = TextWrappingModes.NoWrap;   // 칸보다 긴 이름이 다음 줄로 넘어가 아래 칸과 겹치지 않게 (한 줄 유지)
                 label.raycastTarget = true;
                 var button = label.gameObject.AddComponent<Button>();
@@ -78,6 +84,9 @@ namespace Pokepedia.Presentation.Battle
         }
 
         public void Hide() => root.SetActive(false);
+
+        /// <summary>항목 라벨 (화면 쪽이 버튼 안으로 옮기거나 여백을 줄 때)</summary>
+        public TextMeshProUGUI Label(int i) => labels[i];
 
         void OnClicked(int i)
         {
@@ -113,7 +122,7 @@ namespace Pokepedia.Presentation.Battle
         void Move(int i)
         {
             index = i;
-            for (int k = 0; k < cursors.Count; k++) cursors[k].enabled = k == index;
+            for (int k = 0; k < cursors.Count; k++) cursors[k].enabled = showCursor && k == index;
             Highlighted?.Invoke(index);
         }
     }

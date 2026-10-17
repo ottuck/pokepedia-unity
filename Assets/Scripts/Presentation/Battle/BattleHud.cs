@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using Pokepedia.Content;
-using Pokepedia.Domain;
 using Pokepedia.Domain.Battle;
 using Pokepedia.Presentation.Audio;
 using Pokepedia.Presentation.Audio.Synth;
@@ -36,22 +34,12 @@ namespace Pokepedia.Presentation.Battle
         public ChoiceMenu ActionMenu { get; }
         public ChoiceMenu MoveMenu { get; }
         public ChoiceMenu ResultMenu { get; }
-        public GameObject MoveInfoBox { get; }
-
-        // 기술 메뉴 꾸밈 (2026-10-17 실기기 피드백: 기술이 여백 없이 붙어 있고 위력·명중 글자가 투박함)
-        static readonly Color Muted = Ui.Hex(0x787878);
-        static readonly Color Divider = Ui.Hex(0xD8D8D0);
-        const int MoveRowY = 4, MoveRowGap = 16;   // 기술 세 줄: y 4·20·36 (줄 높이 14 + 여백 2)
-        readonly AnimationCatalog animation;
-        readonly List<Image> movePips = new List<Image>();
-        readonly Image typeChip;
-        readonly TextMeshProUGUI typeText, powerName, powerValue, accName, accValue;
+        public MoveCards Moves { get; }
 
         public BattleHud(MonoBehaviour host, TMP_FontAsset font, Material flashMaterial, Material particleMaterial, Material litMaterial,
                          ContentCatalog catalog, AnimationCatalog animation)
         {
             Font = font;
-            this.animation = animation;
             var canvasGo = new GameObject("BattleCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(PixelCanvasScaler));
             canvasGo.transform.SetParent(host.transform, false);
             var canvas = canvasGo.GetComponent<Canvas>();
@@ -93,35 +81,10 @@ namespace Pokepedia.Presentation.Battle
                 new[] { new Vector3(6, 8, 80), new Vector3(6, 28, 80) }, 1);
             ActionMenu.Hide();
 
-            var moveInner = Ui.Box(srt, "MoveMenu", 2, 156, 124, 58);
-            // 기술은 기본기 + 속성 기술 2개로 최대 3개(PROJECT.md 6.3)라 한 줄에 하나씩 둔다. 2×2 칸에서는 긴 영어 이름(Thunderbolt)이 잘렸다.
-            // 줄 끝에는 그 기술 타입 색의 작은 점을 둔다.
-            var moveCells = new Vector3[3];
-            for (int i = 0; i < moveCells.Length; i++)
-            {
-                int y = MoveRowY + i * MoveRowGap;
-                moveCells[i] = new Vector3(4, y, 100);
-                Ui.Fill(moveInner, "PipEdge" + i, 107, y + 3, 8, 8, Ui.Border);
-                movePips.Add(Ui.Fill(moveInner, "Pip" + i, 108, y + 4, 6, 6, Color.white));
-            }
-            MoveMenu = new ChoiceMenu(moveInner.parent.gameObject, moveInner, font, moveCells, 1);
+            // 기술 메뉴: 큰 타입 색 버튼 3개 (시안 C, MoveCards). 버튼 바깥을 누르면 뒤로(휴대폰엔 X·Esc 가 없다)
+            Moves = new MoveCards(srt, font, animation);
+            MoveMenu = Moves.Menu;
             MoveMenu.Hide();
-
-            // 정보 상자: 타입 이름을 타입 색 띠에, 그 아래 위력·명중은 이름(회색)은 왼쪽, 숫자는 오른쪽 끝에 맞춘다
-            var infoInner = Ui.Box(srt, "MoveInfo", 126, 156, 112, 58);
-            MoveInfoBox = infoInner.parent.gameObject;
-            typeChip = Ui.Fill(infoInner, "TypeChip", 4, 3, 60, 14, Color.white);
-            typeText = Ui.Label(infoInner, "TypeText", font, 4, 3, 60, 14, TextAlignmentOptions.Center);
-            Ui.Fill(infoInner, "Divider", 4, 20, 100, 1, Divider);
-            powerName = Ui.Label(infoInner, "PowerName", font, 6, 23, 60, 14);
-            powerValue = Ui.Label(infoInner, "PowerValue", font, 4, 23, 98, 14, TextAlignmentOptions.TopRight);
-            accName = Ui.Label(infoInner, "AccName", font, 6, 37, 60, 14);
-            accValue = Ui.Label(infoInner, "AccValue", font, 4, 37, 98, 14, TextAlignmentOptions.TopRight);
-            powerName.color = accName.color = Muted;
-            MoveInfoBox.SetActive(false);
-            // 휴대폰: 기술을 한 번 눌러 타입·위력·명중을 보고 한 번 더 눌러 쓴다. 기술 메뉴와 정보 상자 바깥을 누르면 뒤로.
-            MoveMenu.PreviewOnTouch = true;
-            MoveMenu.CancelOutside = new[] { (RectTransform)moveInner.parent, (RectTransform)infoInner.parent };
 
             var resInner = Ui.Box(srt, "ResultMenu", 96, 108, 142, 46);
             ResultMenu = new ChoiceMenu(resInner.parent.gameObject, resInner, font,
@@ -131,31 +94,6 @@ namespace Pokepedia.Presentation.Battle
             Vfx.BringToFront(); // 화면 번쩍임이 모든 것 위에 오도록
             foreach (var m in new[] { ActionMenu, MoveMenu, ResultMenu }) WireSounds(m);
             MoveMenu.Cancelled += () => Sound.Play(SfxKind.Cancel);
-        }
-
-        /// <summary>기술 줄 끝의 타입 색 점 (기술 메뉴를 열 때)</summary>
-        public void SetMoveTypes(IReadOnlyList<PokemonType> types)
-        {
-            for (int i = 0; i < movePips.Count; i++)
-            {
-                bool on = i < types.Count;
-                movePips[i].transform.parent.Find("PipEdge" + i).gameObject.SetActive(on);
-                movePips[i].gameObject.SetActive(on);
-                if (on) movePips[i].color = Ui.Hex(animation.TypeFor(types[i]).PrimaryRgb);
-            }
-        }
-
-        /// <summary>정보 상자: 타입 띠(타입 색, 밝은 색이면 글자는 검정) + 위력·명중</summary>
-        public void ShowMoveInfo(PokemonType type, string typeName, string powerLabel, int power, string accuracyLabel, int accuracy)
-        {
-            var color = Ui.Hex(animation.TypeFor(type).PrimaryRgb);
-            typeChip.color = color;
-            typeText.text = typeName;
-            typeText.color = 0.299f * color.r + 0.587f * color.g + 0.114f * color.b > 0.6f ? Ui.Ink : Color.white;
-            powerName.text = powerLabel;
-            powerValue.text = power.ToString();
-            accName.text = accuracyLabel;
-            accValue.text = accuracy.ToString();
         }
 
         /// <summary>메뉴 커서 이동·결정 소리</summary>

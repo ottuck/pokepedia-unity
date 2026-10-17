@@ -63,7 +63,7 @@
     "info": {
       "type": "Type",
       "power": "Power",
-      "accuracy": "Accuracy"
+      "accuracy": "Acc"
     }
   },
   "types": {
