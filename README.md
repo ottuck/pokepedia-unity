@@ -4,26 +4,25 @@
 
 **▶ 플레이: https://battle.pokepedia.dev** (로그인 없이 Demo 모드, PC·모바일 브라우저)
 
-| VS 도입 | 기술 선택 |
+| 기술 선택 | 10만볼트 |
 |---|---|
-| ![VS 도입 장면](docs/images/battle-vs.png) | ![기술 선택 화면](docs/images/battle-moves.png) |
-| **10만볼트** | **하이드로펌프** |
-| ![피카츄의 10만볼트](docs/images/battle-thunderbolt.png) | ![거북왕의 하이드로펌프](docs/images/battle-hydro-pump.png) |
-| **승리 — 비가 그치고 노을 진 하늘** | |
-| ![승리 연출](docs/images/battle-victory.png) | |
+| ![기술 선택 화면](docs/images/battle-moves.png) | ![피카츄의 10만볼트](docs/images/battle-thunderbolt.png) |
+| **하이드로펌프** | **승리 — 비가 그치고 노을 진 하늘** |
+| ![거북왕의 하이드로펌프](docs/images/battle-hydro-pump.png) | ![승리 연출](docs/images/battle-victory.png) |
 
 ## 지원 범위 (정확한 수)
 
-- **지금 공개된 Demo: 피카츄 vs 거북왕 1매치업.** 두 포켓몬은 전용 연출(Showcase 품질)을 적용했습니다.
-- 로스터 데이터에는 **6종**(피카츄·거북왕·리자몽·이상해꽃·팬텀·뮤츠)이 공통 전투 시스템으로 정의돼 있습니다. 나머지 4종은 Pokepedia 연동(Collection 모드)과 공통 연출 확인 뒤 공개합니다.
+- **지금 공개: 피카츄(플레이어) vs 거북왕(상대) 1매치업.** 두 포켓몬은 전용 연출(Showcase 품질)을 적용했습니다. Pokepedia에서는 퀴즈로 피카츄 띠부씰을 얻으면 내 피카츄로 배틀할 수 있습니다.
+- 로스터 데이터에는 **6종**(피카츄·거북왕·리자몽·이상해꽃·팬텀·뮤츠)이 공통 전투 시스템으로 정의돼 있습니다. 나머지 4종은 데이터만 보관하고 공개하지 않습니다.
 - **배틀 지원 포켓몬은 1세대 151종 중 일부입니다.** 로스터는 데이터(`roster.json`)로 관리하며 엔진은 지원 포켓몬 수를 모릅니다.
 - 포켓몬마다 기술 3개(몸통박치기 + 속성 기술 2개)이고, 상성·물리/특수·명중·급소를 계산합니다. PP·상태이상은 없습니다.
 
 ## 보여 주고 싶은 것
 
-- **규칙은 순수 C#, 화면은 Unity.** 전투 엔진(상성 18×18, 능력치·데미지, 명중·급소, 턴 순서, NPC AI)은 `UnityEngine`을 참조하지 않는 어셈블리입니다. NUnit 테스트 102개가 Unity 없이 `dotnet test`로 돌고, 규칙 코드가 바뀐 PR은 GitHub Actions에서 검증합니다.
+- **규칙은 순수 C#, 화면은 Unity.** 전투 엔진(상성 18×18, 능력치·데미지, 명중·급소, 턴 순서, NPC AI)은 `UnityEngine`을 참조하지 않는 어셈블리입니다. NUnit 테스트 108개가 Unity 없이 `dotnet test`로 돌고, 규칙 코드가 바뀐 PR은 GitHub Actions에서 검증합니다.
 - **이벤트 로그 → 연출 디렉터.** 엔진은 "기술 사용·피해·급소·기절" 같은 이벤트만 내고, 화면이 그 목록을 차례로 재생합니다. 그래서 규칙과 연출이 서로를 모릅니다.
 - **2.5D 화면 연출.** 월드(스프라이트·Light2D·후처리 Bloom/색 보정·패럴랙스 배경·비 파티클·안개 레이어)와 HUD(uGUI, 후처리 제외)를 따로 렌더링하고, 정수 배율 픽셀 카메라로 도트를 유지합니다. 배경은 코드로 그린 디더링 도트 그림이고, 피격 번쩍임은 직접 쓴 셰이더입니다.
+- **두 층의 화면.** 시작·VS 화면은 웹 템플릿(HTML/CSS)이 공식 아트워크로 그리고 Unity가 상태·문구·시간을 보내 이어 붙입니다. 레트로 도트는 전투 화면부터입니다.
 - **데이터 주도 콘텐츠.** 종·기술·로스터·연출 강도·전용 연출 배정을 JSON으로 관리하고, 기술은 타입에서 자동 배정합니다. 한국어·영어·일본어 로케일을 지원합니다.
 - **웹 배포.** Unity WebGL 빌드를 Brotli로 미리 압축해 Cloudflare Pages에 올리고, 응답 헤더(`Content-Encoding`, `application/wasm`, `frame-ancestors`)를 직접 맞췄습니다. 데스크톱 75 FPS(모니터 상한), 아이폰 Safari 50~60 FPS로 측정했습니다.
 - **Pokepedia 연동 규약.** 서버·DB 없이 iframe + `postMessage`(origin 검증)로 보유 포켓몬 목록을 한 번 받습니다 → [docs/PROJECT.md 9.2](docs/PROJECT.md)
@@ -32,11 +31,7 @@
 
 - Unity 6.3 LTS (6000.3.26f1), C# 9, uGUI + TextMesh Pro, URP 2D (Light2D, Volume 후처리)
 - 웹(WebGL) 빌드, Cloudflare Pages(`battle.pokepedia.dev`). Pokepedia(Next.js, Vercel)에서는 iframe으로, 단독으로도(Demo 모드) 실행합니다.
-- 기획·설계·연동 규약: [docs/PROJECT.md](docs/PROJECT.md) (확정/위임/미정 사항) · 단계별 진행: [docs/ROADMAP.md](docs/ROADMAP.md)
-
-## 진행 상태
-
-마일스톤 현황과 진행 기록은 [docs/ROADMAP.md](docs/ROADMAP.md)에서 관리합니다.
+- 기획·설계·연동 규약: [docs/PROJECT.md](docs/PROJECT.md) (확정/위임/미정 사항) · 현재 상태와 마일스톤: [docs/ROADMAP.md](docs/ROADMAP.md)
 
 ## 구조
 
@@ -50,11 +45,12 @@ Assets/
     Presentation/  Pokepedia.Presentation  화면·입력·연출 (규칙 판단 금지)
   Editor/          ProjectSetup, FontAtlasBuilder, WebBuild
   Tests/EditMode/  NUnit 테스트 (UnityEngine 미사용 → dotnet 에서도 실행)
-  Content/         Data(species·moves·roster.json), Locale(ko/en/ja), Fonts(Galmuri11 + Static 아틀라스), Sprites(생성물, 커밋 안 함)
-  WebGLTemplates/Pokepedia/  웹 템플릿 (10:9 화면, 키 입력 차단, origin 검증)
+  Content/         Data(species·moves·roster·animation.json), Locale(ko/en/ja), Fonts(Galmuri11 + Static 아틀라스), Audio(사운드 매니페스트), VFX
+  Resources/       Sprites·Audio 생성물 (커밋 안 함)
+  WebGLTemplates/Pokepedia/  웹 템플릿 (HTML 시작·VS 화면, 10:9 화면, 키 입력 차단, origin 검증)
 Tests.Dotnet/      Unity 없이 순수 C# 테스트를 돌리는 프로젝트 (소스 링크)
 Tools/             sprites(스프라이트 재현), web(로컬 서버·모의 호스트), audio(속성 공격음 시제품·렌더 도구), unity
-docs/              PROJECT.md(기획·설계·연동 규약), ROADMAP.md(진행 기록, M0 결과), 스프라이트 스타일 비교 페이지
+docs/              PROJECT.md(기획·설계·연동 규약), ROADMAP.md(현재 상태·마일스톤·보관), 스프라이트 스타일 비교 페이지
 ```
 
 의존 방향: `Presentation → Application → Domain`, `Bridge → Application`(인터페이스 구현), `Application → Content → Domain`.

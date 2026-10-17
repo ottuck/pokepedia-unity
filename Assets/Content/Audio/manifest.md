@@ -6,8 +6,7 @@
 - 합성 코드: `Assets/Scripts/Presentation/Audio/Synth/` (`TypeAttackSounds`, `BattleSfx`)
 - 굽기: 에디터 메뉴 **Pokepedia → Bake Audio**(Setup Project 에 포함)가 `Assets/Resources/Audio/{키}.wav` 로 굽는다(커밋 안 함, 22050Hz mono).
 - 들어 보기·측정: `dotnet run -c Release --project Tools/audio/render` → `Tools/audio/out/*.wav` + 길이·피크·RMS 표
-- 속성 공격음 시제품(M0 기록, 지금 레시피와 다름): `Tools/audio/type-attack-sounds-prototype.html`
-- 속성 공격음 8개는 M3-3 에서 다시 만들어 사용자가 속성마다 2안 중 골랐다(2026-10-17).
+- 속성 공격음 첫 시제품(지금 레시피와 다름): `Tools/audio/type-attack-sounds-prototype.html`
 
 | 키 | 언제 | 합성 | 비고 |
 |---|---|---|---|
@@ -19,7 +18,7 @@
 | `move_poison` | 독 기술 발사 | 오물 폭탄: 뿌직 → 꿀렁 → 철퍽 → 치이익 산성 거품 | 착탄 0.35초 |
 | `move_ghost` | 고스트 기술 발사 | 원혼의 울음: 유령 목소리 + 속삭임 → 어긋난 종 메아리 | 착탄 0.5초 |
 | `move_psychic` | 에스퍼 기술 발사 | 사이코 빔: 링 변조 광선 + 피융 → 착탄 + 메아리 | 착탄 0.5초 |
-| `sfx_sendout` | 포켓몬 등장 | 노이즈 "휙" + 펄스 "뿅"(번쩍임에 맞춤) | 울음소리 아님. 울음소리는 M3에서 넣지 않음 |
+| `sfx_sendout` | 포켓몬 등장 | 노이즈 "휙" + 펄스 "뿅"(번쩍임에 맞춤) | 울음소리 아님(울음소리는 넣지 않음, PROJECT.md 14) |
 | `sfx_charge` | 기 모으기(준비 0.25초 이상) | 오르는 펄스 + 떨림 | 공격음이 시작될 때 끊는다 |
 | `sfx_hit` | 피격 | LFSR 노이즈 + 낙하 사각파 | |
 | `sfx_criticalhit` | 급소 피격 | 크랙 + 깊은 낙하 + 두 번째 타격 | |
@@ -35,7 +34,7 @@
 
 ## 보관한 공격음 (게임에는 아직 안 씀)
 
-M3-3 에서 2안 중 고르지 않은 쪽. 두 번째 기술을 추가할 때 쓸 수 있는 품질이라 코드로 보관한다(`TypeAttackSounds.Alternates.cs`, `RenderAlternate(id)`). 굽지 않는다.
+속성마다 두 안 중 고르지 않은 쪽. 두 번째 기술을 추가할 때 쓸 수 있는 품질이라 코드로 보관한다(`TypeAttackSounds.Alternates.cs`, `RenderAlternate(id)`). 굽지 않는다.
 
 | id | 소리 |
 |---|---|
@@ -46,6 +45,6 @@ M3-3 에서 2안 중 고르지 않은 쪽. 두 번째 기술을 추가할 때 �
 | `flying_wing_strike` | 날개 강타: 묵직한 펄럭 → 휘익 내려침 → 소용돌이 돌풍 |
 | `poison_toxic_bog` | 독 늪: 부글부글 거품 + 메스꺼운 어긋난 음 → 꿀렁 펑 |
 | `ghost_shadow_ball` | 섀도볼: 차오르는 어둠 + 섬뜩한 음 → 웅! → 메아리 |
-| `psychic_telekinesis` | 염동력: 빨라지는 맥동 + 공명 스윕 → 일그러지며 휘는 세 음 + 링 변조 + 바람 (끝의 맑은 종은 알림음 같다는 의견으로 바꿈) |
+| `psychic_telekinesis` | 염동력: 빨라지는 맥동 + 공명 스윕 → 일그러지며 휘는 세 음 + 링 변조 + 바람 |
 
 외부 소스를 쓰게 되면 이 표에 출처 URL·라이선스·수집일(AI 생성이면 도구와 요금제)을 함께 적는다.
