@@ -4,11 +4,13 @@
 
 **▶ 플레이: https://battle.pokepedia.dev** (로그인 없이 Demo 모드, PC·모바일 브라우저)
 
-| 기술 선택 | 10만볼트 |
+| VS 도입 | 기술 선택 |
 |---|---|
-| ![기술 선택 화면](docs/images/battle-moves.png) | ![피카츄의 10만볼트](docs/images/battle-thunderbolt.png) |
-| **하이드로펌프** | **승리 — 비가 그치고 노을 진 하늘** |
-| ![거북왕의 하이드로펌프](docs/images/battle-hydro-pump.png) | ![승리 연출](docs/images/battle-victory.png) |
+| ![VS 도입 장면](docs/images/battle-vs.png) | ![기술 선택 화면](docs/images/battle-moves.png) |
+| **10만볼트** | **하이드로펌프** |
+| ![피카츄의 10만볼트](docs/images/battle-thunderbolt.png) | ![거북왕의 하이드로펌프](docs/images/battle-hydro-pump.png) |
+| **승리 — 비가 그치고 노을 진 하늘** | |
+| ![승리 연출](docs/images/battle-victory.png) | |
 
 ## 지원 범위 (정확한 수)
 
