@@ -697,8 +697,10 @@ Unity는 규칙이 클라이언트에 있으므로 결과를 서버에서 검증
 
 ### 10.4 도메인과 환경
 
-- 서브도메인 **`battle.pokepedia.dev`** [확정]. 주의: Workers 커스텀 도메인은 해당 도메인(zone)이 Cloudflare에 있어야 한다는 보고가 있다 (검색 결과, 미확인). Cloudflare가 아니면 DNS 이전 또는 `*.workers.dev` 주소를 쓴다 [미정, M4].
-- **확인된 사실 (2026-10-16, 사용자 제공 화면):** `pokepedia.dev`는 **Vercel**(팀 henry-dev, Hobby 플랜, 프로젝트 `pokepedia`)의 Domains 설정에 Production 도메인으로 연결돼 있다(Valid Configuration). 등록 기관과 네임서버가 Vercel DNS인지 외부인지는 아직 확인하지 않았다. → M4에서 (a) Vercel에 Unity용 별도 프로젝트를 두고 `battle.pokepedia.dev`를 붙이는 안, (b) Cloudflare에 두고 Vercel DNS에 CNAME을 거는 안(Workers 커스텀 도메인 조건 확인 필요), (c) DNS를 Cloudflare로 옮기는 안을 비교해 추천한다. Vercel Hobby의 "비상업적 개인 용도" 조건(10.2)도 함께 본다.
+- 서브도메인 **`battle.pokepedia.dev`** [확정, 2026-10-17 연결]. DNS는 Vercel에 그대로 두고 CNAME 하나로 Cloudflare Pages에 붙였다(10.2).
+  - **DNS 현황 (공개 조회·Vercel CLI 확인):** 등록 기관 Name.com, 네임서버 `ns1/ns2.vercel-dns.com`, Vercel 계정 `vison901-gmailcoms-projects` 아래에 있다. 기본 레코드는 루트·`*` 와일드카드 ALIAS(Vercel), CAA(`pki.goog`·`sectigo.com`·`letsencrypt.org`)뿐이고 MX·TXT는 없다. `battle` 레코드를 따로 두면 와일드카드보다 우선한다.
+  - **연결 절차 (순서 중요, 반대로 하면 522):** ① Cloudflare 대시보드 Workers & Pages → `pokepedia-battle` → Custom domains → Set up a custom domain → `battle.pokepedia.dev` → **My DNS provider → Begin CNAME setup**(왼쪽 "Cloudflare DNS"는 DNS 전체 이전이라 쓰지 않는다). ② Vercel DNS에 `battle CNAME pokepedia-battle.pages.dev` 추가: `npx vercel dns add pokepedia.dev battle CNAME pokepedia-battle.pages.dev`. Vercel MCP는 이 도메인 레코드 조회가 403(팀 범위)이라 CLI로 했다. ③ Cloudflare가 확인하고 인증서를 발급하면 활성화된다. CAA가 Google·Let's Encrypt를 허용해 발급에 문제없다.
+  - Pokepedia 프로젝트는 Vercel 팀 henry-dev(Hobby)의 Domains 설정에 `pokepedia.dev`가 Production 도메인으로 연결돼 있다(2026-10-16 사용자 제공 화면).
 - Pokepedia에 `NEXT_PUBLIC_BATTLE_URL` 환경변수로 iframe 주소를 둔다 (Prod/Preview 분리 가능, 기존 Zod 환경변수 스키마에 등록).
 - Pokepedia의 `next.config.ts`와 `vercel.json`에는 CSP 헤더 설정이 없다 (`src/proxy.ts`는 미확인). iframe 임베드는 추가 설정 없이 될 가능성이 높다.
 
