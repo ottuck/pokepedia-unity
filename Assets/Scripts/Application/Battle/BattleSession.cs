@@ -35,15 +35,22 @@ namespace Pokepedia.App.Battle
         readonly Func<int> pickOpponent;
         readonly int playerSpeciesId;
         readonly bool canEscape;
+        readonly int cheerRevives;
+        int revivesLeft;
         int npcSpeciesId;
         BattleEngine engine;
         bool escaped;
 
+        /// <summary>응원 부활 때 플레이어 포켓몬이 주는 피해 배율</summary>
+        public const double CheerPowerBoost = 1.5;
+
         /// <param name="canEscape">Collection 에서 도망칠 수 있는지. 상대 후보가 1마리면 false (OpponentPicker.CandidateCount, 9.2). Demo 는 항상 도망 불가.</param>
+        /// <param name="cheerRevives">판마다 플레이어가 응원으로 다시 일어서는 횟수 (데모 응원 부활, 5.3). 쓰러지면 BattleEnded 대신 Revived.</param>
         public BattleSession(ContentCatalog catalog, BattleRules rules, IRandom random, BattleMode mode,
-                             int playerSpeciesId, Func<int> pickOpponent, bool canEscape = true)
+                             int playerSpeciesId, Func<int> pickOpponent, bool canEscape = true, int cheerRevives = 0)
         {
             this.canEscape = canEscape;
+            this.cheerRevives = Math.Max(0, cheerRevives);
             this.catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             this.rules = rules ?? throw new ArgumentNullException(nameof(rules));
             this.random = random ?? throw new ArgumentNullException(nameof(random));
@@ -77,7 +84,11 @@ namespace Pokepedia.App.Battle
         {
             if (IsOver) throw new InvalidOperationException("battle is over; call NextBattle() or Retry()");
             var npcAction = NpcBattleAi.Choose(Npc, Player, rules);
-            return engine.PlayTurn(new UseMove(moveIndex), npcAction);
+            var events = engine.PlayTurn(new UseMove(moveIndex), npcAction);
+            if (State.Winner != BattleState.Npc || revivesLeft <= 0) return events;
+            // 응원 부활: 이번 턴의 패배(BattleEnded)를 빼고 다시 일어서는 이벤트로 잇는다
+            revivesLeft--;
+            return events.Where(e => !(e is BattleEnded)).Concat(engine.Revive(BattleState.Player, CheerPowerBoost)).ToList();
         }
 
         /// <summary>Demo(와 상대 후보가 1마리인 Collection)는 도망칠 수 없다(상태 변화 없음). 그 밖의 Collection 은 도망에 항상 성공하고 이 배틀이 끝난다.</summary>
@@ -112,6 +123,7 @@ namespace Pokepedia.App.Battle
             var npc = CreateBattler(npcSpeciesId);
             engine = new BattleEngine(new BattleState(new BattleSide(player), new BattleSide(npc)), rules, random);
             escaped = false;
+            revivesLeft = cheerRevives;
         }
 
         Battler CreateBattler(int speciesId)

@@ -56,6 +56,9 @@ namespace Pokepedia.App.Battle
         public const string WildFainted = "battle.wild_fainted";
         public const string Won = "battle.won";
         public const string Lost = "battle.lost";
+        /// <summary>{0} 플레이어 종 이름: 응원 부활 첫 줄 / 둘째 줄</summary>
+        public const string Cheer = "battle.cheer";
+        public const string CheerRevived = "battle.cheer_revived";
         public const string Escaped = "battle.escaped";
         public const string CannotEscape = "battle.cannot_escape";
 
@@ -80,7 +83,7 @@ namespace Pokepedia.App.Battle
         public static IReadOnlyList<string> MessageKeys { get; } = new[]
         {
             WildAppeared, PlayerSentOut, PlayerMove, WildMove, Missed, CriticalHit, SuperEffective, NotVeryEffective, NoEffect,
-            PlayerFainted, WildFainted, Won, Lost, Escaped, CannotEscape,
+            PlayerFainted, WildFainted, Won, Lost, Escaped, CannotEscape, Cheer, CheerRevived,
         };
 
         /// <summary>메뉴·결과·기술 정보 라벨과 18개 타입 이름</summary>
@@ -133,6 +136,8 @@ namespace Pokepedia.App.Battle
                     return One(IsNpc(f.Side) ? BattleTextKeys.WildFainted : BattleTextKeys.PlayerFainted, NameOf(f.Side));
                 case BattleEnded b:
                     return One(b.WinnerSide == BattleState.Player ? BattleTextKeys.Won : BattleTextKeys.Lost);
+                case Revived r:
+                    return new[] { MessageLine.Of(BattleTextKeys.Cheer, NameOf(r.Side)), MessageLine.Of(BattleTextKeys.CheerRevived, NameOf(r.Side)) };
                 default:
                     throw new NotSupportedException($"no message for {e.GetType().Name}");
             }

@@ -103,6 +103,15 @@ namespace Pokepedia.Presentation.Battle
                         yield return hud.Director.Faint(f.Side);
                         yield return SayAll(e);
                         break;
+                    case Revived r:
+                    {
+                        // "트레이너의 응원이 ○○에게 닿았다!" → 다시 일어서는 연출·HP 회복 → "○○은(는) 다시 일어섰다!"
+                        var lines = BattleMessages.For(e, ctx.Names, ctx.SpeciesOf);
+                        yield return hud.Message.Say(ctx.Locale.Format(lines[0].Key, lines[0].Args.Cast<object>().ToArray()));
+                        yield return hud.Director.Revive(r.Side, () => sides[r.Side].Hp.AnimateTo(r.Hp));
+                        yield return hud.Message.Say(ctx.Locale.Format(lines[1].Key, lines[1].Args.Cast<object>().ToArray()));
+                        break;
+                    }
                     case BattleEnded b:
                         yield return hud.Sound.FadeOutMusic(0.25f);
                         hud.Sound.Play(b.WinnerSide == BattleState.Player ? SfxKind.Victory : SfxKind.Defeat);

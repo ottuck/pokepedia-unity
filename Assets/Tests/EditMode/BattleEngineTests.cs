@@ -117,6 +117,28 @@ namespace Pokepedia.Tests
         }
 
         [Test]
+        public void Revive_AfterLoss_RestoresFullHp_ClearsWinner_AndBoostsDamage()
+        {
+            // 데모 응원 부활(PROJECT.md 5.3): 진 쪽을 HP 가득으로 되살리고 승패를 지운 뒤, 그 포켓몬이 주는 피해를 배율만큼 키운다
+            var nuke = TestMove.Of(PokemonType.Normal, power: 250, category: MoveCategory.Physical, id: "nuke");
+            var player = Mon(spe: 10, hp: 5);
+            var npc = Mon(spe: 99, hp: 500, moves: nuke);
+            var e = Engine(player, npc, ScriptedRandom.Of(5, 15));
+            e.Start();
+            Assert.Throws<System.InvalidOperationException>(() => e.Revive(BattleState.Player, 1.5), "only after losing");
+            e.PlayTurn(First, First);
+            Assert.AreEqual(BattleState.Npc, e.State.Winner, "fixture: player lost");
+            var before = DamageCalculator.Calculate(player, npc, TestMove.Tackle, false, 100, Rules).Amount;
+
+            Assert.AreEqual(new BattleEvent[] { new Revived(BattleState.Player, player.MaxHp, player.MaxHp) }, e.Revive(BattleState.Player, 1.5));
+
+            Assert.IsFalse(e.State.IsOver);
+            Assert.AreEqual(player.MaxHp, player.Hp);
+            var after = DamageCalculator.Calculate(player, npc, TestMove.Tackle, false, 100, Rules).Amount;
+            Assert.That(after, Is.InRange((int)(before * 1.5) - 1, (int)(before * 1.5) + 1));
+        }
+
+        [Test]
         public void Immune_DealsZero_AndIsNeverCritical()
         {
             // 노말 → 고스트는 0배. 급소가 떠도 "급소에 맞았다!" 를 띄우지 않는다.

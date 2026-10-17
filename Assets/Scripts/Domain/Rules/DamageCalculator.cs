@@ -66,6 +66,7 @@ namespace Pokepedia.Domain.Rules
             damage = damage * randomPercent / 100;
             if (stab) damage = ApplyModifierRoundHalfDown(damage, rules.StabMultiplier);
             damage = (int)Math.Floor(damage * effectiveness);
+            if (attacker.PowerBoost != 1.0) damage = ApplyModifierRoundHalfDown(damage, attacker.PowerBoost);   // 응원 부활 버프
 
             return new DamageResult(Math.Max(1, damage), effectiveness, critical, stab);
         }

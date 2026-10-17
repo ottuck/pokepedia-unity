@@ -65,6 +65,7 @@ namespace Pokepedia.Tests
             AssertLines(new Fainted(BattleState.Npc), L(BattleTextKeys.WildFainted, "S9"));
             AssertLines(new BattleEnded(BattleState.Player), L(BattleTextKeys.Won));
             AssertLines(new BattleEnded(BattleState.Npc), L(BattleTextKeys.Lost));
+            AssertLines(new Revived(BattleState.Player, 1, 1), L(BattleTextKeys.Cheer, "S25"), L(BattleTextKeys.CheerRevived, "S25"));
         }
 
         // ---------- 키 목록 ----------
@@ -77,7 +78,7 @@ namespace Pokepedia.Tests
                 new PokemonSentOut(BattleState.Npc, 9, 1, 1), new PokemonSentOut(BattleState.Player, 25, 1, 1),
                 new MoveUsed(BattleState.Player, "a"), new MoveUsed(BattleState.Npc, "b"), new MoveMissed(0, "a"),
                 new DamageDealt(1, 1, 1, 2.0, true), new DamageDealt(1, 1, 1, 0.5, false), new DamageDealt(1, 0, 1, 0, false),
-                new Fainted(0), new Fainted(1), new BattleEnded(0), new BattleEnded(1),
+                new Fainted(0), new Fainted(1), new BattleEnded(0), new BattleEnded(1), new Revived(0, 1, 1),
             };
             var lines = events.SelectMany(For)
                 .Concat(new[] { BattleMessages.ForRun(RunOutcome.Escaped), BattleMessages.ForRun(RunOutcome.CannotEscape) });

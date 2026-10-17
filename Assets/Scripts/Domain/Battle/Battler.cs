@@ -18,6 +18,8 @@ namespace Pokepedia.Domain.Battle
         public int MaxHp => Stats.Hp;
         public bool Fainted => Hp <= 0;
         public IReadOnlyList<PokemonType> Types => Species.Types;
+        /// <summary>주는 피해에 곱하는 배율 (응원 부활 버프, 기본 1)</summary>
+        public double PowerBoost { get; private set; } = 1.0;
 
         /// <summary>테스트용: 실제 능력치를 직접 지정한다.</summary>
         public Battler(Species species, StatBlock stats, IReadOnlyList<Move> moves)
@@ -32,6 +34,13 @@ namespace Pokepedia.Domain.Battle
         /// <summary>종족값에서 능력치를 계산해 만든다.</summary>
         public static Battler Create(Species species, IReadOnlyList<Move> moves, BattleRules rules)
             => new Battler(species, StatCalculator.Compute(species.BaseStats, rules), moves);
+
+        /// <summary>쓰러진 뒤 HP 를 가득 채우고 피해 배율을 건다 (BattleEngine.Revive)</summary>
+        internal void Revive(double powerBoost)
+        {
+            Hp = MaxHp;
+            PowerBoost = powerBoost;
+        }
 
         /// <summary>HP 를 깎고 실제로 깎인 양을 돌려준다 (0 미만으로 내려가지 않음).</summary>
         internal int TakeDamage(int amount)
