@@ -663,7 +663,7 @@ Unity는 규칙이 클라이언트에 있으므로 결과를 서버에서 검증
 
 ```text
 브라우저
- ├─ Pokepedia (Vercel, 기존) ── iframe ──▶ Unity 정적 호스팅 (Cloudflare Workers 정적 자산 권장)
+ ├─ Pokepedia (Vercel, 기존) ── iframe ──▶ Unity 정적 호스팅 (Cloudflare Pages, 프로젝트 `pokepedia-battle`)
  └─ Supabase (기존) ◀── React만 접근. Unity는 접근하지 않음
 ```
 
@@ -672,7 +672,12 @@ Unity는 규칙이 클라이언트에 있으므로 결과를 서버에서 검증
 - 브라우저 로컬 저장소(PlayerPrefs)에는 언어·볼륨 같은 설정만 둘 수 있다.
 - 화면 비율은 게임보이(약 10:9)를 기준으로 iframe 크기에 맞춰 스케일한다. 입력은 버튼·터치·키보드로 모두 처리 가능하다.
 
-### 10.2 호스팅 선택지 (2026-10-16 문서 기준)
+### 10.2 호스팅 선택: **Cloudflare Pages** [확정, 2026-10-17]
+
+- **Pages로 정한 이유 (사용자 결정, 공식 문서 확인):** `pokepedia.dev` DNS는 Vercel이 관리한다(네임서버 `ns1/ns2.vercel-dns.com`, 등록 기관 Name.com). Workers 커스텀 도메인은 DNS가 Cloudflare에 있는 영역에만 붙는다(Cloudflare 문서 "Migrate from Pages to Workers"의 호환표와 Custom Domains 문서: Workers는 "네임서버가 Cloudflare가 아닌 도메인은 지원하지 않는다"). Pages는 외부 DNS에 CNAME 하나로 붙는다. 정적 파일 요청 무료·무제한, 파일당 25 MiB, `_headers` 지원은 둘이 같다. 운영 중인 Pokepedia DNS를 옮기지 않으려고 Pages를 골랐다. 나중에 Pokepedia가 Cloudflare로 옮기면(10.8) Workers로 바꾸기 쉽다(공식 마이그레이션 가이드).
+- **주의 (2026-10-17 겪음):** wrangler 4.151은 `wrangler pages project create`를 기본으로 **Worker로 바꿔 만들고 바로 배포**한다. Pages로 만들려면 처음 한 번 `--force`를 붙인다. 이미 Pages 프로젝트가 있으면 이후 `pages deploy`는 Pages로 간다.
+
+**처음 비교한 선택지 (2026-10-16 문서 기준)**
 
 | 선택지 | 평가 | 근거·주의 |
 |---|---|---|
@@ -682,12 +687,11 @@ Unity는 규칙이 클라이언트에 있으므로 결과를 서버에서 검증
 | GitHub Pages | 비추천 | 커스텀 헤더 불가 → Decompression Fallback 필요(로더 증가, wasm 스트리밍 불가) |
 | 개인 서버 | 비추천 | 공개 게임용으로는 가동·보안 운영 부담 |
 
-최종 선택은 실배포(M4)에서 확정한다.
 
 ### 10.3 호스팅 설정
 
 - Unity Web 빌드는 압축 형식에 맞는 `Content-Encoding`(`br` 또는 `gzip`)과 **`.wasm`의 `application/wasm` MIME**이 필요하다 (스트리밍 컴파일). Brotli는 Chrome·Firefox에서 HTTPS에서만 기본 지원한다. 압축을 끄면(Disabled) 파일이 25 MiB 한도를 넘을 수 있으므로 Brotli를 쓴다(M0 PoC 기준 약 9.4MB, 스트리핑 High·LTO를 되돌리기 전 수치).
-- 서버에 이미 자동 압축이 있으면 이중 압축이 될 수 있으므로 실제 응답 헤더를 확인한다. **Vercel은 `wasm`·`javascript` MIME을 자동 압축**하므로(문서 기준) Unity 압축을 Disabled로 두는 방법이 있다 (`.data` 같은 `application/octet-stream`은 자동 압축 대상 아님). Cloudflare의 자동 압축 대상과 사전 압축(`.br`) 파일에 `Content-Encoding`을 직접 지정하는 방식은 확인하지 못했다. 로컬 모의 서버(`Tools/web/serve.py`)로만 확인했고 Cloudflare 실배포 검증은 M4에서 한다.
+- 서버에 이미 자동 압축이 있으면 이중 압축이 될 수 있으므로 실제 응답 헤더를 확인한다. **Vercel은 `wasm`·`javascript` MIME을 자동 압축**하므로(문서 기준) Unity 압축을 Disabled로 두는 방법이 있다 (`.data` 같은 `application/octet-stream`은 자동 압축 대상 아님). **Cloudflare Pages 실배포로 확인 (2026-10-17):** `Tools/web/_headers`로 `Build/*.wasm.br`·`*.js.br`·`*.data.br`에 `Content-Encoding: br`과 안쪽 확장자의 Content-Type을 붙이면 그대로 나간다. `Content-Length`가 원본 `.br` 크기와 같아 Cloudflare가 다시 압축하지 않고, 브라우저(크롬 계열)에서 게임이 정상 실행된다. `Build/`는 `Cache-Control: public, max-age=31536000, immutable`, 나머지는 Pages 기본값(`max-age=0, must-revalidate`). Pages `_headers`는 같은 헤더가 여러 규칙에 걸리면 값을 쉼표로 이어 붙이므로 한 헤더는 한 규칙에서만 정한다.
 - `Content-Security-Policy: frame-ancestors`로 임베드를 허용할 도메인(Pokepedia, 포트폴리오 허브)만 지정한다. `roster.json`을 Pokepedia가 읽는다면 CORS 헤더를 설정한다.
 - 캐시: 로더·`index.html`은 재검증, 해시 파일명(`Name files as hashes`, 구현 시 확인)을 쓰면 빌드 산출물은 장기 캐시.
 
@@ -700,7 +704,7 @@ Unity는 규칙이 클라이언트에 있으므로 결과를 서버에서 검증
 
 ### 10.5 빌드·배포·CI
 
-- **초기: 로컬 Unity 빌드 → 스크립트로 업로드** (`wrangler deploy`, `assets.directory`에 빌드 폴더 지정). Unity CI(GameCI 등)는 라이선스·캐시 설정이 번거로워 이후 검토한다.
+- **로컬 Unity Release 빌드 → `python -I Tools/web/deploy.py`** [확정]: `Builds/Web`을 `Builds/deploy`로 복사하고 `_headers`를 넣어 `wrangler pages deploy`로 올린다(`--branch`가 `main`이 아니면 미리보기 배포). 주소는 `https://pokepedia-battle.pages.dev`. Unity CI(GameCI 등)는 라이선스·캐시 설정이 번거로워 이후 검토한다.
 - **CI에서는 순수 C# 도메인 테스트만** 실행한다 (GitHub Actions + `dotnet test`). Domain이 UnityEngine을 참조하지 않으므로 별도 테스트 csproj가 Domain 소스를 링크해 Unity 라이선스 없이 매 푸시마다 검증할 수 있다.
 - 주의: Unity에서 `record`의 `init` 접근자를 쓰려면 `System.Runtime.CompilerServices.IsExternalInit` 타입을 직접 정의해야 한다 (`Assets/Scripts/Domain/IsExternalInit.cs`).
 - 빌드 산출물(`Builds/` 등)은 저장소에 커밋하지 않는다.
@@ -771,7 +775,7 @@ ottuck/pokepedia-unity    # Unity / C# [확정]
 | 모드 | Demo(피카츄 vs 거북왕 고정) / Collection(보유 ∩ 지원). 판별은 `?host=pokepedia` + `init` 대기, 실패 시 [다시 시도], Demo는 명시적 선택 |
 | DB | Pokepedia DB 변경 없음. Unity는 인증·DB 직접 사용 안 함 |
 | 보상 | 배틀 승리 보상·랭킹 갱신 없음 |
-| 인프라 | 자체 서버 없음, 정적 호스팅(Cloudflare Workers 정적 자산 권장), 서브도메인 `battle.pokepedia.dev` |
+| 인프라 | 자체 서버 없음, 정적 호스팅 **Cloudflare Pages**(프로젝트 `pokepedia-battle`, DNS는 Vercel에 두고 CNAME), 서브도메인 `battle.pokepedia.dev` (10.2) |
 | 저장소 | `ottuck/pokepedia-unity` (Pokepedia와 분리) |
 | 모바일 | 앱 출시 없음. **모바일 브라우저에서 화면이 완벽하게 보이는 것이 목표** |
 | Pokepedia 쪽 | 퀴즈에서 지원 포켓몬이 처음에 등장하도록 수정(의도 확정, 세부는 게임 완성 후) |
@@ -779,7 +783,7 @@ ottuck/pokepedia-unity    # Unity / C# [확정]
 ## 14. 아직 결정하지 않은 사항 (에이전트가 임의로 확정하지 말 것)
 
 **실배포로 정해지는 것**
-- 호스팅 최종 선택, `pokepedia.dev` DNS 위치에 따른 서브도메인 방식 (Cloudflare `.br` 헤더 검증 포함, ROADMAP M4)
+- (없음. 호스팅·`.br` 헤더는 2026-10-17 확정, 10.2·10.3)
 
 **사용자 결정 필요**
 - M3 이후 포켓몬 울음소리(등장 소리)를 넣을지, 넣는다면 어떤 방식인지 (8.3). M3에서는 넣지 않기로 확정했다. 속성 합성 소리는 공격음이라 해당하지 않는다.
