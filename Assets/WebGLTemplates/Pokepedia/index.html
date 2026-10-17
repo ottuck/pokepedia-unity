@@ -42,7 +42,7 @@
       :lang(ja) #title { font-family: "Galmuri11", "DotGothic16", "Hiragino Sans", "Yu Gothic", monospace; }
       #title[data-view="hidden"] { opacity: 0; visibility: hidden; pointer-events: none; }
       /* 굵게: Regular 글자를 도트 한 칸(1em/12)만큼 가로로만 겹친다. 세로 획만 두꺼워지고 'ㅌ' 사이의 가로 틈은 그대로 남는다 */
-      #title [data-action], #title .message, #title .tag, #title .pct, #title .tip, #title .footer { text-shadow: calc(1em / 12) 0 currentColor; }
+      #title [data-action], #title .message, #title .pct, #title .tip, #title .footer { text-shadow: calc(1em / 12) 0 currentColor; }
 
       /* 로고: 퀴즈 타이틀과 같은 두 겹 픽셀 테두리(번짐 없음) */
       #title .logo, #title .vs { font-family: "Galmuri11 Bold", "Galmuri11", monospace; }
@@ -98,11 +98,13 @@
       /* 게임보이 글상자: 진한 두 줄 테두리, 안에 메뉴 */
       #title .box { width: 100%; box-sizing: border-box; border: 0.9cqw solid var(--ink); border-radius: 2cqw; background: var(--paper);
         box-shadow: inset 0 0 0 1.6cqw var(--paper), inset 0 0 0 2.1cqw var(--ink); padding: 3.4cqw 5cqw; }
-      #title .message { margin: 0; font-size: max(3.6cqw, 12px); font-size: max(12px, round(nearest, max(3.6cqw, 12px), 12px)); font-weight: 700; line-height: 1.7; white-space: pre-line; word-break: keep-all; }
+      /* 안내 문구는 메뉴보다 작게(6px 단위로 맞춤) */
+      #title .message { margin: 0; font-size: 3cqw; font-size: max(12px, round(nearest, 3cqw, 6px)); font-weight: 700; line-height: 1.7; white-space: pre-line; word-break: keep-all; }
       #title .actions { display: flex; justify-content: center; gap: 4cqw; margin-top: 1.4cqw; }
       #title .box button { font-size: max(3.8cqw, 13px); font-size: max(12px, round(nearest, max(3.8cqw, 13px), 12px)); font-weight: 900; }
+      /* 게임보이 메뉴처럼 고른 항목 앞에 늘 ▶ 커서가 있다(처음엔 첫 항목). 마우스를 올리거나 방향키로 옮기고 Z·Enter 로 고른다 */
       #title .box button > span::before { content: "▶ "; visibility: hidden; color: #e3342f; }
-      #title .box button:hover > span::before, #title .box button:focus-visible > span::before { visibility: visible; }
+      #title .box button.sel > span::before { visibility: visible; }
 
       /* 상태별로 보이는 것 */
       #title .loading, #title .box, #title [data-action] { display: none; }
@@ -133,11 +135,14 @@
       @keyframes slam { from { transform: scale(2.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
       #title .flash { position: absolute; inset: 0; z-index: 6; background: #fff; opacity: 0; pointer-events: none; animation: flash 0.35s steps(3, end) 0.62s both; }
       @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
-      #title .tag { position: absolute; z-index: 5; border: 0.8cqw solid var(--ink); border-radius: 1.6cqw; background: var(--paper);
-        box-shadow: inset 0 0 0 1.2cqw var(--paper), inset 0 0 0 1.7cqw var(--ink); padding: 2.4cqw 4.4cqw; font-size: max(4.4cqw, 13px); font-size: max(12px, round(nearest, max(4.4cqw, 13px), 12px)); font-weight: 900;
-        white-space: nowrap; animation: tag 0.24s steps(3, end) 0.45s both; }
-      #title .tag.right { right: 5cqw; top: 8cqw; }
-      #title .tag.left { left: 5cqw; bottom: 8cqw; animation-delay: 0.5s; }
+      /* 이름: 각 포켓몬 발밑에 진한 글자 + 얇은 흰 테두리(글상자 대신). 구름·하늘 어디에 걸려도 읽힌다 */
+      #title .tag { position: absolute; z-index: 5; top: 75cqw; font-size: 5.4cqw; font-size: max(12px, round(nearest, 5.4cqw, 12px)); font-weight: 900;
+        letter-spacing: 0.06em; white-space: nowrap; color: var(--ink);
+        text-shadow: calc(1em / 12) 0 var(--ink), 0.35cqw 0 #fff, -0.35cqw 0 #fff, 0 0.35cqw #fff, 0 -0.35cqw #fff,
+          calc(1em / 12 + 0.35cqw) 0 #fff, calc(1em / 12 + 0.35cqw) 0.35cqw #fff, calc(1em / 12 + 0.35cqw) -0.35cqw #fff, -0.35cqw 0.35cqw #fff, -0.35cqw -0.35cqw #fff;
+        animation: tag 0.24s steps(3, end) 0.7s both; }
+      #title .tag.left { left: 6cqw; width: 28cqw; text-align: center; }
+      #title .tag.right { right: 5cqw; width: 34cqw; text-align: center; animation-delay: 0.76s; }
       @keyframes tag { from { opacity: 0; translate: 0 2cqw; } to { opacity: 1; translate: 0 0; } }
       @media (prefers-reduced-motion: reduce) { #title *, #title *::after { animation: none !important; } #title[data-view="vs"] .mon { filter: none; opacity: 1; } }
     </style>
@@ -184,11 +189,11 @@
       // 로딩 문구 언어: Pokepedia 는 ?lang= 을 붙여 띄우고, 없으면 브라우저 언어. 시작 화면 문구는 Unity 가 로케일 파일에서 보낸다
       var lang = (new URLSearchParams(location.search).get("lang") || navigator.language || "ko").slice(0, 2);
       var TEXT = {
-        ko: { tip: "처음 불러올 때는 조금 걸려요. 다음부터는 빨라요.", ready: "준비 중", failed: "불러오지 못했어요. 새로고침해 주세요.", footer: "© 2026 Pokepedia · 팬 프로젝트" },
-        en: { tip: "The first load takes a moment. It is faster next time.", ready: "Ready soon", failed: "Could not load. Please refresh.", footer: "© 2026 Pokepedia · Fan project" },
-        ja: { tip: "はじめての よみこみは すこし じかんが かかります。", ready: "じゅんびちゅう", failed: "よみこめませんでした。 リロードしてください。", footer: "© 2026 Pokepedia · ファンプロジェクト" }
+        ko: { tip: "처음 불러올 때는 조금 걸려요. 다음부터는 빨라요.", failed: "불러오지 못했어요. 새로고침해 주세요.", footer: "© 2026 Pokepedia · 팬 프로젝트" },
+        en: { tip: "The first load takes a moment. It is faster next time.", failed: "Could not load. Please refresh.", footer: "© 2026 Pokepedia · Fan project" },
+        ja: { tip: "はじめての よみこみは すこし じかんが かかります。", failed: "よみこめませんでした。 リロードしてください。", footer: "© 2026 Pokepedia · ファンプロジェクト" }
       }[lang] || null;
-      if (!TEXT) TEXT = { tip: "The first load takes a moment. It is faster next time.", ready: "Ready soon", failed: "Could not load. Please refresh.", footer: "© 2026 Pokepedia · Fan project" };
+      if (!TEXT) TEXT = { tip: "The first load takes a moment. It is faster next time.", failed: "Could not load. Please refresh.", footer: "© 2026 Pokepedia · Fan project" };
       document.documentElement.lang = lang === "en" || lang === "ja" ? lang : "ko";
       // 부제·시작 버튼은 세 언어 모두 영어(BATTLE · START): 퀴즈의 PRESS START 처럼 어느 언어에서나 통한다
       title.querySelector(".sub").textContent = "BATTLE";
@@ -217,8 +222,22 @@
           set('[data-action="retry"] > span', v.retry);
           set('[data-action="demo"] > span', v.demo);
           set(".footer", v.footer);
+          var items = menu(); select(items[0] || null);
         }
       };
+      // 안내 글상자의 메뉴: 보이는 버튼 중 고른 것에 .sel(▶ 커서). 상태가 바뀌면 첫 항목, 마우스·방향키로 옮기고 Z·Enter·Space 로 누른다.
+      // (Unity 는 시작 화면에서만 키를 받으므로 여기서 받아도 겹치지 않는다)
+      var menu = function () { return Array.prototype.filter.call(title.querySelectorAll(".box button"), function (b) { return b.offsetParent !== null; }); };
+      var select = function (b) { title.querySelectorAll(".box button").forEach(function (x) { x.classList.toggle("sel", x === b); }); };
+      title.querySelectorAll(".box button").forEach(function (b) { b.addEventListener("mouseenter", function () { select(b); }); });
+      window.addEventListener("keydown", function (e) {
+        var items = menu();
+        if (!items.length) return;
+        var i = Math.max(0, items.findIndex(function (b) { return b.classList.contains("sel"); }));
+        if (/^Arrow(Left|Up)$/.test(e.key)) select(items[(i + items.length - 1) % items.length]);
+        else if (/^Arrow(Right|Down)$/.test(e.key)) select(items[(i + 1) % items.length]);
+        else if (e.key === "Enter" || e.key === " " || e.key === "z" || e.key === "Z") { if (!e.repeat) items[i].click(); }
+      });
       title.addEventListener("click", function (e) {
         var b = e.target.closest("button[data-action]");
         if (!b || !window.pokeHost.instance) return;
@@ -285,10 +304,11 @@
           return false;
         },
       }, function (p) {
-        // 0~0.9 는 내려받기, 그 뒤는 엔진 초기화. 막대는 10칸 블록이 차례로 찬다
-        var on = Math.round(p * blocks.length);
+        // 0~0.9 가 내려받기, 그 뒤는 엔진 초기화(짧다). 막대는 내려받기가 끝나면 다 차고(10칸 블록), 따로 "준비 중"을 띄우지 않는다
+        var q = Math.min(1, p / 0.9);
+        var on = Math.round(q * blocks.length);
         for (var i = 0; i < blocks.length; i++) blocks[i].classList.toggle("on", i < on);
-        loadingText.textContent = p >= 0.9 ? TEXT.ready : Math.round(p * 100) + "%";
+        loadingText.textContent = Math.round(q * 100) + "%";
       })
       .then(function (instance) {
         window.pokeHost.instance = instance;
