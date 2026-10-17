@@ -56,6 +56,7 @@
     },
     "result": {
       "next_opponent": "Next opponent",
+      "rematch": "Battle again",
       "retry": "Try again",
       "title": "Title screen"
     },

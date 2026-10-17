@@ -65,6 +65,8 @@ namespace Pokepedia.App.Battle
         public const string MenuFight = "battle.menu.fight";
         public const string MenuRun = "battle.menu.run";
         public const string ResultNextOpponent = "battle.result.next_opponent";
+        /// <summary>상대 후보가 1마리라 이긴 뒤에도 같은 상대가 나올 때 (Demo, 지금의 Collection)</summary>
+        public const string ResultRematch = "battle.result.rematch";
         public const string ResultRetry = "battle.result.retry";
         public const string ResultTitle = "battle.result.title";
         public const string InfoType = "battle.info.type";
@@ -84,7 +86,7 @@ namespace Pokepedia.App.Battle
         /// <summary>메뉴·결과·기술 정보 라벨과 18개 타입 이름</summary>
         public static IReadOnlyList<string> UiKeys { get; } = new[]
             {
-                PromptWhatToDo, MenuFight, MenuRun, ResultNextOpponent, ResultRetry, ResultTitle, InfoType, InfoPower, InfoAccuracy,
+                PromptWhatToDo, MenuFight, MenuRun, ResultNextOpponent, ResultRematch, ResultRetry, ResultTitle, InfoType, InfoPower, InfoAccuracy,
             }
             .Concat(((PokemonType[])Enum.GetValues(typeof(PokemonType))).Select(TypeName))
             .ToArray();

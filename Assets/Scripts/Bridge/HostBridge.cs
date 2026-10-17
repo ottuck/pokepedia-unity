@@ -27,6 +27,9 @@ namespace Pokepedia.Bridge
         /// <summary>주소에 ?fps 가 있으면 프레임 표시를 켠다 (성능 측정용)</summary>
         public bool IsFpsMode { get; private set; }
 
+        /// <summary>주소의 ?lang= (ko/en/ja). Pokepedia 가 페이지 언어를 넘긴다. 없으면 null</summary>
+        public string Lang { get; private set; }
+
         void Awake()
         {
             gameObject.name = "HostBridge";
@@ -36,6 +39,8 @@ namespace Pokepedia.Bridge
             IsHostMode = search.Contains("host=pokepedia");
             IsLabMode = search.Contains("lab");
             IsFpsMode = search.Contains("fps");
+            int at = search.IndexOf("lang=", StringComparison.Ordinal);
+            if (at >= 0 && at + 7 <= search.Length) Lang = search.Substring(at + 5, 2);
 #endif
         }
 
