@@ -96,7 +96,7 @@ namespace Pokepedia.Content
 
         // ---------- roster.json ----------
 
-        static readonly string[] RosterFields = { "id", "tier", "npcWeight" };
+        static readonly string[] RosterFields = { "id", "tier", "npcWeight", "playable" };
 
         public static IReadOnlyList<RosterEntry> ParseRoster(string json)
         {
@@ -112,7 +112,8 @@ namespace Pokepedia.Content
                 if (!seen.Add(id)) throw o.Error($"duplicate roster id {id}");
                 var tier = o.Enum("tier", RosterTier.Showcase, RosterTier.Standard);
                 int weight = o.Int("npcWeight", min: 0);
-                result.Add(new RosterEntry(id, tier, weight));
+                bool playable = o.Has("playable") && o.Bool("playable");
+                result.Add(new RosterEntry(id, tier, weight, playable));
             }
             return result.AsReadOnly();
         }
@@ -167,6 +168,8 @@ namespace Pokepedia.Content
                     if (System.Array.IndexOf(allowed, key) < 0)
                         throw Error($"unknown field '{key}' (allowed: {string.Join(", ", allowed)})");
             }
+
+            public bool Has(string name) => map.ContainsKey(name);
 
             public object Raw(string name)
             {

@@ -14,7 +14,8 @@ namespace Pokepedia.Presentation.Battle
 {
     /// <summary>
     /// 배틀 화면이 지금 무엇을 하는 중인지 (PROJECT.md 7.3). 입력은 Command·Result·Lab 에서만 받는다.
-    /// M6(Pokepedia 연동)에서 Connecting(호스트 init 대기)·Selecting(보유 포켓몬 고르기)을 Entering 앞에 더한다.
+    /// 호스트 연결(init 대기)과 플레이어 포켓몬 정하기는 배틀 화면이 열리기 전 TitleScreen 이 맡는다.
+    /// 플레이어 후보가 2마리 이상이 되는 확장 때 선택 화면(Selecting)을 Entering 앞에 더한다 (9.2).
     /// </summary>
     public enum BattleViewState
     {
@@ -73,6 +74,7 @@ namespace Pokepedia.Presentation.Battle
         BattleEventPlayer player;
         BattleLab lab;
         Action onExit;
+        Action<bool> onBattleEnded;   // Collection: 한 판의 승패를 호스트에 알린다 (battleEnded, 9.2)
         ChoiceMenu activeMenu;
         bool lastWin;
         int lastMoveIndex;
@@ -84,6 +86,23 @@ namespace Pokepedia.Presentation.Battle
         public void BeginDemo(string localeCode, Action onExit)
         {
             Prepare(localeCode, onExit);
+            ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, NewRandom(), BattleMode.Demo, DemoPlayer, () => DemoNpc);
+            StartCoroutine(NewBattle(ctx.Session.Start));
+        }
+
+        /// <summary>
+        /// Pokepedia 에서 들어온 Collection 모드 (9.2): 고른 플레이어 포켓몬으로, 상대는 roster.json 가중 추첨.
+        /// 상대 후보가 1마리뿐이면 도망을 끈다. onBattleEnded 는 승패가 날 때마다 (true = 승리).
+        /// </summary>
+        public void BeginCollection(string localeCode, PlayerChoice choice, Action onExit, Action<bool> onBattleEnded)
+        {
+            Prepare(localeCode, onExit);
+            this.onBattleEnded = onBattleEnded;
+            ctx.PlayerShiny = choice.Shiny;
+            var random = NewRandom();
+            bool canEscape = OpponentPicker.CandidateCount(ctx.Catalog, choice.SpeciesId) > 1;
+            ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, random, BattleMode.Collection, choice.SpeciesId,
+                                            OpponentPicker.Weighted(ctx.Catalog, random, choice.SpeciesId), canEscape);
             StartCoroutine(NewBattle(ctx.Session.Start));
         }
 
@@ -91,21 +110,44 @@ namespace Pokepedia.Presentation.Battle
         public void BeginLab(string localeCode, Action onExit)
         {
             Prepare(localeCode, onExit);
+            ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, NewRandom(), BattleMode.Demo, DemoPlayer, () => DemoNpc);
             State = BattleViewState.Animating;
             StartCoroutine(lab.Intro());
         }
 
+        /// <summary>Collection 모드의 플레이어 후보 (보유 ∩ 플레이어 가능). 타이틀이 연결 직후 묻는다.</summary>
+        public IReadOnlyList<PlayerChoice> CollectionPlayers(IEnumerable<App.Host.OwnedSticker> owned)
+        {
+            LoadCatalog();
+            return CollectionLineup.Players(ctx.Catalog, owned);
+        }
+
+        /// <summary>플레이어로 쓸 수 있는 포켓몬의 이름 키 (보유 0마리일 때 "무엇을 얻으면 되는지" 안내용)</summary>
+        public IEnumerable<string> PlayableNameKeys()
+        {
+            LoadCatalog();
+            return ctx.Catalog.Roster.Where(r => r.Playable).Select(r => ctx.Catalog.GetSpecies(r.Id).NameKey);
+        }
+
+        void LoadCatalog()
+        {
+            if (ctx.Catalog != null) return;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            ctx.Catalog = ContentLoader.Load(speciesJson.text, movesJson.text, rosterJson.text);
+            Perf("content", sw);
+            ctx.Animation = AnimationCatalog.Parse(animationJson.text);
+            Perf("animation", sw);
+        }
+
+        static SeededRandom NewRandom() => new SeededRandom((uint)Environment.TickCount | 1u);
+
         void Prepare(string localeCode, Action onExit)
         {
             this.onExit = onExit;
+            onBattleEnded = null;
+            ctx.PlayerShiny = false;
+            LoadCatalog();
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            if (ctx.Catalog == null)
-            {
-                ctx.Catalog = ContentLoader.Load(speciesJson.text, movesJson.text, rosterJson.text);
-                Perf("content", sw);
-                ctx.Animation = AnimationCatalog.Parse(animationJson.text);
-                Perf("animation", sw);
-            }
             var asset = localeCode switch { "en" => localeEn, "ja" => localeJa, _ => localeKo };
             ctx.Locale = LocaleTable.Parse(asset.text);
             Perf("locale", sw);
@@ -113,9 +155,6 @@ namespace Pokepedia.Presentation.Battle
             ctx.Names = new BattleNames(id => locale.Get(catalog.GetSpecies(id).NameKey), id => locale.Get(catalog.GetMove(id).NameKey));
             if (hud == null) { Build(); Perf("build ui", sw); }
             hud.SetVisible(true);
-
-            var seed = (uint)Environment.TickCount | 1u;
-            ctx.Session = new BattleSession(ctx.Catalog, BattleRules.Default, new SeededRandom(seed), BattleMode.Demo, DemoPlayer, () => DemoNpc);
             lastMoveIndex = 0;
         }
 
@@ -220,6 +259,7 @@ namespace Pokepedia.Presentation.Battle
         {
             State = BattleViewState.Result;
             lastWin = ctx.Session.State.Winner == BattleState.Player;
+            onBattleEnded?.Invoke(lastWin);
             SetMenu(hud.ResultMenu);
             hud.ResultMenu.Show(new[] { ctx.Locale.Get(lastWin ? Keys.NextOpponent : Keys.Retry), ctx.Locale.Get(Keys.ToTitle) });
         }

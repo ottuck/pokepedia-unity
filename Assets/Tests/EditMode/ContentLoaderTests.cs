@@ -34,7 +34,7 @@ namespace Pokepedia.Tests
             SpeciesJson(25, Q("'electric'")),
             SpeciesJson(6, Q("'fire', 'flying'"))) + "]";
 
-        static readonly string Roster = Q("[ { 'id': 25, 'tier': 'showcase', 'npcWeight': 10 }, { 'id': 6, 'tier': 'standard', 'npcWeight': 3 } ]");
+        static readonly string Roster = Q("[ { 'id': 25, 'tier': 'showcase', 'npcWeight': 10, 'playable': true }, { 'id': 6, 'tier': 'standard', 'npcWeight': 3 } ]");
 
         static FormatException Fails(TestDelegate act) => Assert.Throws<FormatException>(act);
 
@@ -64,11 +64,12 @@ namespace Pokepedia.Tests
         }
 
         [Test]
-        public void Roster_IsParsed()
+        public void Roster_IsParsed_PlayableDefaultsToFalse()
         {
+            // playable 이 빠진 포켓몬은 상대로만 나온다(9.2). 기본값이 true 면 준비 안 된 포켓몬이 플레이어로 열린다.
             var r = ContentLoader.ParseRoster(Roster);
-            Assert.AreEqual(new RosterEntry(25, RosterTier.Showcase, 10), r[0]);
-            Assert.AreEqual(new RosterEntry(6, RosterTier.Standard, 3), r[1]);
+            Assert.AreEqual(new RosterEntry(25, RosterTier.Showcase, 10, Playable: true), r[0]);
+            Assert.AreEqual(new RosterEntry(6, RosterTier.Standard, 3, Playable: false), r[1]);
         }
 
         [Test]

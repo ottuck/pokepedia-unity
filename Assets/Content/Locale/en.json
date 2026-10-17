@@ -7,7 +7,7 @@
     "demo_mode": "DEMO MODE\nPikachu vs Blastoise",
     "connecting": "Connecting to Pokepedia…",
     "connect_failed": "Could not connect.",
-    "connected": "Connected! {0} Pokémon owned"
+    "no_partner": "Win a {0} sticker in the quiz\nto battle with your own Pokémon"
   },
   "species": {
     "003": "Venusaur",

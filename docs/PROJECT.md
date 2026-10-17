@@ -375,7 +375,7 @@ VS 도입 장면 (약 2초, 확인 입력으로 건너뛰기, M5)
 
 - **수치가 민감하다.** 몇 번 맞으면 쓰러지는지(확정 n타)가 한 단계 바뀌면 승률이 크게 뛴다(예: k 0.6에서 위력 38 → 62%, 40 → 47%). 그래서 목표 범위 안의 한 점이 아니라 **주변까지 60~70%가 유지되는 구간의 중심**을 골랐다: k 0.64~0.68 × 위력 34~36이 모두 60~70%.
 - 다른 기술·포켓몬을 추가하거나 수치를 바꾸면 `BalanceTests`가 범위 이탈을 잡는다. 조정용 표 출력(`Sweep_CompressionAndSignaturePower`, k × 위력 표)은 최소 테스트 원칙에 따라 지웠다. 다시 조정할 때는 커밋 `cd45839`의 `Assets/Tests/EditMode/BalanceTests.cs`에서 꺼내 임시로 쓴다.
-- 나머지 4마리와의 매치업, 전설 가중치(`npcWeight`, 임시 뮤츠 2 / 나머지 10)는 로스터 확장(M5)에서 조정한다.
+- 나머지 4마리와의 매치업, 전설 가중치(`npcWeight`, 임시 뮤츠 2 / 나머지 10)는 로스터 확장(이후 확장)에서 조정한다. 공개 범위가 Showcase 2마리라 M6에서 Standard 4종의 `npcWeight`를 **0**으로 두었다(상대로 안 나옴). 다시 열 때 위 임시값에서 시작한다.
 
 **M3 피드백 조정 (2026-10-17, 5,000판 시드 고정)**
 
@@ -546,7 +546,7 @@ AnimationDirector (Presentation)
 
 ```text
 Pokepedia 페이지 (/[locale]/battle)
-  └─ <iframe src="https://battle.pokepedia.dev/?host=pokepedia" allow="autoplay">
+  └─ <iframe src="https://battle.pokepedia.dev/?host=pokepedia&lang=ko" allow="autoplay">
         Unity Web 빌드 (index.html 템플릿 + HostBridge.jslib + HostBridge.cs)
 ```
 
@@ -567,6 +567,7 @@ Pokepedia 페이지 (/[locale]/battle)
 - [다시 시도]를 누르면 `ready`를 다시 보낸다.
 - iframe 여부(`window.parent !== window`)로는 판별하지 않는다. 포트폴리오 허브도 iframe으로 임베드할 수 있기 때문이다.
 - 쿼리는 jslib로 `location.search`를 읽어 판별한다(iframe에서 `Application.absoluteURL`의 의미가 불명확해 쓰지 않는다. M0 확인).
+- `lang`(`ko`/`en`/`ja`)은 Unity가 뜨기 전 **로딩 화면**(진행 막대·안내 문구, 웹 템플릿)의 언어다. 없으면 브라우저 언어. 게임 안 언어는 `init.locale`이 정한다.
 
 | 모드 | 포켓몬 선택 | 사용처 |
 |---|---|---|
@@ -614,7 +615,7 @@ Pokepedia 페이지 (/[locale]/battle)
 { "type": "battleEnded", "v": 1, "result": "win" }
 ```
 
-표시용이다. 저장하지 않는다.
+`result`는 `win` 또는 `lose`(도망은 보내지 않는다). Collection 모드에서 승패가 날 때마다 보낸다. 표시용이다. 저장하지 않는다.
 
 **Unity → React: `resize` (필요 시)** — 높이 조정. 아직 정의하지 않았다.
 
@@ -629,7 +630,7 @@ Pokepedia 페이지 (/[locale]/battle)
 
 허용 목록은 `Assets/WebGLTemplates/Pokepedia/index.html`에 있다. 현재 값: `https://pokepedia.dev`, `https://www.pokepedia.dev`, `http://localhost:3000`(Pokepedia 개발 서버), `http://localhost:8000`(로컬 테스트 페이지). 또 Pokepedia CSP의 `frame-src`도 확인한다(9.1) — 2026-10-17 확인: Pokepedia에는 CSP 헤더가 없어 iframe을 막지 않는다.
 
-**Vercel Preview (M6 결정):** Preview 주소는 `https://pokepedia-git-<브랜치>-vison901-gmailcoms-projects.vercel.app` 형식이다(PR 59 Preview로 확인). PR마다 바뀌므로 허용 목록에 정확한 값 대신 **이 계정의 Pokepedia Preview만 맞는 정규식**(`^https://pokepedia-[a-z0-9-]+-vison901-gmailcoms-projects\.vercel\.app$`)을 더한다. `frame-ancestors`는 호스트 앞 한 단계 와일드카드만 되므로 `https://*.vercel.app`을 넣는다(다른 Vercel 사이트도 iframe으로 띄울 수는 있지만, 로그인·보상이 없는 공개 게임이라 영향이 없고, `init`은 위 정규식에 맞는 origin에서만 받는다).
+**Vercel Preview (M6 결정):** Preview 주소는 `https://pokepedia-git-<브랜치>-vison901-gmailcoms-projects.vercel.app` 형식이다(PR 59 Preview로 확인). PR마다 바뀌므로 허용 목록에 정확한 값 대신 **이 계정의 Pokepedia Preview만 맞는 정규식**(`^https://pokepedia-[a-z0-9-]+-vison901-gmailcoms-projects\.vercel\.app$`)을 더한다. `frame-ancestors`는 호스트 앞 한 단계 와일드카드만 되므로 `https://*.vercel.app`을 넣는다. Pokepedia 개발 서버에서 배포된 게임을 띄워 볼 수 있게 `http://localhost:3000`도 넣는다(다른 Vercel 사이트도 iframe으로 띄울 수는 있지만, 로그인·보상이 없는 공개 게임이라 영향이 없고, `init`은 위 정규식에 맞는 origin에서만 받는다).
 
 #### 입력
 
@@ -644,7 +645,7 @@ python -I Tools/web/serve.py --dir Builds/Web --port 8001 --ancestors http://loc
 python -I Tools/web/serve.py --dir Tools/web/host-test --port 8000
 ```
 
-`http://localhost:8000/`를 열면 모의 Pokepedia 페이지가 게임을 iframe으로 띄운다. 이 페이지에서 `ready` → `init` 왕복, 타임아웃(init 보내지 않기 체크), 스크롤 간섭을 확인할 수 있다.
+`http://localhost:8000/`를 열면 모의 Pokepedia 페이지가 게임을 iframe으로 띄운다. 이 페이지에서 `ready` → `init` 왕복, 타임아웃(init 보내지 않기 체크), 스크롤 간섭, 보유 상황(피카츄 / 색이 다른 피카츄 / 피카츄 없음)별 진입, `battleEnded` 수신을 확인할 수 있다.
 
 ### 9.3 DB 정책 [확정]
 

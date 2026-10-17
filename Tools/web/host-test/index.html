@@ -20,6 +20,11 @@
     <button id="reload">iframe 다시 로드(?host=pokepedia)</button>
     <button id="reloadDemo">iframe 다시 로드(host 파라미터 없음)</button>
     <label><input type="checkbox" id="mute"> init 보내지 않기(타임아웃/재시도 테스트)</label>
+    <select id="owned">
+      <option value="pikachu">피카츄 보유</option>
+      <option value="shiny">색이 다른 피카츄 보유</option>
+      <option value="none">피카츄 없음(안내 + 데모 체험)</option>
+    </select>
     <span id="scrollY"></span>
   </div>
   <iframe id="game" allow="autoplay"></iframe>
@@ -34,7 +39,7 @@
   window.__hostLog = [];
 
   function load(host) {
-    frame.src = GAME_ORIGIN + "/index.html" + (host ? "?host=pokepedia" : "");
+    frame.src = GAME_ORIGIN + "/index.html" + (host ? "?host=pokepedia&lang=ko" : "");
     log("iframe load " + frame.src);
   }
   document.getElementById("reload").onclick = () => load(true);
@@ -46,8 +51,11 @@
     window.__hostLog.push(d);
     log("<- " + JSON.stringify(d));
     if (d && d.type === "ready" && !document.getElementById("mute").checked) {
-      // 보유 포켓몬 전체를 한 번 전달 (실제로는 Supabase user_sticker 조회 결과)
-      const msg = { type: "init", v: 1, locale: "ko", owned: [{ id: 25, shiny: false }, { id: 9, shiny: true }, { id: 6, shiny: false }, { id: 1, shiny: false }] };
+      // 보유 포켓몬 전체를 한 번 전달 (실제로는 Supabase user_sticker 조회 결과). 거북왕(9)은 가져도 플레이어로 못 쓴다(9.2).
+      const others = [{ id: 9, shiny: true }, { id: 6, shiny: false }, { id: 1, shiny: false }];
+      const pick = document.getElementById("owned").value;
+      const owned = pick === "none" ? others : others.concat([{ id: 25, shiny: false }], pick === "shiny" ? [{ id: 25, shiny: true }] : []);
+      const msg = { type: "init", v: 1, locale: "ko", owned };
       frame.contentWindow.postMessage(msg, GAME_ORIGIN);
       log("-> init " + JSON.stringify(msg));
     }

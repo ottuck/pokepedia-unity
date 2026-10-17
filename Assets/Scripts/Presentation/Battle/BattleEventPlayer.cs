@@ -20,8 +20,11 @@ namespace Pokepedia.Presentation.Battle
         public LocaleTable Locale;
         public BattleNames Names;
         public BattleSession Session;
+        /// <summary>Collection 모드에서 플레이어가 색이 다른 스티커로 들어왔다 (외형만, PROJECT.md 9.2)</summary>
+        public bool PlayerShiny;
 
         public int SpeciesOf(int side) => Session.State.Sides[side].Active.Species.Id;
+        public bool ShinyOf(int side) => side == BattleState.Player && PlayerShiny;
     }
 
     /// <summary>
@@ -49,14 +52,16 @@ namespace Pokepedia.Presentation.Battle
         /// <summary>도입 VS 장면 (M5): 두 포켓몬의 앞모습·이름·첫 타입 색은 데이터에서 가져온다.</summary>
         public IEnumerator PlayVs()
         {
-            yield return hud.Vs.Play(VsSide(ctx.SpeciesOf(BattleState.Player)), VsSide(ctx.SpeciesOf(BattleState.Npc)));
+            yield return hud.Vs.Play(VsSide(BattleState.Player), VsSide(BattleState.Npc));
         }
 
-        VsIntro.Side VsSide(int speciesId)
+        VsIntro.Side VsSide(int side)
         {
+            int speciesId = ctx.SpeciesOf(side);
             var info = ctx.Catalog.GetSpecies(speciesId);
             var tv = ctx.Animation.TypeFor(info.Species.Types[0]);
-            return new VsIntro.Side(SpriteSheet.Load(info.Sprites.Front), ctx.Names.Species(speciesId), Ui.Hex(tv.PrimaryRgb), Ui.Hex(tv.SecondaryRgb));
+            var front = ctx.ShinyOf(side) ? info.Sprites.FrontShiny : info.Sprites.Front;
+            return new VsIntro.Side(SpriteSheet.Load(front), ctx.Names.Species(speciesId), Ui.Hex(tv.PrimaryRgb), Ui.Hex(tv.SecondaryRgb));
         }
 
         public IEnumerator Play(IReadOnlyList<BattleEvent> events)
@@ -73,7 +78,7 @@ namespace Pokepedia.Presentation.Battle
                         view.Name.text = ctx.Names.Species(s.SpeciesId);
                         view.Hp.Set(s.Hp, s.MaxHp);
                         view.InfoBox.SetActive(false);
-                        yield return hud.Director.SendOut(s.Side, ctx.Catalog.GetSpecies(s.SpeciesId));
+                        yield return hud.Director.SendOut(s.Side, ctx.Catalog.GetSpecies(s.SpeciesId), ctx.ShinyOf(s.Side));
                         view.InfoBox.SetActive(true);
                         yield return SayAll(e);
                         break;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Pokepedia.App.Host;
 using Pokepedia.Content;
 using Pokepedia.Domain;
 using Pokepedia.Domain.Battle;
@@ -33,13 +34,16 @@ namespace Pokepedia.App.Battle
         readonly IRandom random;
         readonly Func<int> pickOpponent;
         readonly int playerSpeciesId;
+        readonly bool canEscape;
         int npcSpeciesId;
         BattleEngine engine;
         bool escaped;
 
+        /// <param name="canEscape">Collection 에서 도망칠 수 있는지. 상대 후보가 1마리면 false (OpponentPicker.CandidateCount, 9.2). Demo 는 항상 도망 불가.</param>
         public BattleSession(ContentCatalog catalog, BattleRules rules, IRandom random, BattleMode mode,
-                             int playerSpeciesId, Func<int> pickOpponent)
+                             int playerSpeciesId, Func<int> pickOpponent, bool canEscape = true)
         {
+            this.canEscape = canEscape;
             this.catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             this.rules = rules ?? throw new ArgumentNullException(nameof(rules));
             this.random = random ?? throw new ArgumentNullException(nameof(random));
@@ -76,11 +80,11 @@ namespace Pokepedia.App.Battle
             return engine.PlayTurn(new UseMove(moveIndex), npcAction);
         }
 
-        /// <summary>Demo 는 도망칠 수 없다(상태 변화 없음). Collection 은 도망에 항상 성공하고 이 배틀이 끝난다.</summary>
+        /// <summary>Demo(와 상대 후보가 1마리인 Collection)는 도망칠 수 없다(상태 변화 없음). 그 밖의 Collection 은 도망에 항상 성공하고 이 배틀이 끝난다.</summary>
         public RunOutcome TryRun()
         {
             if (IsOver) throw new InvalidOperationException("battle is over");
-            if (Mode == BattleMode.Demo) return RunOutcome.CannotEscape;
+            if (Mode == BattleMode.Demo || !canEscape) return RunOutcome.CannotEscape;
             escaped = true;
             return RunOutcome.Escaped;
         }
@@ -125,7 +129,7 @@ namespace Pokepedia.App.Battle
         {
             if (catalog == null) throw new ArgumentNullException(nameof(catalog));
             if (random == null) throw new ArgumentNullException(nameof(random));
-            var candidates = catalog.Roster.Where(r => r.NpcWeight > 0 && r.Id != excludeId).ToArray();
+            var candidates = Candidates(catalog, excludeId);
             int total = candidates.Sum(r => r.NpcWeight);
             if (total <= 0) throw new InvalidOperationException("no roster entry can be an NPC (all weights are 0 or excluded)");
             return () =>
@@ -138,6 +142,30 @@ namespace Pokepedia.App.Battle
                 }
                 throw new InvalidOperationException("unreachable: roll exceeded total weight");
             };
+        }
+
+        /// <summary>Weighted 가 고를 수 있는 상대 수. 1 이면 도망쳐도 같은 상대가 나오므로 도망을 끈다.</summary>
+        public static int CandidateCount(ContentCatalog catalog, int? excludeId = null) => Candidates(catalog, excludeId).Length;
+
+        static RosterEntry[] Candidates(ContentCatalog catalog, int? excludeId)
+            => catalog.Roster.Where(r => r.NpcWeight > 0 && r.Id != excludeId).ToArray();
+    }
+
+    /// <summary>Collection 모드에서 플레이어로 고를 수 있는 포켓몬 하나 (Shiny 는 외형만, 6.5)</summary>
+    public sealed record PlayerChoice(int SpeciesId, bool Shiny);
+
+    /// <summary>Collection 모드의 플레이어 후보: 보유 ∩ 플레이어 가능(roster.json playable), 로스터 순서 (PROJECT.md 9.2)</summary>
+    public static class CollectionLineup
+    {
+        /// <summary>같은 포켓몬을 여러 장(일반·shiny) 가졌으면 하나로 묶고, shiny 를 하나라도 가졌으면 shiny 로 낸다.</summary>
+        public static IReadOnlyList<PlayerChoice> Players(ContentCatalog catalog, IEnumerable<OwnedSticker> owned)
+        {
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog));
+            var stickers = (owned ?? Enumerable.Empty<OwnedSticker>()).Where(s => s != null).ToArray();
+            return catalog.Roster
+                .Where(r => r.Playable && stickers.Any(s => s.id == r.Id))
+                .Select(r => new PlayerChoice(r.Id, stickers.Any(s => s.id == r.Id && s.shiny)))
+                .ToArray();
         }
     }
 }

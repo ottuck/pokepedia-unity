@@ -32,6 +32,7 @@ namespace Pokepedia.Content
 
     /// <summary>
     /// 지원 포켓몬 한 줄. NpcWeight 는 Collection 모드 NPC 가중 추첨의 상대 가중치(0 이면 NPC 로 나오지 않음, PROJECT.md 6.5).
+    /// Playable 은 Collection 모드에서 플레이어로 쓸 수 있는지(연출이 준비된 포켓몬만 true, 9.2). JSON 에서 빠지면 false.
     /// </summary>
-    public sealed record RosterEntry(int Id, RosterTier Tier, int NpcWeight);
+    public sealed record RosterEntry(int Id, RosterTier Tier, int NpcWeight, bool Playable = false);
 }
