@@ -1,7 +1,7 @@
 {
   "title": {
     "subtitle": "バトル",
-    "press_start": "PRESS START",
+    "start": "バトル スタート",
     "retry": "もういちど",
     "try_demo": "デモを あそぶ",
     "demo_mode": "デモモード\nピカチュウ vs カメックス",
