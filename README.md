@@ -76,6 +76,16 @@ python -I Tools/web/serve.py --dir Tools/web/host-test --port 8000
 - `serve.py --mbps 9 --latency-ms 60`으로 Fast 4G 근사 속도에서 로딩을 잴 수 있습니다.
 - 같은 와이파이의 휴대폰으로 열려면 `--host 0.0.0.0`을 붙이고(Windows 방화벽 허용 필요) 휴대폰에서 `http://<PC의 IP>:<포트>/?fps`를 엽니다. `?fps`는 왼쪽 위에 FPS와 가장 느린 프레임(ms)을 보여 줍니다.
 
+## 배포 (Cloudflare Pages)
+
+```sh
+# Release 빌드 뒤. wrangler 로그인 필요(npx wrangler login)
+python -I Tools/web/deploy.py                 # 본 배포 → https://pokepedia-battle.pages.dev
+python -I Tools/web/deploy.py --branch test   # 미리보기 → https://test.pokepedia-battle.pages.dev
+```
+
+- 헤더 규칙은 `Tools/web/_headers`(PROJECT.md 10.3). 로컬 `serve.py`도 같은 규칙을 흉내 냅니다.
+
 ## 라이선스·고지
 
 - 코드: MIT (예정)

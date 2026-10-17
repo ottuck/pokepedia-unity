@@ -57,3 +57,6 @@ Thumbs.db
 /Tools/audio/render/bin/
 /Tools/audio/render/obj/
 !/Tools/audio/render/*.csproj
+
+# Cloudflare wrangler 로컬 캐시
+.wrangler/
