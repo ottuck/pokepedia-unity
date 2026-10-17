@@ -184,13 +184,14 @@
       // 로딩 문구 언어: Pokepedia 는 ?lang= 을 붙여 띄우고, 없으면 브라우저 언어. 시작 화면 문구는 Unity 가 로케일 파일에서 보낸다
       var lang = (new URLSearchParams(location.search).get("lang") || navigator.language || "ko").slice(0, 2);
       var TEXT = {
-        ko: { sub: "배틀", tip: "처음 불러올 때는 조금 걸려요. 다음부터는 빨라요.", ready: "준비 중", failed: "불러오지 못했어요. 새로고침해 주세요.", footer: "© 2026 Pokepedia · 팬 프로젝트" },
-        en: { sub: "BATTLE", tip: "The first load takes a moment. It is faster next time.", ready: "Ready soon", failed: "Could not load. Please refresh.", footer: "© 2026 Pokepedia · Fan project" },
-        ja: { sub: "バトル", tip: "はじめての よみこみは すこし じかんが かかります。", ready: "じゅんびちゅう", failed: "よみこめませんでした。 リロードしてください。", footer: "© 2026 Pokepedia · ファンプロジェクト" }
+        ko: { tip: "처음 불러올 때는 조금 걸려요. 다음부터는 빨라요.", ready: "준비 중", failed: "불러오지 못했어요. 새로고침해 주세요.", footer: "© 2026 Pokepedia · 팬 프로젝트" },
+        en: { tip: "The first load takes a moment. It is faster next time.", ready: "Ready soon", failed: "Could not load. Please refresh.", footer: "© 2026 Pokepedia · Fan project" },
+        ja: { tip: "はじめての よみこみは すこし じかんが かかります。", ready: "じゅんびちゅう", failed: "よみこめませんでした。 リロードしてください。", footer: "© 2026 Pokepedia · ファンプロジェクト" }
       }[lang] || null;
-      if (!TEXT) TEXT = { sub: "BATTLE", tip: "The first load takes a moment. It is faster next time.", ready: "Ready soon", failed: "Could not load. Please refresh.", footer: "© 2026 Pokepedia · Fan project" };
+      if (!TEXT) TEXT = { tip: "The first load takes a moment. It is faster next time.", ready: "Ready soon", failed: "Could not load. Please refresh.", footer: "© 2026 Pokepedia · Fan project" };
       document.documentElement.lang = lang === "en" || lang === "ja" ? lang : "ko";
-      title.querySelector(".sub").textContent = TEXT.sub;
+      // 부제·시작 버튼은 세 언어 모두 영어(BATTLE · START): 퀴즈의 PRESS START 처럼 어느 언어에서나 통한다
+      title.querySelector(".sub").textContent = "BATTLE";
       title.querySelector(".tip").textContent = TEXT.tip;
       title.querySelector(".footer").textContent = TEXT.footer;
 
