@@ -1,46 +1,42 @@
-# Pokepedia Battle — PROJECT (기획·설계·연동 규약)
+# Pokepedia Battle — PROJECT
 
-> 지금의 사양과 결정, 그리고 이후 작업할 때 알아야 할 것만 적는다. 진행 기록은 남기지 않는다(현재 상태는 [ROADMAP.md](ROADMAP.md), 에이전트 규칙은 [CLAUDE.md](../CLAUDE.md)).
-> **[확정]** 합의된 사항 · **[위임]** 에이전트가 정하고 결과를 정리하는 사항 · **[미정]** 결정 전(14장, 에이전트가 임의로 확정하지 않는다).
+기획·설계·Pokepedia 연동 규약의 **현재 사양**. 현재 상태와 보관 목록은 [ROADMAP.md](ROADMAP.md), 빌드·배포 명령은 [DEVELOPMENT.md](DEVELOPMENT.md), 에이전트 규칙은 [CLAUDE.md](../CLAUDE.md).
+
 > 절 번호는 코드 주석이 참조하므로 바꾸지 않는다.
 
-## 요약
+## 한눈에
 
-- Pokepedia의 **퀴즈 → 띠부띠부씰 컬렉션 → 배틀** 루프 중 배틀을 맡는 Unity 2D 턴제 게임. WebGL 빌드를 `battle.pokepedia.dev`(Cloudflare Pages)에 올리고 Pokepedia가 iframe으로 띄운다.
-- 지금 공개: **피카츄(플레이어) vs 거북왕(상대)** 1:1. 로스터 데이터에는 6종이 있고 나머지 4종은 보관 중이다.
-- 규칙은 순수 C# 엔진(현대 데이터 기반 단순화 규칙, 명중·급소 포함), 화면은 Unity(2.5D 도트 전투). 시작·VS 화면은 웹 템플릿(HTML)이 그린다.
-- 서버·DB 없음. Pokepedia DB를 바꾸지 않는다.
+| 항목 | 내용 |
+|---|---|
+| 정체 | Pokepedia의 퀴즈 → 띠부띠부씰 컬렉션 → **배틀** 중 배틀을 맡는 Unity 2D 턴제 게임. `battle.pokepedia.dev`에 WebGL로 올리고 Pokepedia가 iframe으로 띄운다 |
+| 공개 범위 | 피카츄(플레이어) vs 거북왕(상대) 1:1. Standard 4종은 데이터만 보관 (5.1) |
+| 품질 등급 | Showcase / Standard, 엔진 하나, 연출은 오버라이드 데이터 (5.2) |
+| 전투 흐름 | 트레이너 없음, 싸우다/도망, NPC는 턴마다 기술을 섞음, 쓰러지면 [응원한다 / 트레이너가 처리한다], 상대 1마리면 승리 장면에서 끝 (5.3) |
+| 화면 | 시작·VS는 HTML, 전투는 240×216 정수 배율 도트 2.5D(월드/HUD 분리) (5.5) |
+| 규칙 | 현대 데이터, L50, 물리/특수, 명중·급소, 기술 3개, PP·상태이상 없음 (6.3·6.4) |
+| 밸런스 | 4~6턴, 종족값 압축 k 0.65, Demo 피카츄 승률 85~93% (6.5) |
+| 기술 스택 | Unity 6.3 LTS, C# 9, URP 2D, uGUI + TMP, 순수 C# Domain, NUnit, JSON (4) |
+| 에셋 | PokeAPI BW 애니메이션 스프라이트(커밋 안 함), Galmuri11, 소리는 모두 코드로 합성 (7.7·8) |
+| 연동 | iframe + postMessage 단방향, 보유 ∩ 지원은 Unity가 계산 (9.2) |
+| 인프라 | 서버·DB 없음, Cloudflare Pages, Pokepedia DB 변경 없음 (9.3·10) |
 
 ---
 
 ## 1. 프로젝트 개요
 
-### 목표
-
-- Pokepedia에서 모은 띠부띠부씰 포켓몬으로 NPC와 싸우는 **Unity + C# 2D 턴제 배틀**. 대규모 포켓몬 게임이 아니라 **제대로 설계하고 연출한 소규모 Unity 포트폴리오**다.
+- Pokepedia에서 모은 띠부띠부씰 포켓몬으로 NPC와 싸우는 **Unity + C# 2D 턴제 배틀**. 많은 포켓몬보다 **작은 범위를 제대로 설계하고 연출하는 것**이 목표다.
 - 웹(WebGL)으로 배포하고 Pokepedia에서 iframe으로 들어온다. 단독(Demo)으로도 플레이할 수 있다.
-- 모바일 앱은 내지 않지만 **모바일 브라우저에서 완벽하게 보이는 것**이 목표다 [확정].
+- 모바일 앱은 내지 않지만 **모바일 브라우저에서 완벽하게 보여야 한다.**
+- Unity를 폭넓게 쓴다(월드/UI 렌더링 분리, Light2D, 후처리, 셰이더, VFX, 카메라 연출). 이 방침은 용량·작업량보다 우선한다.
 
-### 개발 목적
-
-- C# 실전 학습(Java 경험 활용), 도메인 설계(엔진·데미지·상성·AI), 규칙과 콘텐츠의 분리.
-- **Unity를 폭넓게 경험:** 월드/UI 렌더링 분리, Light2D, 후처리, 셰이더, VFX, 카메라 연출. 이 목적은 용량·작업량보다 우선한다 [확정].
-
-### 프로젝트 완료 기준 [확정]
-
-1. 순수 C#으로 게임 규칙을 작성하고 자동화 테스트할 수 있다.
-2. Unity에서 UI·애니메이션·사운드·이펙트를 직접 구현했다.
-3. 브라우저에서 플레이 가능한 완성형 미니게임을 공개했다.
-4. 다른 개발자에게 아키텍처와 설계 의도를 설명할 수 있다.
-
-(포켓몬 수는 기준이 아니다. 네 가지 모두 달성했다.)
+**완료 기준**(모두 충족): 순수 C# 규칙과 자동화 테스트 · Unity로 직접 만든 UI·애니메이션·사운드·이펙트 · 브라우저에서 플레이 가능한 완성형 미니게임 공개 · 아키텍처와 설계 의도를 설명할 수 있는 문서. 포켓몬 수는 기준이 아니다.
 
 ---
 
-## 2. 기존 Pokepedia 현황
+## 2. Pokepedia
 
 - 사이트 https://pokepedia.dev · 저장소 https://github.com/ottuck/pokepedia · 설계 문서는 그 저장소의 `docs/system_design.md`, 머지 정책은 그 저장소의 `CLAUDE.md`.
-- Pokepedia의 게임은 **실루엣 이름 맞히기 퀴즈**다. 배틀·기술 데이터는 이 저장소가 새로 만든 것이다.
+- Pokepedia의 게임은 **실루엣 이름 맞히기 퀴즈**다. 배틀·기술 데이터는 이 저장소가 만든다.
 
 | 항목 | 내용 |
 |---|---|
@@ -53,7 +49,7 @@
 
 ---
 
-## 3. 최종 게임 루프 [확정]
+## 3. 게임 루프
 
 ```text
 Pokepedia 퀴즈 (React)
@@ -63,7 +59,7 @@ Pokepedia 퀴즈 (React)
 Unity 배틀: 보유 ∩ 플레이어 가능 → NPC와 1:1 → 승리 장면에서 끝
 ```
 
-- 배틀로 들어오는 길은 **배틀 체험(Demo)** 과 **피카츄 띠부씰**(Collection) 두 가지뿐이다 [확정]. 내비게이션의 "배틀" 메뉴도 같은 페이지다.
+- 배틀로 들어오는 길은 **배틀 체험(Demo)** 과 **피카츄 띠부씰**(Collection) 두 가지다. 내비게이션의 "배틀" 메뉴도 같은 페이지다.
 - 연결은 **단방향**(React → Unity). 배틀 결과로 스티커·랭킹을 바꾸지 않는다.
 
 ---
@@ -72,7 +68,7 @@ Unity 배틀: 보유 ∩ 플레이어 가능 → NPC와 1:1 → 승리 장면에
 
 | 구분 | 기술 |
 |---|---|
-| Engine | Unity 6.3 LTS (6000.3.26f1) — 2027년 12월까지 지원. 6.0 LTS는 2026년 10월 종료라 쓰지 않는다 |
+| Engine | Unity 6.3 LTS (6000.3.26f1) — 2027년 12월까지 지원 (6.0 LTS는 2026년 10월 종료) |
 | 언어 | C# 9 고정 (`Tests.Dotnet`이 최신 문법을 먼저 잡는다) |
 | 렌더 | **URP 2D**(Light2D·Sprite-Lit·Volume 후처리) |
 | UI | uGUI + TextMesh Pro (Galmuri11 Static 아틀라스, 7.7) |
@@ -81,20 +77,20 @@ Unity 배틀: 보유 ∩ 플레이어 가능 → NPC와 1:1 → 승리 장면에
 | 웹 | Unity Web(WebGL), 사전 압축 Brotli, Cloudflare Pages |
 | 서버·DB | 없음. Unity는 인증·DB를 다루지 않는다 |
 
-**렌더·빌드 결정 (M0 PoC 근거)**
-- **URP 2D 유지:** Built-in RP가 약 1.2MB 작지만 Unity가 6.5부터 deprecated로 지정했고 2D Light·Sprite-Lit·Volume 후처리·2D Shader Graph를 잃는다.
-- 스플래시 로고 텍스처(2.7MB)는 `SplashScreen.show=false`만으로 빠지지 않고 `showUnityLogo=false`까지 꺼야 빠진다(Unity Issue UUM-63958, Won't Fix). `ProjectSetup`이 둘 다 끈다.
-- **Data Caching 끔:** Safari는 iframe 안에서 IndexedDB를 지원하지 않고, 같은 origin을 두 탭에서 동시에 로딩하면 IndexedDB 캐시가 깨진 적이 있다. 재방문 캐시는 해시 파일명 + `immutable` HTTP 캐시에 맡긴다.
-- 빌드: Brotli, 관리 코드 스트리핑 Minimal, IL2CPP 크기 우선. Release는 Runtime Speed(LTO 없음), Dev는 빌드 속도 우선. 스트리핑 High·Disk Size LTO는 빌드가 7~10분 걸리고 문제 가능성이 있어 쓰지 않는다.
+**렌더·빌드 설정과 이유**
+- **URP 2D:** Built-in RP가 약 1.2MB 작지만 Unity 6.5부터 deprecated이고 2D Light·Sprite-Lit·Volume 후처리·2D Shader Graph를 잃는다.
+- **스플래시 로고:** 텍스처(2.7MB)는 `SplashScreen.show=false`만으로 빠지지 않고 `showUnityLogo=false`까지 꺼야 빠진다(Unity Issue UUM-63958, Won't Fix). `ProjectSetup`이 둘 다 끈다.
+- **Data Caching 끔:** Safari는 iframe 안에서 IndexedDB를 지원하지 않고, 같은 origin을 두 탭에서 동시에 로딩하면 IndexedDB 캐시가 깨질 수 있다. 재방문 캐시는 해시 파일명 + `immutable` HTTP 캐시에 맡긴다.
+- **빌드:** Brotli, 관리 코드 스트리핑 Minimal, IL2CPP 크기 우선. Release는 Runtime Speed(LTO 없음), Dev는 빌드 속도 우선. 스트리핑 High·Disk Size LTO는 빌드가 7~10분 걸리고 문제 가능성이 있어 쓰지 않는다.
 - Unity에서 `record`의 `init`을 쓰려면 `IsExternalInit`을 직접 정의해야 한다(`Assets/Scripts/Domain/IsExternalInit.cs`).
 
 ---
 
 ## 5. 게임 범위
 
-### 5.1 지원 포켓몬 로스터 [확정]
+### 5.1 지원 포켓몬 로스터
 
-| 등급 | 포켓몬 | 지금 |
+| 등급 | 포켓몬 | 상태 |
 |---|---|---|
 | Showcase | 피카츄 #025 (전기) | **공개, 유일한 플레이어** |
 | Showcase | 거북왕 #009 (물) | **공개, 상대로만** |
@@ -102,18 +98,18 @@ Unity 배틀: 보유 ∩ 플레이어 가능 → NPC와 1:1 → 승리 장면에
 
 - 지원 목록과 역할은 `roster.json`이 정한다(`playable`, `npcWeight`). **엔진은 지원 포켓몬 수를 모르고, 엔진·화면 코드에 포켓몬 이름을 쓰지 않는다.**
 - 추가는 로스터 항목을 늘리는 것(데이터 + 스프라이트 + 필요하면 연출 오버라이드)이다. 18타입 상성은 모두 구현돼 있고 기술·이펙트는 로스터가 쓰는 타입만 만든다.
-- README·포트폴리오에는 151종 중 일부만 지원한다는 사실을 정확히 적는다.
+- 소개 문서에는 151종 중 일부만 지원한다는 사실을 정확히 적는다.
 
-### 5.2 품질 등급: Showcase / Standard [확정]
+### 5.2 품질 등급: Showcase / Standard
 
 - 엔진은 하나이고 **시각적 표현만 다르다.** Showcase도 실제 엔진으로 플레이된다.
-- 별도 시스템을 만들지 않는다. 연출 디렉터의 기본 타임라인(접촉 / 발사 / 효과) 위에 종족·기술 단위 **오버라이드 데이터**만 얹는다: `Assets/Content/Data/animation.json` → `AnimationCatalog`.
+- 별도 시스템 없이, 연출 디렉터의 기본 타임라인(접촉 / 발사 / 효과) 위에 종족·기술 단위 **오버라이드 데이터**만 얹는다: `Assets/Content/Data/animation.json` → `AnimationCatalog`.
   - 종 프로필(`animProfile` 키): `windupSec`(준비 시간), `lungePx`(돌진), `hitShakePx`(피격 흔들림), `knockbackPx`(넉백), `mouth`(앞모습에서 입 위치, 물 기술 발사점), `moveFx`(기술 id → 전용 연출 id). 빠진 값은 `defaults`.
   - 기술 전용 공격음 `moveSfx`(맨 위, 기술 id → 소리 id, 8.3). 없는 기술은 타입 공격음.
   - 18타입마다 이펙트 색(primary·secondary).
 - Standard는 공통 타임라인 + 타입 색, Showcase는 전용 연출(5.5)과 타이밍에 맞춘 소리.
 
-### 5.3 전투 흐름과 화면 구성 [확정]
+### 5.3 전투 흐름과 화면 구성
 
 트레이너(사람)는 화면에 나오지 않는다. 야생 포켓몬과 마주친 것처럼 진행한다.
 
@@ -130,42 +126,50 @@ VS 장면 (HTML, 약 2초, 확인 입력으로 건너뜀)
 상대가 쓰러지면 승리 → (상대 후보 1마리면) 승리 장면에서 끝
 ```
 
+**흐름**
 - **시작 화면:** 웹 템플릿이 그린다(5.5). 상태는 로딩 / 시작 / 연결 중 / 연결 실패([다시 시도]·[데모 체험]) / 띠부씰 없음([데모 체험]). 키보드 Z·Enter·Space, 실험실은 L.
 - **도망:** 상대 후보가 여럿이면 "무사히 도망쳤다!" 후 상대가 바뀌어 새 배틀(HP 가득). 상대 후보가 1마리(Demo, 지금의 Collection)면 첫 번째는 "도망칠 수 없다!", **두 번째부터 "정말 도망칠까?" [그만둔다 / 계속 싸운다]**(기본 커서는 계속 싸운다, 판마다 다시 센다) — 갇힌 느낌을 막는다.
-- **쓰러지면 선택 [확정]:** 데모·첫 Collection 전투에서 져서 다시 도전할 이유는 없으므로, 플레이어가 **쓰러질 때마다** "트레이너, 어떻게 할까?"를 고른다(취소 없음, `BattleSession.faintChoice`).
+- **쓰러지면 선택:** 데모·첫 Collection 전투에서 져서 다시 도전할 이유는 없으므로, 플레이어가 **쓰러질 때마다** "트레이너, 어떻게 할까?"를 고른다(취소 없음, `BattleSession.faintChoice`).
   - **응원한다:** HP 가득으로 다시 일어나고 이후 주는 피해 ×1.5(`CheerPowerBoost`, 겹치지 않음). 엔진 `Revive`·`Revived`. 이름은 원작 인물 대신 "트레이너의 응원".
-  - **트레이너가 처리한다:** 몬스터볼이 상대 머리에 맞아 상대가 쓰러지고 **플레이어 승리**(Collection이면 `battleEnded` 승리). 엔진 `KnockOut`(방금 이긴 쪽을 쓰러뜨려 승패를 뒤집음)·`TrainerThrewBall`. 바로 끝내고 싶은 사용자를 위한 위트 있는 마무리다.
+  - **트레이너가 처리한다:** 몬스터볼이 상대 머리에 맞아 상대가 쓰러지고 **플레이어 승리**(Collection이면 `battleEnded` 승리). 엔진 `KnockOut`(방금 이긴 쪽을 쓰러뜨려 승패를 뒤집음)·`TrainerThrewBall`. 바로 끝내고 싶은 사용자를 위한 마무리다.
   - 그래서 이 배틀들에서는 패배가 나오지 않는다. 패배([다시 도전])는 `faintChoice`가 꺼진 세션에만 있다.
 - **승리:** 상대 후보가 1마리면 결과 메뉴 없이 승리 장면("승부에서 이겼다!", 노을 하늘)에서 끝난다. 나가기는 Pokepedia 메뉴, 단독 주소에서는 새로고침. 상대 후보가 여럿이면 [다음 상대와 싸운다] / [처음으로]. 보상·점수는 없다.
 - **NPC AI(난이도 하나):** 기대 데미지(위력·명중·자속·상성) 순위를 매기고 **턴마다 섞는다**: 턴 1·3은 1순위, 2는 2순위, 4는 3순위, 이후 4턴마다 반복(난수 없음, `NpcBattleAi`). 같은 기술만 쓰면 단조로워서다.
+
+**화면과 입력**
 - **기술 메뉴:** 큰 타입 색 버튼 3개(`MoveCards`) — 이름·위력·명중이 버튼 안에 있고, 누르면 2px 눌렸다 튀어 오르는 반응 뒤 바로 사용한다. 평소 세 버튼은 같은 모양이고 키보드 방향키로 고를 때만 지금 버튼을 띄운다. 버튼 바깥을 누르면 뒤로(휴대폰엔 X·Esc가 없다). 긴 이름은 글자 간격만 좁히고, 영어 명중은 "Acc", 일본어는 "威力·命中". PP 없음.
 - **턴 메시지:** "○○의 ○○!" → 빗나감 / 급소 / 상성 문구 → HP 바 감소 → 기절. 타자기식 출력. 상대는 "야생의 ○○"처럼 별도 키를 쓴다(원작이 구분하고, 영어는 대소문자 때문에 접두어 방식이 안 된다). 키 목록은 `BattleTextKeys`.
-- **화면:** 게임보이식 배치(상대 오른쪽 위 앞모습, 플레이어 왼쪽 아래 뒷모습, 이름·`:L50`·HP 바·숫자, 아래 메시지 창과 메뉴).
+- **배치:** 게임보이식(상대 오른쪽 위 앞모습, 플레이어 왼쪽 아래 뒷모습, 이름·`:L50`·HP 바·숫자, 아래 메시지 창과 메뉴).
 - **기준 해상도 240×216**(10:9, 160×144의 1.5배 — BW 스프라이트가 최대 112px라서). **정수 배율로만** 키운다(`PixelCanvasScaler`·`PixelCamera`). 문구는 Galmuri11 12px.
 - **입력:** 방향키 + Z/X, 클릭, 터치.
 
 ### 5.4 개발 방침과 범위
 
-- **Vertical Slice 우선** [확정]: 콘텐츠를 늘리기 전에 피카츄 vs 거북왕을 최종 품질로 완성한다.
-- **용량은 최하위 고려** [확정]. 화면 품질에 도움이 되면 용량을 쓴다(후처리용 `PostProcessData` 연결). 호스팅 단일 파일 25 MiB 한도(10.2)만 실제 제약이다.
-- **측정값:** 전송 약 13MB, 첫 로딩은 데스크톱 약 3.5초·사용자 휴대폰(4G) 체감 문제없음. 프레임은 데스크톱 75 FPS(모니터 상한), 아이폰 Safari 50~60 FPS → 후처리·조명을 줄이지 않는다. 저사양 안드로이드는 재지 않았다.
-- **범위 제외:** 151종 지원, 포켓몬별 고유 애니메이션, 트레이너 등장·인트로 씬, 난이도 선택, 승리 보상·랭킹, 온라인 PvP, 게임 서버, 퀴즈의 Unity 재구현, PP·상태이상, 3D 모델·카메라·조명.
-- **향후 확장(보관):** 3:3 배틀과 교체·가방 메뉴(엔진은 파티 구조로 설계돼 있다, 7.2), 로스터 공개·추가. 목록은 ROADMAP "보관".
+- **Vertical Slice 우선:** 콘텐츠를 늘리기 전에 피카츄 vs 거북왕을 최종 품질로 완성한다.
+- **용량은 최하위 고려:** 화면 품질에 도움이 되면 용량을 쓴다(후처리용 `PostProcessData` 연결). 호스팅 단일 파일 25 MiB 한도(10.2)만 실제 제약이다.
+- **성능 기준:** 전송 약 13MB, 첫 로딩 데스크톱 약 3.5초, 휴대폰 4G에서 문제없음. 데스크톱 75 FPS(모니터 상한), 아이폰 Safari 50~60 FPS라 후처리·조명을 줄이지 않는다. 저사양 안드로이드는 재지 않았다.
+- **범위 밖:** 151종 지원, 포켓몬별 고유 애니메이션, 트레이너 등장·인트로 씬, 난이도 선택, 승리 보상·랭킹, 온라인 PvP, 게임 서버, 퀴즈의 Unity 재구현, PP·상태이상, 3D 모델·카메라·조명.
+- 3:3 배틀과 교체·가방 메뉴는 엔진이 파티 구조라 나중에 넣을 수 있다(7.2). 다시 꺼낼 수 있는 일은 ROADMAP "보관".
 
 ### 5.5 화면 연출
 
-**두 층:** 시작·VS 화면은 **웹 템플릿(HTML)**, 전투는 **Unity 도트(2.5D)**. 시작 화면을 240×216 Unity 도트로 그리면 글자·로고가 뭉개져서 HTML로 그린다 [확정].
+**두 층:** 시작·VS 화면은 **웹 템플릿(HTML)**, 전투는 **Unity 도트(2.5D)**. 시작 화면을 240×216 Unity 도트로 그리면 글자·로고가 뭉개지기 때문이다.
 
 **HTML 시작·VS 화면** (`Assets/WebGLTemplates/Pokepedia/index.html`)
-- **Pokepedia 퀴즈 타이틀의 형제 화면** [확정]: 같은 하늘 그라데이션·네모난 구름·네 갈래 반짝이·두 겹 픽셀 테두리 로고 "Pokepedia"에 부제만 "BATTLE". 피카츄와 거북왕이 공식 아트워크 실루엣으로 마주 보고(못 받으면 뺀다) 가운데 도트 VS. 퀴즈에서 넘어와도 한 게임으로 보이게 하고, 1인 개발자가 손으로 만든 느낌을 낸다(그라데이션 대결 구도·만화 글꼴은 "AI 티가 난다"는 의견으로 버림).
-- 시작은 퀴즈의 PRESS START처럼 깜박이는 "▶ START"(부제 "BATTLE"과 함께 세 언어 공통 영어), 로딩은 가운데의 얇은 진행 막대 + 오른쪽 퍼센트 + TIP(내려받기가 끝나면 100%, "준비 중" 문구 없음), 연결 중·실패·띠부씰 없음은 게임보이 글상자(두 줄 테두리) 안의 작은 안내 문구 + 메뉴. 메뉴는 고른 항목 앞에 늘 ▶ 커서가 있고(처음엔 첫 항목) 마우스·방향키로 옮겨 Z·Enter·Space로 고른다(템플릿이 처리, Unity는 시작 화면에서만 키를 받는다). 글상자가 뜨면 가운데 VS는 감춘다.
-- **글꼴: Galmuri11** (OFL, 템플릿 폴더에 같이 둔다). 로고·VS(영문)는 퀴즈 로고와 같은 Bold(`Galmuri11-Bold.woff2`), 한글은 Regular(`Galmuri11.woff`, 게임 안 TTF에서 한글·영문·기호만 fontTools로 뽑음). **Bold는 '틀'의 'ㅌ' 윗줄 두 개가 붙어 "배틀"이 "배들"로 보인다(글리프 디자인).** Regular는 도트 한 칸(1em/12)만큼 가로로만 겹쳐 굵게 한다(세로 획만 두꺼워지고 가로 틈은 남는다). 글자 크기는 12px 격자 배수로 맞춘다(CSS `round()`, 아니면 도트 줄이 뭉개진다). 일본어 가나는 DotGothic16(Google Fonts).
-- **VS(view = vs):** 같은 하늘에서 로고·아래 영역이 사라지고, 0.62초에 흰 번쩍임과 함께 두 실루엣이 색을 되찾으며(퀴즈의 "정답 공개") VS가 계단식으로 커지며 찍힌다. 이름은 각 포켓몬 발밑에 진한 글자 + 얇은 흰 테두리(위·아래 글상자는 완성도가 낮아 보인다는 의견으로 바꿈). 1.75초부터 0.45초 동안 옅어지며 도트 전투가 드러난다.
-- 크기는 모두 게임 폭 기준(cqw)이라 데스크톱·휴대폰에서 같은 짜임이다. 겹침 상자는 `overflow: clip`(hidden은 스크롤 상자라 화면이 바뀔 때 저절로 밀려 있었다).
+- **Pokepedia 퀴즈 타이틀의 형제 화면:** 같은 하늘 그라데이션·네모난 구름·네 갈래 반짝이·두 겹 픽셀 테두리 로고 "Pokepedia"에 부제만 "BATTLE". 피카츄와 거북왕이 공식 아트워크 실루엣으로 마주 보고(못 받으면 뺀다) 가운데 도트 VS. 퀴즈에서 넘어와도 한 게임으로 보이게 한다.
+- **시작:** 퀴즈의 PRESS START처럼 깜박이는 "▶ START"(부제 "BATTLE"과 함께 세 언어 공통 영어).
+- **로딩:** 가운데의 얇은 진행 막대 + 오른쪽 퍼센트 + TIP(내려받기가 끝나면 100%, "준비 중" 문구 없음).
+- **연결 중·실패·띠부씰 없음:** 게임보이 글상자(두 줄 테두리) 안의 작은 안내 문구 + 메뉴. 글상자가 뜨면 가운데 VS는 감춘다.
+- **메뉴:** 고른 항목 앞에 늘 ▶ 커서(처음엔 첫 항목). 마우스·방향키로 옮기고 Z·Enter·Space로 고른다(템플릿이 처리, Unity는 시작 화면에서만 키를 받는다).
+- **글꼴: Galmuri11** (OFL, 템플릿 폴더에 같이 둔다). 로고·VS(영문)는 퀴즈 로고와 같은 Bold(`Galmuri11-Bold.woff2`), 한글은 Regular(`Galmuri11.woff`, 게임 안 TTF에서 한글·영문·기호만 fontTools로 뽑음). 일본어 가나는 DotGothic16(Google Fonts).
+  - **Bold는 '틀'의 'ㅌ' 윗줄 두 개가 붙어 "배틀"이 "배들"로 보인다(글리프 디자인).** 그래서 Regular를 도트 한 칸(1em/12)만큼 가로로만 겹쳐 굵게 한다(세로 획만 두꺼워지고 가로 틈은 남는다).
+  - 글자 크기는 12px 격자 배수로 맞춘다(CSS `round()`, 아니면 도트 줄이 뭉개진다).
+- **VS(view = vs):** 같은 하늘에서 로고·아래 영역이 사라지고, 0.62초에 흰 번쩍임과 함께 두 실루엣이 색을 되찾으며(퀴즈의 "정답 공개") VS가 계단식으로 커지며 찍힌다. 이름은 각 포켓몬 발밑에 진한 글자 + 얇은 흰 테두리. 1.75초부터 0.45초 동안 옅어지며 도트 전투가 드러난다.
+- **크기:** 모두 게임 폭 기준(cqw)이라 데스크톱·휴대폰에서 같은 짜임이다. 겹침 상자는 `overflow: clip`(hidden은 스크롤 상자라 화면이 바뀔 때 밀린다).
 - **Unity ↔ HTML:** Unity가 상태·문구(로케일 파일)·도감 번호를 보내고(`HostBridge.ShowTitle` → `window.pokeTitle.show`, view = loading|idle|connecting|failed|no_partner|vs|hidden), 버튼은 템플릿이 `SendMessage("App", "OnTitleAction", start|retry|demo)`로 돌려준다 — 클릭 처리 안에서 바로 불러 첫 소리(오디오 잠금 해제)가 막히지 않는다. VS의 소리(등장음·급소 타격음)·시간·건너뛰기(0.3초 뒤 확인 입력)는 Unity(`BattleEventPlayer.PlayHtmlVs`)가 맡는다.
 - 에디터에는 HTML이 없어 시작은 단순한 Unity 패널, VS는 도트 `VsIntro`로 대신한다.
 
-**Unity 전투 화면: 2.5D + 월드/HUD 분리 [확정]**
+**Unity 전투 화면: 2.5D + 월드/HUD 분리**
 - 포켓몬은 2D 스프라이트 그대로, 배경·그림자·카메라·조명·후처리로 입체감을 낸다. 3D는 쓰지 않는다.
 - **월드**(`BattleWorld`: `SpriteRenderer`·`PixelCamera`, Light2D·후처리·파티클)와 **HUD**(uGUI Overlay 캔버스: HP·메뉴·메시지)를 나눈다. HUD는 후처리를 받지 않아 글자가 선명하다. 화면 전체 번쩍임만 HUD 맨 위.
 - **도트를 깨뜨리지 않는다:** Point 필터 + 정수 배율. 원근은 배치·고정 크기로, 패럴랙스·이동은 정수 픽셀로. 확대는 움직이는 짧은 순간에만(멈춰 있을 땐 항상 1배), 회전은 쓰지 않는다. 정수 배율로 남는 여백은 화면 테두리 색 `#262a35`(카메라 배경·가림 막대·웹 템플릿).
@@ -185,17 +189,21 @@ VS 장면 (HTML, 약 2초, 확인 입력으로 건너뜀)
 
   발사·효과형의 공통 타임라인은 구체(projectile)·고리(effect). 끝점은 몸 **표면**이다(가운데로 하면 몸을 뚫은 것처럼 보인다).
 - **피격:** `Pokepedia/Sprite Flash` 셰이더 번쩍임 + 흔들림 + 넉백, 급소는 화면 번쩍임·흔들림, 빗나감은 회피 모션.
-- **응원 부활:** 카메라가 다가가고 하늘에서 금빛 빛기둥(`VfxLayer.LightShaft`) → 빛 속에서 떠오르며 다시 나타남 → 금빛 화면 번쩍임 → HP가 찬다. (흩날리는 깃털은 240×216에서 작아 나뭇잎처럼 보여 쓰지 않는다.)
+- **응원 부활:** 카메라가 다가가고 하늘에서 금빛 빛기둥(`VfxLayer.LightShaft`) → 빛 속에서 떠오르며 다시 나타남 → 금빛 화면 번쩍임 → HP가 찬다.
 - **트레이너가 처리한다:** 화면 왼쪽 아래에서 몬스터볼(코드로 그린 11×11 도트)이 돌며 포물선으로 날아가 상대 머리에 맞고 튕겨 나감 → 번쩍·움찔 → 머리 위 별이 돌며 비틀 → HP가 0으로 → 기절(`AnimationDirector.TrainerBall`).
 - **승리:** 1.4초에 비·안개·구름이 걷히고 노을 하늘 레이어가 나타나며 전역 조명이 따뜻해진다. 이긴 쪽이 빛 속에서 세 번 뛰고 카메라가 다가간다(쓰러진 쪽이 이긴 경우엔 날씨만). 다음 판에서 날씨가 돌아온다.
 - **HP UI:** 둥근 모서리 두 겹 테두리 상자, 포켓몬 쪽 받침선, 도트 "HP:" 표, 숫자 "126/ 126".
-- **연출 실험실:** 주소에 `?lab`(또는 시작 화면에서 L). 전용 연출(10만볼트 3종·하이드로펌프·물의맹세·몸통박치기 양쪽), 몬스터볼(Ball), 응원 부활(Revive), VS, 승리를 반복 재생하고 결과 버튼으로 명중 → 빗나감 → 급소를 돌린다. 소리도 실제 배틀과 같이 난다(Tackle = 몸통박치기 전용음, WP = 물기둥 솟구침). HP는 바뀌지 않는다. `?fps`는 FPS와 가장 느린 프레임을 보여 준다(`?lab&fps` 가능). 고른 결과는 `animation.json`의 `moveFx`에 적는다.
+
+**연출 실험실**
+- 주소에 `?lab`(또는 시작 화면에서 L). 전용 연출(10만볼트 3종·하이드로펌프·물의맹세·몸통박치기 양쪽), 몬스터볼(Ball), 응원 부활(Revive), VS, 승리를 반복 재생하고 결과 버튼으로 명중 → 빗나감 → 급소를 돌린다.
+- 소리도 실제 배틀과 같이 난다(Tackle = 몸통박치기 전용음, WP = 물기둥 솟구침). HP는 바뀌지 않는다.
+- `?fps`는 FPS와 가장 느린 프레임을 보여 준다(`?lab&fps` 가능). 고른 결과는 `animation.json`의 `moveFx`에 적는다.
 
 ---
 
 ## 6. 전투 규칙과 데이터 설계
 
-### 6.1 원칙 [확정]
+### 6.1 원칙
 
 - 원작 재현이 목표가 아니다. 엔진은 **하나**, 포켓몬은 **데이터**로만 표현한다(포켓몬별 클래스·스크립트 없음).
 - 데이터는 **현대 기준**(18타입, 능력치 6종, 특공/특방 분리), 규칙은 직접 정한 단순화 규칙. 게임보이 감성은 화면·소리로 낸다.
@@ -204,7 +212,7 @@ VS 장면 (HTML, 약 2초, 확인 입력으로 건너뜀)
 ### 6.2 포켓몬 데이터
 
 - `Assets/Content/Data/species.json`, `moves.json`, `roster.json`, `animation.json`. 로더 `ContentLoader`(순수 C#, 엄격한 스키마: 누락·모르는 필드·잘못된 값은 항목 이름을 담은 `FormatException`).
-- 종족값·타입은 **PokeAPI** `/pokemon/{id}`(Pokepedia DB와 같은 출처)로 확인해 적었다. 런타임 DB 조회는 없다.
+- 종족값·타입은 **PokeAPI** `/pokemon/{id}`(Pokepedia DB와 같은 출처) 값이다. 런타임 DB 조회는 없다.
 - 이름은 엔진에 없다. `nameKey`(`species.025`, `move.thunderbolt`)로 로케일(`Assets/Content/Locale/{ko,en,ja}.json`)에서 찾는다. 이름은 PokeAPI ko / en / ja-Hrkt 값.
 - `roster.json`: `id`, `tier`(showcase|standard), `npcWeight`(상대로 나올 가중치, 0이면 안 나옴), `playable`(플레이어로 쓸 수 있음).
 
@@ -214,18 +222,18 @@ VS 장면 (HTML, 약 2초, 확인 입력으로 건너뜀)
   "baseStats": { "hp": 35, "attack": 55, "defense": 40, "spAttack": 50, "spDefense": 50, "speed": 90 },
   "sprites": { "front": "front_25_sheet", "back": "back_25_sheet", "frontShiny": "front_25_shiny_sheet", "backShiny": "back_25_shiny_sheet" },
   "animProfile": "pikachu", "nameKey": "species.025", "legendary": false }
-// roster.json (지금)
+// roster.json
 [ { "id": 25, "tier": "showcase", "npcWeight": 10, "playable": true }, { "id": 9, "tier": "showcase", "npcWeight": 10 },
   { "id": 6, "tier": "standard", "npcWeight": 0 }, ... ]
 ```
 
 ### 6.3 기술 데이터
 
-- 직접 정의한다(Pokepedia에 기술 데이터 없음). **노말 기본기 1개 + 로스터 타입별 대표 기술 + 단일 타입 종의 보조 기술**, 지금 12개.
-- 각 포켓몬은 **기본기 + 속성 기술 2개 = 3개** [확정], 타입에서 자동 배정: 기본기 → 종의 타입 순서대로 대표 기술 → (단일 타입이면) 그 타입의 보조 기술. 예: 피카츄 = 몸통박치기·10만볼트·번개, 리자몽 = 몸통박치기·화염방사·날개치기.
+- 직접 정의한다(Pokepedia에 기술 데이터 없음). **노말 기본기 1개 + 로스터 타입별 대표 기술 + 단일 타입 종의 보조 기술**, 12개.
+- 각 포켓몬은 **기본기 + 속성 기술 2개 = 3개**, 타입에서 자동 배정: 기본기 → 종의 타입 순서대로 대표 기술 → (단일 타입이면) 그 타입의 보조 기술. 예: 피카츄 = 몸통박치기·10만볼트·번개, 리자몽 = 몸통박치기·화염방사·날개치기.
 - 필드: `id, type, category(physical|special), power, accuracy, nameKey, animKind(contact|projectile|effect), role(basic|signature|secondary)`. 기본기는 정확히 1개, 대표·보조는 타입마다 최대 1개.
-- 보조 기술은 대표 기술보다 기대 데미지(위력×명중)가 낮게 잡는다 — "세지만 빗나가는 기술"(번개)과 "약하지만 반드시 맞는 기술"(물의맹세·염동력) 같은 선택지.
-- 수치는 원작보다 낮춰 전투를 4~6턴으로 맞춘다(6.5). 원작 기술 이름을 빌려도 고정 피해·2턴 기술처럼 단순 위력 계산과 맞지 않는 기술은 쓰지 않는다.
+- 보조 기술은 대표 기술보다 기대 데미지(위력×명중)가 낮다 — "세지만 빗나가는 기술"(번개)과 "약하지만 반드시 맞는 기술"(물의맹세·염동력) 같은 선택지.
+- 수치는 원작보다 낮춰 전투를 4~6턴으로 맞춘다(6.5). 고정 피해·2턴 기술처럼 단순 위력 계산과 맞지 않는 기술은 쓰지 않는다.
 
 | id | 이름(ko) | 타입 | 분류 | 위력 | 명중 | animKind | role |
 |---|---|---|---|---|---|---|---|
@@ -244,7 +252,7 @@ VS 장면 (HTML, 약 2초, 확인 입력으로 건너뜀)
 
 (타입·분류는 PokeAPI `/move/{name}`과 일치. 물의맹세의 원작 "맹세" 합체 효과는 넣지 않는다.)
 
-### 6.4 전투 규칙 [확정]
+### 6.4 전투 규칙
 
 공식은 현대 포켓몬(능력치 3세대 이후, 데미지 6세대 이후) 기준. 출처: Pokémon Showdown 소스(`sim/battle.ts` statModify·modify, `sim/battle-actions.ts` getDamage·modifyDamage), 상성은 PokeAPI `type` damage_relations와 Pokémon Database 표(324칸 일치). 코드 주석에 URL이 있다.
 
@@ -268,17 +276,17 @@ VS 장면 (HTML, 약 2초, 확인 입력으로 건너뜀)
 
 - **전투 길이** 약 4~6턴. HP 배율 규칙 없이 **기술 위력(데이터)** 으로 맞춘다. 모든 모드가 같은 규칙·데이터를 쓴다.
 - **종족값 압축:** `stat' = 80 + (종족값 − 80) × k`, 사사오입, 최소 1, **k = 0.65**. 종족값 합 격차(피카츄 320 ~ 뮤츠 680)를 줄인다.
-- **Demo 목표 [확정]:** 피카츄 승률 **85~93%**, 평균 4~6턴(`BalanceTests`, 5,000판 시드 고정, 피카츄는 가장 센 기술만 / NPC는 실제처럼 기술을 섞음). 지금 90.9%·4.95턴. 60~70%는 한 번 빗나가면 지는 아슬아슬한 판이라 올렸다.
+- **Demo 목표:** 피카츄 승률 **85~93%**, 평균 4~6턴(`BalanceTests`, 5,000판 시드 고정, 피카츄는 가장 센 기술만 / NPC는 실제처럼 기술을 섞음). 60~70%면 한 번 빗나가면 지는 판이 너무 많다. 반대로 거북왕을 플레이어로 하면 승률은 약 11%다.
 - 지금 값의 이유: 10만볼트 명중 100·하이드로펌프 명중 85(믿음직한 기술 vs 세지만 빗나가는 기술), NPC가 약한 기술을 섞는 만큼 하이드로펌프 위력 45·물의맹세 30.
-- **수치가 민감하다:** 확정 n타가 한 단계 바뀌면 승률이 크게 뛴다. 조정할 때는 한 점이 아니라 주변까지 목표 범위가 유지되는 구간의 중심을 고른다. 조정용 표 출력(k × 위력)은 커밋 `cd45839`의 `BalanceTests.cs`에서 꺼내 임시로 쓴다.
-- **상대 선택(Collection):** `npcWeight` 비례 가중 추첨(`OpponentPicker`), 플레이어와 같은 종 제외. 전설은 가중치를 낮게(다시 열 때 임시값 뮤츠 2 / 나머지 10). 상대 후보가 1마리면 도망을 끈다.
+- **수치가 민감하다:** 확정 n타가 한 단계 바뀌면 승률이 크게 뛴다. 조정할 때는 한 점이 아니라 주변까지 목표 범위가 유지되는 구간의 중심을 고른다. 조정용 표 출력(k × 위력) 코드는 커밋 `cd45839`의 `BalanceTests.cs`에 있다.
+- **상대 선택(Collection):** `npcWeight` 비례 가중 추첨(`OpponentPicker`), 플레이어와 같은 종 제외. 전설은 가중치를 낮게(다시 열 때 기준: 뮤츠 2 / 나머지 10). 상대 후보가 1마리면 도망을 끈다.
 - 중복 스티커는 능력치에 영향 없음, shiny는 외형만.
 
 ---
 
 ## 7. 아키텍처
 
-### 7.1 설계 원칙 [확정]
+### 7.1 설계 원칙
 
 1. 엔진(규칙)과 콘텐츠(데이터·에셋·텍스트)를 분리한다. 엔진은 ID와 숫자만 안다.
 2. Domain·Content·Application은 `UnityEngine`을 참조하지 않는다(asmdef와 `Tests.Dotnet`이 강제).
@@ -357,7 +365,7 @@ AnimationDirector ── 기본 타임라인 + AnimationProfile 오버라이드 
 
 단일 출처는 Unity `roster.json`이다. Pokepedia는 플레이어 가능 ID를 코드 상수 `BATTLE_PLAYABLE_IDS`(지금 `[25]`, `src/features/battle/host.ts`)로 두고 출처를 주석으로 적는다. Pokepedia 서버 경로에서 Unity 호스트를 런타임에 부르지 않는다. 플레이어 가능 포켓몬을 바꾸면 두 곳을 함께 고친다.
 
-### 7.7 폰트 [확정: Galmuri11 + TMP Static]
+### 7.7 폰트: Galmuri11 + TMP Static
 
 - 게임 안 글자는 **Galmuri11**(한글·가나·JIS 한자, OFL-1.1, 고지 `Assets/Content/Fonts/Galmuri-OFL.txt`). 11 Bold는 가나·한자·♀♂가, 11 Condensed는 한자가 없어 쓰지 않는다.
 - 출력 문자열이 정해져 있으므로 **필요한 글리프만** 담은 TMP **Static** 아틀라스(12pt, `RASTER_HINTED`, 512×512)를 쓴다. Dynamic은 원본 TTF(5.4MB)가 빌드에 들어가 쓰지 않는다.
@@ -373,27 +381,30 @@ AnimationDirector ── 기본 타임라인 + AnimationProfile 오버라이드 
 
 ---
 
-## 8. 아트·에셋 전략
+## 8. 아트·에셋
 
 ### 8.1 방침
 
-- 포켓몬 도트는 **PokeAPI 스프라이트**, 시작·VS 화면은 Pokepedia Storage의 공식 아트워크. 권리는 Pokepedia와 같은 수준(비공식·비영리 팬 프로젝트 고지)으로 하고 별도 검토는 하지 않는다. 다른 원작 에셋은 쓰지 않는다.
-- **저장소에 스프라이트를 커밋하지 않는다** [확정]: `Assets/Resources/Sprites/`는 `.gitignore`. `Tools/sprites`의 스크립트와 **PokeAPI sprites 커밋 SHA로 고정한 매니페스트**만 커밋하고, clone 후 스크립트로 재현한다(DEVELOPMENT.md).
+- 포켓몬 도트는 **PokeAPI 스프라이트**, 시작·VS 화면은 Pokepedia Storage의 공식 아트워크. 권리는 Pokepedia와 같은 수준(비공식·비영리 팬 프로젝트 고지, `LICENSE`)으로 다룬다. 다른 원작 에셋은 쓰지 않는다.
+- **저장소에 스프라이트를 커밋하지 않는다:** `Assets/Resources/Sprites/`는 `.gitignore`. `Tools/sprites`의 스크립트와 **PokeAPI sprites 커밋 SHA로 고정한 매니페스트**만 커밋하고, clone 후 스크립트로 재현한다(DEVELOPMENT.md).
 - 트레이너 그림은 쓰지 않는다. PokeAPI는 트레이너 그림을 주지 않는다(sprites 저장소에는 badges·items·pokemon·types뿐).
 
-### 8.2 스프라이트 스타일 [확정: 5세대 블랙·화이트 애니메이션]
+### 8.2 스프라이트: 5세대 블랙·화이트 애니메이션
 
 - 소스: PokeAPI sprites `versions/generation-v/black-white/animated/`(앞, `back/`, `shiny/`, `back/shiny/`).
 - `Tools/sprites`가 GIF를 프레임 분해 → 시트 PNG(`--dedupe --indexed`) + 프레임 지연 JSON으로 만든다. 런타임에 이름으로 `Resources.Load` 해서 `SpriteAnimator`가 재생한다(프레임 지연이 불균일하고 프레임이 많아 Animator 클립은 쓰지 않는다). 임포트 설정(Point·무압축·밉맵 없음)은 `SpriteSheetImporter`가 강제한다.
-- 매니페스트에는 지금 피카츄·거북왕만 있다. Standard 4종을 다시 쓰려면 `fetch_sprites.py --update-manifest --ids 25,9,6,3,94,150` 뒤 `build_sprites.py`(같은 PokeAPI 커밋).
-- 발 위치 pivot, 정수 배율, Point 필터. 다른 스타일 후보 비교는 [`sprite-style-compare.html`](sprite-style-compare.html).
+- 매니페스트에는 피카츄·거북왕만 있다. Standard 4종을 다시 쓰려면 `fetch_sprites.py --update-manifest --ids 25,9,6,3,94,150` 뒤 `build_sprites.py`(같은 PokeAPI 커밋).
+- 발 위치 pivot, 정수 배율, Point 필터. 다른 스타일과의 비교는 [`sprite-style-compare.html`](sprite-style-compare.html).
 
-### 8.3 사운드 전략 [확정]
+### 8.3 사운드
 
 - **모든 소리를 이 저장소의 코드로 직접 합성한다**(외부·AI·원작 음원 없음). 목록·레시피는 `Assets/Content/Audio/manifest.md`.
-- **속성 공격음:** 기술을 쓸 때 나는 소리(전기 = 낙뢰, 물 = 물대포 등, 시드 고정). 포켓몬 울음소리가 아니다. 고르지 않은 안은 두 번째 기술용으로 `TypeAttackSounds.Alternates`에 보관.
-- **기술 전용 공격음:** 같은 타입의 두 기술이 같은 소리를 내지 않게 `animation.json`의 `moveSfx`로 기술마다 소리를 지정할 수 있다. 쓸 수 있는 소리는 새로 만든 것(`TypeAttackSounds.MoveOnlyIds`)과 보관한 안(`AlternateIds`)이고, 없는 id면 굽기(`AudioBaker`)가 멈춘다. 지금: 몸통박치기 = 전용 "슈욱 → 퍽·쿵 → 흙먼지"(충돌이 돌진 0.09초에 맞춤), 물의맹세 = 전용 "촤아"×4 + 큰 "촤아아"(물기둥이 솟을 때마다 한 번, 연출 시간표 그대로). 물소리는 거품 공명(짧게 위로 미끄러지는 사인) + 출렁이는 대역 노이즈로 만들고, 소리마다 45ms 에 걸쳐 곡선으로 차오르게 한다(10ms 안팎에 터졌다 줄어드는 노이즈·쿵 저음은 총소리처럼 들린다). 하이드로펌프(물대포)·10만볼트·번개(둘 다 낙뢰)는 타입 공격음.
-- **울음소리(등장 소리)는 넣지 않는다.** PokeAPI 원본은 어색했다. 넣을지는 14장.
+- **속성 공격음:** 기술을 쓸 때 나는 소리(전기 = 낙뢰, 물 = 물대포 등, 시드 고정). 포켓몬 울음소리가 아니다. 다른 안은 `TypeAttackSounds.Alternates`에 보관.
+- **기술 전용 공격음:** 같은 타입의 두 기술이 같은 소리를 내지 않게 `animation.json`의 `moveSfx`로 기술마다 소리를 지정한다. 쓸 수 있는 소리는 전용으로 만든 것(`TypeAttackSounds.MoveOnlyIds`)과 보관한 안(`AlternateIds`)이고, 없는 id면 굽기(`AudioBaker`)가 멈춘다.
+  - 몸통박치기: "슈욱 → 퍽·쿵 → 흙먼지"(충돌이 돌진 0.09초에 맞춤).
+  - 물의맹세: "촤아"×4 + 큰 "촤아아"(물기둥이 솟을 때마다 한 번, 연출 시간표 그대로). 물소리는 거품 공명(짧게 위로 미끄러지는 사인) + 출렁이는 대역 노이즈로 만들고 45ms 에 걸쳐 곡선으로 차오르게 한다(10ms 안팎에 터졌다 줄어드는 노이즈·쿵 저음은 총소리처럼 들린다).
+  - 하이드로펌프(물대포)·10만볼트·번개(둘 다 낙뢰)는 타입 공격음.
+- **울음소리(등장 소리)는 넣지 않는다.** PokeAPI 원본은 화면과 어울리지 않았다.
 - **배틀 BGM:** 직접 작곡한 8비트 루프 1곡(`BattleMusic`). 판마다 처음부터, 승패가 나면 줄이고 징글. WebGL은 소리를 AAC로 바꾸며 앞부분을 건드려 루프 이음새가 튈 수 있어 앞에 무음 2048 샘플 + WAV smpl 루프 구간을 둔다.
 - **WebGL에서는 실행 중 합성이 화면을 멈추므로** 에디터가 미리 굽는다(`AudioBaker` → `Assets/Resources/Audio/`, 커밋 안 함). 짧은 소리는 iOS 디코드 문제 때문에 최소 0.25초로 채운다.
 - **타이밍이 핵심:** 공격음은 발사 순간(`ReleaseSec`)보다 소리마다 정한 만큼 먼저 틀어 터지는 순간을 맞춘다. 준비가 길면 그 앞을 기 모으기 소리로 채운다.
@@ -403,11 +414,11 @@ AnimationDirector ── 기본 타임라인 + AnimationProfile 오버라이드 
 
 ## 9. Pokepedia(React) 연동
 
-### 9.1 방식: iframe + postMessage [확정]
+### 9.1 방식: iframe + postMessage
 
 - 페이지 **`/[locale]/battle`** 에 iframe으로 넣는다. 쿠키·인증을 쓰지 않으므로 다른 도메인이어도 `postMessage`로 충분하다. origin 검증 필수.
 
-### 9.2 메시지 규약 (v1) [확정]
+### 9.2 메시지 규약 (v1)
 
 이 절이 Pokepedia ↔ Unity 규약의 **단일 출처**다.
 
@@ -431,7 +442,7 @@ Pokepedia 페이지 (/[locale]/battle, BattleFrame)
 | `?host=pokepedia` 있음 | 시작 후 `ready`를 보내고 `init`을 **5초** 기다린다 |
 
 - 5초 안에 `init`이 없으면 "연결하지 못했습니다" + [다시 시도]([`ready` 재전송]) / [데모 체험]. **자동으로 Demo로 바꾸지 않는다.**
-- iframe 여부로는 판별하지 않는다(포트폴리오 허브도 iframe으로 띄울 수 있다). 쿼리는 jslib로 `location.search`를 읽는다.
+- iframe 여부로는 판별하지 않는다(다른 사이트도 iframe으로 띄울 수 있다). 쿼리는 jslib로 `location.search`를 읽는다.
 - `lang`(`ko`/`en`/`ja`)은 로딩·시작 화면의 언어다. 없으면 브라우저 언어(모르면 한국어). 연결 뒤 게임 안 언어는 `init.locale`.
 
 | 모드 | 플레이어 | 상대 |
@@ -468,7 +479,7 @@ Pokepedia 페이지 (/[locale]/battle, BattleFrame)
 #### 입력과 크기
 
 - iframe 안에서 방향키·Space의 기본 동작(부모 스크롤)을 막고, 클릭·터치 때 캔버스에 포커스를 준다. iframe에는 `allow="autoplay"`.
-- **크기는 Pokepedia가 정한다** (`BattleFrame`, `fitBattleScreen`): 데스크톱은 빨간 도감 기기 프레임 안에서 iframe을 화면 배율(DPR)에 맞는 **정수 배율**로 딱 맞게 잡는다(최대 720 CSS px, 창 높이 안). 더 크게 키우면 240×216 그림의 글자·디더링이 깨져 보인다. 휴대폰은 가장자리까지 채운다. 피카츄·거북왕만 고해상도로 바꾸는 방법은 도트 크기가 섞이고 문제가 화면 전체라 쓰지 않는다 — 크게 보이면서 매끄러우려면 게임 해상도를 올려야 한다(보관).
+- **크기는 Pokepedia가 정한다** (`BattleFrame`, `fitBattleScreen`): 데스크톱은 빨간 도감 기기 프레임 안에서 iframe을 화면 배율(DPR)에 맞는 **정수 배율**로 딱 맞게 잡는다(최대 720 CSS px, 창 높이 안). 더 크게 키우면 240×216 그림의 글자·디더링이 깨져 보인다. 휴대폰은 가장자리까지 채운다. 피카츄·거북왕만 고해상도로 바꾸면 도트 크기가 섞이므로, 크게 보이면서 매끄러우려면 게임 해상도를 올려야 한다(ROADMAP "보관").
 
 #### 로컬 테스트
 
@@ -479,7 +490,7 @@ python -I Tools/web/serve.py --dir Tools/web/host-test --port 8000
 
 `http://localhost:8000/`의 모의 Pokepedia 페이지에서 `ready` → `init` 왕복, 타임아웃(init 보내지 않기), 스크롤 간섭, 보유 상황(피카츄 / shiny / 없음)별 진입, `battleEnded` 수신을 확인한다.
 
-### 9.3 DB 정책 [확정]
+### 9.3 DB 정책
 
 **Pokepedia DB는 바꾸지 않는다.** 새 테이블·RPC·컬럼이 없다. 읽기만 한다. 꼭 필요해지면 additive만(Prod·Preview가 같은 DB, migration 자동 적용).
 
@@ -496,12 +507,12 @@ python -I Tools/web/serve.py --dir Tools/web/host-test --port 8000
 ### 9.6 컬렉션의 배틀 가능 표시
 
 - 배틀 가능 포켓몬(피카츄) 카드는 **금색 테두리 + "배틀" 배지**로 보여 주고 배틀로 들어가는 입구가 된다. shiny 스티커의 노란(`volt`) 테두리와 구분한다.
-- `전체 | 배틀 가능` 필터는 선택 사항으로 남겨 두었다(14장).
+- `전체 | 배틀 가능` 필터는 없다(ROADMAP "보관").
 
-### 9.7 첫 퀴즈 피카츄 [확정]
+### 9.7 첫 퀴즈 피카츄
 
-- **피카츄 띠부씰이 없는 사용자**의 새 판 **첫 문제만** 피카츄 실루엣으로 낸다. 서버(`startOrResume`)가 이미 있는 `user_sticker`를 읽어 판단한다 — DB 변경이 없고 조작할 수 없고 기기가 바뀌어도 같다. (브라우저 저장소·DB 컬럼 안은 이 이유로 쓰지 않았다.)
-- 피카츄로 정한 이유: Demo(피카츄 vs 거북왕)와 그대로 맞아 매치업·밸런스·연출을 바꿀 필요가 없다. 첫 문제 하나·미보유 사용자만이라 퀴즈 반복·편중 부작용이 거의 없다.
+- **피카츄 띠부씰이 없는 사용자**의 새 판 **첫 문제만** 피카츄 실루엣으로 낸다. 서버(`startOrResume`)가 이미 있는 `user_sticker`를 읽어 판단한다 — DB 변경이 없고 조작할 수 없고 기기가 바뀌어도 같다.
+- 피카츄인 이유: Demo(피카츄 vs 거북왕)와 그대로 맞아 매치업·밸런스·연출을 바꿀 필요가 없다. 첫 문제 하나·미보유 사용자만이라 퀴즈 반복·편중 부작용이 거의 없다.
 - 맞히면 띠부씰 획득 화면에 **[내 피카츄로 배틀]** (첫 피카츄면 금빛 단독 버튼). 진행 중인 퀴즈는 남아 돌아오면 이어서 한다.
 
 ---
@@ -518,7 +529,7 @@ python -I Tools/web/serve.py --dir Tools/web/host-test --port 8000
 
 - 새 서버·DB·게임 서버는 없다. 배틀 상태는 브라우저 탭 메모리에만 있다(새로고침하면 처음부터).
 
-### 10.2 호스팅: Cloudflare Pages [확정]
+### 10.2 호스팅: Cloudflare Pages
 
 - `pokepedia.dev` DNS는 Vercel이 관리한다(네임서버 `ns1/ns2.vercel-dns.com`, 등록 기관 Name.com). Workers 커스텀 도메인은 DNS가 Cloudflare에 있어야 하지만 **Pages는 외부 DNS에 CNAME 하나로 붙는다** — 운영 중인 DNS를 옮기지 않으려고 Pages를 쓴다. 정적 요청 무료·무제한, **파일당 25 MiB**, `_headers` 지원.
 - **주의:** wrangler 4.x의 `wrangler pages project create`는 기본으로 Worker로 바꿔 만든다. Pages로 만들려면 처음 한 번 `--force`. 이미 Pages 프로젝트가 있으면 이후 `pages deploy`는 Pages로 간다.
@@ -528,7 +539,7 @@ python -I Tools/web/serve.py --dir Tools/web/host-test --port 8000
 - `Tools/web/_headers`: `Build/*.wasm.br`·`*.js.br`·`*.data.br`에 `Content-Encoding: br`과 안쪽 확장자의 Content-Type(`.wasm`은 `application/wasm` — 스트리밍 컴파일). Cloudflare가 다시 압축하지 않는다(`Content-Length`가 원본 `.br`와 같다).
 - `Build/*`는 해시 파일명이라 `Cache-Control: public, max-age=31536000, immutable`, 나머지는 Pages 기본(매번 재검증). Pages는 같은 헤더가 여러 규칙에 걸리면 값을 쉼표로 이어 붙이므로 **한 헤더는 한 규칙에서만** 정한다. `frame-ancestors`는 `/*`에 한 번.
 - 로컬 `serve.py`가 같은 규칙을 흉내 낸다(`--mbps 9 --latency-ms 60`으로 Fast 4G 근사).
-- **용량:** 전송 약 13MB(코드 `wasm.br` 약 7.7MB + 데이터 `data.br` 약 5.2MB). 최적화는 하지 않기로 했다(사용자 휴대폰 4G에서 문제 없음). 도트 시트는 단색 면이 많아 압축이 잘 되므로 그림을 빼도 전송량은 크게 줄지 않는다(Standard 4종 그림을 뺐을 때 텍스처 원본은 27.9 → 8.3MB였지만 전송은 0.4MB만 줄었다).
+- **용량:** 전송 약 13MB(코드 `wasm.br` 약 7.7MB + 데이터 `data.br` 약 5.2MB). 사용자 휴대폰 4G에서 문제가 없어 최적화하지 않는다. 도트 시트는 단색 면이 많아 압축이 잘 되므로 그림을 빼도 전송량은 크게 줄지 않는다(Standard 4종 그림을 빼도 전송은 0.4MB만 준다).
 - 배포 직후 1분 안쪽은 이전 파일이 보일 수 있다(전파). 해시 비교는 잠시 뒤 다시 한다.
 
 ### 10.4 도메인과 환경
@@ -539,7 +550,7 @@ python -I Tools/web/serve.py --dir Tools/web/host-test --port 8000
 
 ### 10.5 빌드·배포·CI
 
-- **로컬 Unity Release 빌드 → `python -I Tools/web/deploy.py`** [확정]: `Builds/Web`을 `Builds/deploy`로 복사하고 `_headers`를 넣어 `wrangler pages deploy`(`--branch`가 main이 아니면 미리보기). 배포 뒤 `Build/*.br`의 sha256을 실제 응답과 비교해 확인한다.
+- **로컬 Unity Release 빌드 → `python -I Tools/web/deploy.py`**: `Builds/Web`을 `Builds/deploy`로 복사하고 `_headers`를 넣어 `wrangler pages deploy`(`--branch`가 main이 아니면 미리보기). 배포 뒤 `Build/*.br`의 sha256을 실제 응답과 비교해 확인한다.
 - Unity 빌드·테스트는 CI에 없다(라이선스·시간). **CI는 순수 C# 테스트만**(`dotnet test Tests.Dotnet`, PR에서만, 경로 필터) — 규칙은 [CLAUDE.md](../CLAUDE.md)의 CI 절.
 - 빌드 산출물(`Builds/`)은 커밋하지 않는다. batchmode 빌드를 강제로 끊으면 `bee_backend`가 남아 다음 빌드가 실패하고 `ProjectSettings.asset`에 빌드 중 임시 값(`preloadedAssets`)이 남는다 — 프로세스를 끄고 파일을 되돌린다.
 
@@ -551,13 +562,13 @@ Cloudflare Web Analytics 정도면 충분하다. 비밀값은 없고 `init`의 o
 
 승리 보상, 공식 랭킹, 클라우드 세이브, 온라인 PvP를 넣을 때. 그때도 새 게임 서버보다 기존 Pokepedia 백엔드를 확장하는 것을 기본으로 한다.
 
-### 10.8 Pokepedia 호스팅 이전(Vercel → Cloudflare) [범위 밖]
+### 10.8 Pokepedia 호스팅
 
-Unity가 Cloudflare에 있다고 Pokepedia를 옮길 필요는 없다(별도 origin + postMessage). 옮기면 Workers로 바꾸기 쉽다.
+Unity가 Cloudflare에 있다고 Pokepedia를 옮길 필요는 없다(별도 origin + postMessage). 이 프로젝트의 범위가 아니다.
 
 ---
 
-## 11. GitHub 저장소 전략
+## 11. 저장소
 
 ```text
 ottuck/pokepedia          # Pokepedia(Next.js). 연동에 필요한 최소 변경만, 그 저장소 PR·정책으로
@@ -566,60 +577,14 @@ ottuck/pokepedia-unity    # 이 저장소
 
 - 분리 이유: 구조·도구·CI·배포가 전혀 다르고, 합치면 Pokepedia CI가 Unity 변경에 영향을 받는다.
 - 접점은 iframe 주소, `postMessage` 규약(9.2), 플레이어 가능 ID(7.6)뿐이다. 규약은 이 문서가 단일 출처다.
-- 포트폴리오 서사: Quiz → Collection → Battle 루프, TypeScript/React(퀴즈)와 C#/Unity(배틀)의 역할 분담, 순수 C# 엔진과 NUnit, 이벤트 기반 연출, 브라우저에서 실행되는 Unity, Next.js와의 iframe 연동. 실제 지원 수를 정확히 적는다.
 
 ---
 
-## 12. 로드맵
+## 12. 개발 지침
 
-현재 상태와 마일스톤은 [ROADMAP.md](ROADMAP.md).
+C#과 Unity를 이해하며 만드는 것이 이 프로젝트의 방식이다. 에이전트 작업 규칙(브랜치·PR·CI·에디터 점유)은 [CLAUDE.md](../CLAUDE.md).
 
----
-
-## 13. 확정된 사항
-
-| 항목 | 내용 |
-|---|---|
-| 프로젝트 | Quiz → Collection → Battle 루프, 소규모 Unity 배틀 포트폴리오. 퀴즈는 Pokepedia 유지 |
-| 공개 범위 | 피카츄(플레이어) vs 거북왕(상대). Standard 4종은 데이터만 보관 (5.1) |
-| 품질 등급 | Showcase / Standard, 엔진 하나, 연출은 오버라이드 데이터 (5.2) |
-| 전투 흐름 | 트레이너 없음, 행동 싸우다/도망, 난이도 하나(NPC는 턴마다 기술을 섞음), 쓰러지면 [응원한다 / 트레이너가 처리한다], 상대 1마리면 도망 확인·승리 장면에서 끝 (5.3) |
-| 화면 | 시작·VS는 HTML(퀴즈 타이틀과 같은 하늘·실루엣·Galmuri11), 전투는 240×216 정수 배율 도트 2.5D(월드/HUD 분리, 3D 없음) (5.5) |
-| 기술 | 포켓몬마다 기본기 + 속성 기술 2개, 12종 (6.3) |
-| 규칙 | 1:1, 현대 데이터, L50·개체값 31·노력치 0, 물리/특수, 명중·급소, PP·상태이상 없음 (6.4) |
-| 밸런스 | 4~6턴, 종족값 압축 k 0.65, Demo 피카츄 승률 85~93% (6.5) |
-| 기술 스택 | Unity 6.3 LTS, C# 9, URP 2D, uGUI, 순수 C# Domain, NUnit, JSON (4) |
-| 폰트 | 게임 안 Galmuri11 TMP Static, 시작·VS는 웹 글꼴 (7.7) |
-| 스프라이트 | PokeAPI BW 애니메이션, 저장소에 커밋하지 않음 (8.2) |
-| 사운드 | 모두 코드로 합성, 속성 공격음, 창작 BGM, 울음소리 없음 (8.3) |
-| 연동 | iframe + postMessage 단방향, 보유 ∩ 지원은 Unity가 계산, 입구는 Demo와 피카츄 띠부씰 (9.2) |
-| Pokepedia 쪽 | 첫 퀴즈 피카츄(피카츄 미보유), 보상 화면 배틀 버튼, 컬렉션 금색 테두리, 정수 배율 배틀 프레임 (9.4·9.6·9.7) |
-| DB·보상 | Pokepedia DB 변경 없음, 승리 보상·랭킹 없음 |
-| 인프라 | 서버 없음, Cloudflare Pages + `battle.pokepedia.dev`(DNS는 Vercel에 두고 CNAME) (10) |
-| 모바일 | 앱 없음, 모바일 브라우저에서 완벽하게 |
-
-## 14. 아직 결정하지 않은 사항 (에이전트가 임의로 확정하지 말 것)
-
-**사용자 결정 필요**
-- 포켓몬 울음소리(등장 소리)를 넣을지, 넣는다면 어떤 방식인지 (8.3).
-- 컬렉션 `전체 | 배틀 가능` 필터를 넣을지 (9.6).
-- 거북왕 등 다른 포켓몬을 플레이어로 열 시점과 밸런스(참고: 거북왕 vs 피카츄 승률 약 11%, 시드 고정 5,000판).
-- Standard 4종 공개, 3:3 배틀·교체·가방, 로스터 추가, 게임 해상도 올리기의 시점 (ROADMAP "보관").
-
-**에이전트에 위임 (할 때 결과를 이 문서에 정리)**
-- 로스터를 열 때의 전설 가중치, 매치업별 상성 편향·이상치 보정.
-- Standard용 공통 배경 테마, 저사양 안드로이드에서 느리면 후처리·조명 축소.
-
-**별도 프로젝트**
-- Pokepedia 호스팅 이전(Vercel → Cloudflare) (10.8).
-
----
-
-## 15. 개발 에이전트 지침
-
-이 프로젝트의 핵심은 AI가 코드를 생성하는 것이 아니라 **C#과 Unity를 이해하며 만드는 것**이다.
-
-1. 주요 기술 선택에는 이유와 대안을 간단히 설명한다. 새 C#/Unity 개념은 Java와 비교한다(7.4).
+1. 주요 기술 선택에는 이유를 간단히 적는다. 새 C#/Unity 개념은 Java와 비교한다(7.4).
 2. Unity 생명주기와 순수 C# 도메인 로직을 구분한다. 규칙은 **테스트를 먼저** 쓴다.
 3. 불필요한 프레임워크·인프라·추상화를 더하지 않는다. 웹 빌드 가능성을 늘 유지한다.
 4. **Pokepedia 코드·DB는 함부로 고치지 않는다.** 고치기 전에 해당 소스, `docs/system_design.md`, 그 저장소 `CLAUDE.md`를 확인한다.
@@ -628,12 +593,13 @@ ottuck/pokepedia-unity    # 이 저장소
 7. **사실을 추측으로 채우지 않는다.** Pokepedia·PokeAPI·Unity는 코드·문서·API로 확인하고, 외부 제안(GPT 등)의 기술 이름·규칙·라이선스는 그대로 믿지 않는다. 버전·한도·가격 같은 사실은 웹에서 확인해 출처와 미확인 부분을 함께 적는다.
 8. 사용자는 포켓몬 도메인 지식이 약하므로 규칙·용어를 먼저 설명하고 추천안과 이유를 제시한 뒤 정한다.
 9. 사운드·에셋은 출처와 라이선스를 매니페스트에 기록한다.
+10. 범위를 넓히는 일(ROADMAP "보관": 새 포켓몬 공개, 3:3, 울음소리, 해상도 등)은 사용자가 정한다. 꺼낼 때 추천안과 이유를 제시한다.
 
 ### Unity CLI·에이전트 연동
 
 출처: [Unity CLI as the replacement for the in-Editor MCP server](https://docs.unity.com/en-us/unity-cli/replace-mcp-server-unity-cli).
 
 - 에디터 안 AI Assistant의 MCP 서버는 deprecated이고 Unity CLI의 `unity mcp`가 대체한다. 셸을 쓸 수 있으면 **MCP보다 `unity command`·`unity eval` 직접 호출**이 빠르고 토큰도 적다(공식 안내) → 이 저장소의 기본.
-- 에디터 없이 헤드리스 빌드·테스트도 된다(`unity test . --mode EditMode`, 배치 빌드는 DEVELOPMENT.md). 로컬 CLI `1.0.0-beta.13`. `unity pipeline install`은 아직 안 했다(하면 패키지가 추가되므로 PR로 확인).
+- 에디터 없이 헤드리스 빌드·테스트도 된다(`unity test . --mode EditMode`, 배치 빌드는 DEVELOPMENT.md). 로컬 CLI `1.0.0-beta.13`. `unity pipeline install`은 하지 않았다(하면 패키지가 추가되므로 PR로 확인).
 - 확인하지 못한 것: `winget install Unity.CLI` 패키지명, `unity skill install`의 에이전트 이름, `unity command`·`unity eval`이 실행 중인 에디터를 꼭 필요로 하는지.
 - `unity eval`은 에디터에서 임의 C#을 실행한다. 권한 허용 목록에는 필요한 명령만 넣는다. 에디터 단일 점유와 병렬 작업 규칙은 [CLAUDE.md](../CLAUDE.md).
