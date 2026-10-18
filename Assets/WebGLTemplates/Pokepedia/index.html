@@ -86,13 +86,12 @@
       #title [data-action="start"] { font-size: max(4.8cqw, 15px); font-size: max(12px, round(nearest, max(4.8cqw, 15px), 12px)); font-weight: 900; letter-spacing: 0.12em; animation: blink 1s steps(1, end) infinite; }
       #title [data-action="start"] > span::before { content: "▶ "; }
       @keyframes blink { 50% { opacity: 0; } }
-      /* 로딩: 블록 막대(10칸) + 퍼센트, 아래에 TIP */
-      #title .loading { flex-direction: column; align-items: center; gap: 1.4cqw; }
-      #title .barrow { display: flex; align-items: center; gap: 2cqw; }
-      #title .blocks { display: flex; gap: 0.8cqw; padding: 0.8cqw; border: 0.8cqw solid var(--ink); background: var(--paper); }
-      #title .blocks i { width: 3cqw; height: 3.4cqw; box-shadow: inset 0 0 0 0.5cqw #c9c4b8; }
-      #title .blocks i.on { background: var(--ink); box-shadow: none; }
-      #title .pct { min-width: 10cqw; text-align: left; font-size: max(3.4cqw, 11px); font-size: max(12px, round(nearest, max(3.4cqw, 11px), 12px)); font-weight: 900; font-variant-numeric: tabular-nums; }
+      /* 로딩: 얇은 진행 막대 + 퍼센트, 아래에 TIP. 막대가 정확히 가운데에 오도록 퍼센트는 오른쪽 칸(왼쪽은 같은 폭의 빈 칸)에 둔다 */
+      #title .loading { flex-direction: column; align-items: center; gap: 1.4cqw; width: 100%; }
+      #title .barrow { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1.6cqw; width: 100%; }
+      #title .bar { width: 36cqw; height: 1.6cqw; padding: 0.4cqw; border: 0.6cqw solid var(--ink); background: var(--paper); }
+      #title .bar i { display: block; width: 0; height: 100%; background: var(--ink); }
+      #title .pct { justify-self: start; text-align: left; font-size: max(3.4cqw, 11px); font-size: max(12px, round(nearest, max(3.4cqw, 11px), 12px)); font-weight: 900; font-variant-numeric: tabular-nums; }
       #title .tip { font-size: max(2.6cqw, 10px); font-size: max(12px, round(nearest, max(2.6cqw, 10px), 12px)); font-weight: 700; }
       #title .tip::before { content: "TIP "; color: #e3342f; }
       /* 게임보이 글상자: 진한 두 줄 테두리, 안에 메뉴 */
@@ -165,7 +164,7 @@
         <div class="flash"></div>
         <div class="panel">
           <div class="loading">
-            <div class="barrow"><div class="blocks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="pct">0%</div></div>
+            <div class="barrow"><span></span><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div><div class="pct">0%</div></div>
             <div class="tip"></div>
           </div>
           <div class="box">
@@ -184,7 +183,7 @@
     <script>
       var canvas = document.querySelector("#unity-canvas");
       var title = document.querySelector("#title");
-      var blocks = title.querySelectorAll(".blocks i");
+      var bar = title.querySelector(".bar");
       var loadingText = title.querySelector(".pct");
       // 로딩 문구 언어: Pokepedia 는 ?lang= 을 붙여 띄우고, 없으면 브라우저 언어. 시작 화면 문구는 Unity 가 로케일 파일에서 보낸다
       var lang = (new URLSearchParams(location.search).get("lang") || navigator.language || "ko").slice(0, 2);
@@ -304,11 +303,11 @@
           return false;
         },
       }, function (p) {
-        // 0~0.9 가 내려받기, 그 뒤는 엔진 초기화(짧다). 막대는 내려받기가 끝나면 다 차고(10칸 블록), 따로 "준비 중"을 띄우지 않는다
-        var q = Math.min(1, p / 0.9);
-        var on = Math.round(q * blocks.length);
-        for (var i = 0; i < blocks.length; i++) blocks[i].classList.toggle("on", i < on);
-        loadingText.textContent = Math.round(q * 100) + "%";
+        // 0~0.9 가 내려받기, 그 뒤는 엔진 초기화(짧다). 막대는 내려받기가 끝나면 다 차고, 따로 "준비 중"을 띄우지 않는다
+        var pct = Math.round(Math.min(1, p / 0.9) * 100);
+        bar.firstChild.style.width = pct + "%";
+        bar.setAttribute("aria-valuenow", pct);
+        loadingText.textContent = pct + "%";
       })
       .then(function (instance) {
         window.pokeHost.instance = instance;
