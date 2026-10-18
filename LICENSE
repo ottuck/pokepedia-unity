@@ -1,0 +1,50 @@
+Source Code
+MIT License
+
+Copyright (c) 2026 ottuck
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Pokémon Content
+Pokémon-related trademarks, names, characters, images,
+artwork and other intellectual property are owned by
+their respective rights holders (Nintendo, The Pokémon
+Company, Creatures Inc. and GAME FREAK inc.) and are not
+covered by the MIT License. In this repository that
+includes:
+
+- docs/images/ (screenshots showing Pokémon sprites)
+- Pokémon and move names in Assets/Content/Data,
+  Assets/Content/Locale and in tests
+
+Pokémon sprites are not included in this repository.
+
+Pokepedia Battle is an unofficial, non-commercial fan
+project and is not affiliated with or endorsed by
+Nintendo, The Pokémon Company, Creatures Inc. or
+GAME FREAK inc.
+
+Third-Party Assets
+The following are distributed under their own licenses
+and are not covered by the MIT License:
+
+- Galmuri11 font (Assets/Content/Fonts/Galmuri11.ttf and
+  the generated font atlas) by Lee Minseo, SIL Open Font
+  License 1.1 (Assets/Content/Fonts/Galmuri-OFL.txt)
+- Assets/TextMesh Pro/ (Unity TextMesh Pro resources)

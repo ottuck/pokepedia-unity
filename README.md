@@ -113,6 +113,6 @@ sequenceDiagram
 
 ## 라이선스·고지
 
-- 코드: MIT (예정)
+- 코드: [MIT](LICENSE)
 - 폰트: [Galmuri](https://github.com/quiple/galmuri) © Lee Minseo, SIL OFL 1.1 → `Assets/Content/Fonts/Galmuri-OFL.txt`
-- 포켓몬 및 포켓몬 스프라이트의 권리는 Nintendo, Creatures Inc., GAME FREAK inc.에 있습니다. 이 프로젝트는 비공식·비영리 팬 프로젝트이며 스프라이트를 저장소에 포함하지 않습니다.
+- 포켓몬과 관련 이름·그림의 권리는 Nintendo, The Pokémon Company, Creatures Inc., GAME FREAK inc.에 있으며 MIT 라이선스에 포함되지 않습니다. 이 프로젝트는 비공식·비영리 팬 프로젝트이며 스프라이트를 저장소에 포함하지 않습니다.
