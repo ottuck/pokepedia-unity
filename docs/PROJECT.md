@@ -351,7 +351,7 @@ AnimationDirector ── 기본 타임라인 + AnimationProfile 오버라이드 
 
 ### 7.5 디렉터리 구조
 
-실제 구조와 어셈블리 의존 방향은 [README.md](../README.md)의 "구조"가 단일 출처다. asmdef는 5개 이내로 유지한다.
+실제 구조와 어셈블리 의존 방향은 [DEVELOPMENT.md](DEVELOPMENT.md)의 "디렉터리"가 단일 출처다. asmdef는 5개 이내로 유지한다.
 
 ### 7.6 지원 포켓몬 목록의 출처
 
@@ -378,7 +378,7 @@ AnimationDirector ── 기본 타임라인 + AnimationProfile 오버라이드 
 ### 8.1 방침
 
 - 포켓몬 도트는 **PokeAPI 스프라이트**, 시작·VS 화면은 Pokepedia Storage의 공식 아트워크. 권리는 Pokepedia와 같은 수준(비공식·비영리 팬 프로젝트 고지)으로 하고 별도 검토는 하지 않는다. 다른 원작 에셋은 쓰지 않는다.
-- **저장소에 스프라이트를 커밋하지 않는다** [확정]: `Assets/Resources/Sprites/`는 `.gitignore`. `Tools/sprites`의 스크립트와 **PokeAPI sprites 커밋 SHA로 고정한 매니페스트**만 커밋하고, clone 후 스크립트로 재현한다(README).
+- **저장소에 스프라이트를 커밋하지 않는다** [확정]: `Assets/Resources/Sprites/`는 `.gitignore`. `Tools/sprites`의 스크립트와 **PokeAPI sprites 커밋 SHA로 고정한 매니페스트**만 커밋하고, clone 후 스크립트로 재현한다(DEVELOPMENT.md).
 - 트레이너 그림은 쓰지 않는다. PokeAPI는 트레이너 그림을 주지 않는다(sprites 저장소에는 badges·items·pokemon·types뿐).
 
 ### 8.2 스프라이트 스타일 [확정: 5세대 블랙·화이트 애니메이션]
@@ -634,6 +634,6 @@ ottuck/pokepedia-unity    # 이 저장소
 출처: [Unity CLI as the replacement for the in-Editor MCP server](https://docs.unity.com/en-us/unity-cli/replace-mcp-server-unity-cli).
 
 - 에디터 안 AI Assistant의 MCP 서버는 deprecated이고 Unity CLI의 `unity mcp`가 대체한다. 셸을 쓸 수 있으면 **MCP보다 `unity command`·`unity eval` 직접 호출**이 빠르고 토큰도 적다(공식 안내) → 이 저장소의 기본.
-- 에디터 없이 헤드리스 빌드·테스트도 된다(`unity test . --mode EditMode`, 배치 빌드는 README). 로컬 CLI `1.0.0-beta.13`. `unity pipeline install`은 아직 안 했다(하면 패키지가 추가되므로 PR로 확인).
+- 에디터 없이 헤드리스 빌드·테스트도 된다(`unity test . --mode EditMode`, 배치 빌드는 DEVELOPMENT.md). 로컬 CLI `1.0.0-beta.13`. `unity pipeline install`은 아직 안 했다(하면 패키지가 추가되므로 PR로 확인).
 - 확인하지 못한 것: `winget install Unity.CLI` 패키지명, `unity skill install`의 에이전트 이름, `unity command`·`unity eval`이 실행 중인 에디터를 꼭 필요로 하는지.
 - `unity eval`은 에디터에서 임의 C#을 실행한다. 권한 허용 목록에는 필요한 명령만 넣는다. 에디터 단일 점유와 병렬 작업 규칙은 [CLAUDE.md](../CLAUDE.md).
