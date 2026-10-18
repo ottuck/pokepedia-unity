@@ -7,7 +7,6 @@
 | | |
 |---|---|
 | ![기술 선택 화면](docs/images/battle-moves.png) | ![피카츄의 10만볼트](docs/images/battle-thunderbolt.png) |
-| ![거북왕의 하이드로펌프](docs/images/battle-hydro-pump.png) | ![승리 연출](docs/images/battle-victory.png) |
 
 ## 개요
 
@@ -17,8 +16,6 @@
 - **한국어·영어·일본어.**
 
 ## 구조
-
-### 전체 구성
 
 ```mermaid
 flowchart LR
@@ -42,53 +39,6 @@ flowchart LR
 - 게임 서버와 DB가 없습니다. Pokepedia가 iframe으로 게임을 띄우고, `postMessage`로 보유 포켓몬 목록을 한 번 넘깁니다(`ready` → `init`, 끝나면 `battleEnded`). 양쪽 모두 origin을 검증합니다 — 규약은 [PROJECT.md 9.2](docs/PROJECT.md).
 - 주소에 `?host=pokepedia`가 없으면 데모 모드로 바로 시작합니다.
 - 시작·VS 화면은 웹 템플릿이 HTML/CSS로 그리고, 도트 그래픽은 전투 화면부터 Unity가 그립니다.
-
-### 코드 계층
-
-```mermaid
-flowchart TB
-    subgraph engine["Unity"]
-        direction LR
-        presentation["<b>Presentation</b><br/>화면 · 입력 · 연출 · 오디오"]
-        bridge["<b>Bridge</b><br/>WebGL ↔ postMessage"]
-    end
-
-    subgraph pure["순수 C# · UnityEngine 미참조"]
-        application["<b>Application</b><br/>BattleSession · NPC AI · 호스트 연결"]
-        content["<b>Content</b><br/>species · moves · roster · locale"]
-        domain["<b>Domain</b><br/>BattleEngine · 상성 · 데미지 · BattleEvent"]
-    end
-
-    presentation --> application
-    bridge -- "IHostBridge 구현" --> application
-    application --> content --> domain
-    application --> domain
-```
-
-- 어셈블리(asmdef)로 의존 방향을 고정했습니다. 규칙은 `Domain`에만 있고 `Presentation`은 판단하지 않습니다.
-- `Domain`·`Content`·`Application`은 Unity 없이 `dotnet test`로 검증합니다.
-
-### 한 턴의 흐름
-
-```mermaid
-sequenceDiagram
-    actor player as 플레이어
-    participant screen as BattleScreen
-    participant session as BattleSession
-    participant engine as BattleEngine
-    participant director as EventPlayer · AnimationDirector
-
-    player->>screen: 기술 선택
-    screen->>session: UseMove(index)
-    session->>session: NPC 기술 결정
-    session->>engine: PlayTurn(player, npc)
-    engine-->>session: BattleEvent 목록
-    session-->>screen: BattleEvent 목록
-    screen->>director: 이벤트 재생
-    Note over director: 메시지 · 공격 · 피격 · 카메라 · 소리
-```
-
-엔진은 화면을 모르고 `MoveUsed`·`DamageDealt`·`Fainted` 같은 이벤트 목록만 돌려줍니다. 화면은 그 목록을 차례로 재생하므로 연출을 바꿔도 규칙은 그대로입니다.
 
 ## 화면
 
