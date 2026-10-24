@@ -54,5 +54,5 @@ unity test . --mode EditMode          # Unity EditMode 테스트 (Unity CLI)
 
 - 에디터는 프로젝트 폴더당 하나만 열 수 있다(`Library/` 점유). **에디터가 열린 폴더에서는 batchmode 실행(컴파일·테스트·빌드)이 실패한다.**
 - 에디터 조작 작업(씬, 파티클, UI)은 에이전트 한 명이 순서대로 맡고, 순수 C#·`dotnet test`는 별도 worktree에서 병렬로 해도 된다(worktree마다 첫 임포트가 오래 걸린다).
-- **worktree마다 `Library/`가 약 2.6GB 생긴다.** 에이전트는 `.worktrees/docs-world` 하나를 계속 쓰고(브랜치만 바꾼다) 새 worktree를 만들지 않는다. 꼭 만들었다면 병합 즉시 `git worktree remove`로 지운다. 띄운 로컬 서버도 확인이 끝나면 끈다.
+- **worktree마다 `Library/`가 약 2.6GB 생긴다.** 필요할 때만 만들고, 작업을 병합하거나 버리기로 한 즉시 `git worktree remove`로 지우고 같은 이름의 로컬 브랜치도 정리한다. 세션을 시작할 때 `git worktree list`로 남은 것을 보고, 변경이 없고 PR이 병합된 것은 지운다. 커밋하지 않은 변경이나 병합되지 않은 커밋이 있으면 지우지 말고 사용자에게 알린다. 띄운 로컬 서버도 확인이 끝나면 끈다.
 - 에디터 연동은 MCP보다 Unity CLI 직접 호출(`unity command`, `unity eval`)이 기본이다. `unity pipeline install`은 아직 안 했다. 검증된 사실과 미확인 항목은 PROJECT.md 12장 "Unity CLI·에이전트 연동".
