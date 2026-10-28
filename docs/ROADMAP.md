@@ -1,29 +1,29 @@
-# 로드맵
+# Roadmap
 
-현재 상태와 마일스톤. **에이전트는 작업 전에 "현재 상태"를 확인하고, 단계가 바뀌거나 할 일이 생기면 같은 PR에서 이 문서를 고친다.** 결정 내용과 사양은 [PROJECT.md](PROJECT.md)의 해당 절에 적고, 여기에는 날짜별 진행 기록을 남기지 않는다. 에이전트 규칙은 [CLAUDE.md](../CLAUDE.md).
+Current status and milestones. **Agents check "Current status" before starting work, and update this document in the same PR whenever the stage changes or new work appears.** Decisions and specs go in the matching section of [PROJECT.md](PROJECT.md); no dated progress log is kept here. Agent rules are in [CLAUDE.md](../CLAUDE.md).
 
-## 현재 상태
+## Current status
 
-- **완성.** 사용자가 이 상태를 완성으로 정했다. Pokepedia 퀴즈 → 피카츄 띠부씰 → 배틀(피카츄 vs 거북왕)이 한 흐름으로 공개돼 있다. 단독 체험은 https://battle.pokepedia.dev , Pokepedia 안에서는 https://pokepedia.dev 의 "배틀" 메뉴와 첫 퀴즈 보상 화면.
-- **다음 작업:** 없음. 고장 수정만 한다(웹·모바일에서 흐름이 깨지면). 아래 "보관"은 사용자가 다시 꺼낼 때 한다.
+- **Complete.** The user has declared this state complete. Pokepedia quiz → Pikachu sticker → battle (Pikachu vs Blastoise) is live as one flow. Standalone: https://battle.pokepedia.dev ; inside Pokepedia: the "Battle" menu on https://pokepedia.dev and the first-quiz reward screen.
+- **Next work:** none. Only bug fixes (if the flow breaks on web or mobile). The "Parked" items below are picked up when the user brings them back.
 
-## 마일스톤 (모두 완료)
+## Milestones (all done)
 
-| | 내용 |
+| | Scope |
 |---|---|
-| M0 | PoC: 한·영·일 폰트, WebGL 용량·로딩, iframe + postMessage, 키 입력, 호스팅 헤더, 공격 연출, BW 스프라이트, 모바일 레이아웃, 오디오 — 결론은 PROJECT.md 4·7.7·8·10절 |
-| M1 | 정식 프로젝트·저장소, asmdef, 테스트(`dotnet test`·CI), 웹 빌드 설정, 진입 화면·브리지 |
-| M2 | 순수 C# 엔진: 18타입 상성, 능력치·데미지, 명중·급소, 턴 순서, 승패, NPC AI, 시드 고정 밸런스 시뮬레이션 |
-| M3 | Vertical Slice(피카츄 vs 거북왕): 전투 흐름·화면, 이벤트 재생, 공격·피격 연출, 합성 사운드·BGM, 월드/HUD 분리, 2.5D 화면 |
-| M4 | 웹 배포(Cloudflare Pages, `battle.pokepedia.dev`), README 소개 |
-| M5 | 연출 완성: VS 도입, 공격 카메라, 몸통박치기, 화면 구조 정리(`BattleViewState`) |
-| M6 | Pokepedia 연동(Collection 모드): `/[locale]/battle`, 첫 퀴즈 피카츄, 보상 화면 배틀 버튼, 컬렉션 금색 테두리. 이후 다듬기: 쓰러지면 선택, 거북왕 기술 섞기, HTML 시작·VS 화면, 정수 배율 배틀 프레임 |
-| M7 | 용량 측정만(최적화는 하지 않기로 함, PROJECT.md 10.3) |
+| M0 | PoC: Korean/English/Japanese fonts, WebGL size and loading, iframe + postMessage, key input, hosting headers, attack effects, BW sprites, mobile layout, audio — conclusions in PROJECT.md sections 4, 7.7, 8, 10 |
+| M1 | Real project and repository, asmdef, tests (`dotnet test`, CI), web build settings, entry screen and bridge |
+| M2 | Pure C# engine: 18-type chart, stats and damage, accuracy and critical hits, turn order, win/loss, NPC AI, seeded balance simulation |
+| M3 | Vertical Slice (Pikachu vs Blastoise): battle flow and screen, event playback, attack/hit effects, synthesized sound and BGM, world/HUD split, 2.5D screen |
+| M4 | Web deployment (Cloudflare Pages, `battle.pokepedia.dev`), README introduction |
+| M5 | Finished presentation: VS intro, attack camera, Tackle, screen structure cleanup (`BattleViewState`) |
+| M6 | Pokepedia integration (Collection mode): `/[locale]/battle`, first-quiz Pikachu, battle button on the reward screen, gold border in the collection. Later polish: choice on faint, Blastoise move mixing, HTML title/VS screens, integer-scaled battle frame |
+| M7 | Size measurement only (decided not to optimize, PROJECT.md 10.3) |
 
-## 보관 (지금은 하지 않음)
+## Parked (not now)
 
-- Standard 4종(리자몽·이상해꽃·팬텀·뮤츠) 공개: 공통 연출·체형별 표시·밸런스·NPC 가중치. 데이터는 남아 있고 그림만 빌드에서 뺐다(PROJECT.md 5.1·10.3).
-- 다른 포켓몬을 플레이어로 열기(거북왕 등) — 뒷모습 연출·밸런스 확인 필요(거북왕 플레이어 승률 약 11%, PROJECT.md 6.5).
-- 3:3 배틀, 포켓몬 교체·가방 메뉴.
-- 게임 해상도 올리기(240×216 → 크게 보여도 매끄럽게) — UI·배경·글꼴을 다시 맞추는 큰 작업.
-- 컬렉션 "배틀 가능" 필터(PROJECT.md 9.6), 포켓몬 울음소리(PROJECT.md 8.3).
+- Releasing the four Standard Pokémon (Charizard, Venusaur, Gengar, Mewtwo): shared effects, per-body-shape display, balance, NPC weights. The data remains; only the art was removed from the build (PROJECT.md 5.1, 10.3).
+- Opening other Pokémon as the player (Blastoise, etc.) — needs back-view effects and a balance check (Blastoise as player wins about 11%, PROJECT.md 6.5).
+- 3v3 battles, Pokémon switching and the Bag menu.
+- Raising the game resolution (240×216 → smooth when shown large) — a big job that reworks UI, backgrounds and fonts.
+- Collection "battle-ready" filter (PROJECT.md 9.6), Pokémon cries (PROJECT.md 8.3).

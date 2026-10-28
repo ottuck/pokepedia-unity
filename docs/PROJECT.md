@@ -1,220 +1,220 @@
 # Pokepedia Battle — PROJECT
 
-기획·설계·Pokepedia 연동 규약의 **현재 사양**. 현재 상태와 보관 목록은 [ROADMAP.md](ROADMAP.md), 빌드·배포 명령은 [DEVELOPMENT.md](DEVELOPMENT.md), 에이전트 규칙은 [CLAUDE.md](../CLAUDE.md).
+The **current spec** for design, architecture and the Pokepedia integration contract. Current status and parked work are in [ROADMAP.md](ROADMAP.md), build and deploy commands in [DEVELOPMENT.md](DEVELOPMENT.md), agent rules in [CLAUDE.md](../CLAUDE.md).
 
-> 절 번호는 코드 주석이 참조하므로 바꾸지 않는다.
+> Code comments reference section numbers, so do not renumber sections.
 
-## 한눈에
+## At a glance
 
-| 항목 | 내용 |
+| Item | Details |
 |---|---|
-| 정체 | Pokepedia의 퀴즈 → 띠부띠부씰 컬렉션 → **배틀** 중 배틀을 맡는 Unity 2D 턴제 게임. `battle.pokepedia.dev`에 WebGL로 올리고 Pokepedia가 iframe으로 띄운다 |
-| 공개 범위 | 피카츄(플레이어) vs 거북왕(상대) 1:1. Standard 4종은 데이터만 보관 (5.1) |
-| 품질 등급 | Showcase / Standard, 엔진 하나, 연출은 오버라이드 데이터 (5.2) |
-| 전투 흐름 | 트레이너 없음, 싸우다/도망, NPC는 턴마다 기술을 섞음, 쓰러지면 [응원한다 / 트레이너가 처리한다], 상대 1마리면 승리 장면에서 끝 (5.3) |
-| 화면 | 시작·VS는 HTML, 전투는 240×216 정수 배율 도트 2.5D(월드/HUD 분리) (5.5) |
-| 규칙 | 현대 데이터, L50, 물리/특수, 명중·급소, 기술 3개, PP·상태이상 없음 (6.3·6.4) |
-| 밸런스 | 4~6턴, 종족값 압축 k 0.65, Demo 피카츄 승률 85~93% (6.5) |
-| 기술 스택 | Unity 6.3 LTS, C# 9, URP 2D, uGUI + TMP, 순수 C# Domain, NUnit, JSON (4) |
-| 에셋 | PokeAPI BW 애니메이션 스프라이트(커밋 안 함), Galmuri11, 소리는 모두 코드로 합성 (7.7·8) |
-| 연동 | iframe + postMessage 단방향, 보유 ∩ 지원은 Unity가 계산 (9.2) |
-| 인프라 | 서버·DB 없음, Cloudflare Pages, Pokepedia DB 변경 없음 (9.3·10) |
+| What it is | A Unity 2D turn-based game that handles the **battle** part of Pokepedia's quiz → sticker collection → **battle** loop. Shipped as WebGL on `battle.pokepedia.dev` and embedded by Pokepedia in an iframe |
+| Public scope | Pikachu (player) vs Blastoise (opponent), 1v1. The four Standard Pokémon are kept as data only (5.1) |
+| Quality tiers | Showcase / Standard, one engine, effects as override data (5.2) |
+| Battle flow | No trainers, Fight/Run, the NPC mixes moves per turn, on faint [Cheer on / Handle it yourself], with a single opponent it ends on the victory scene (5.3) |
+| Screens | Title and VS in HTML, battle in 240×216 integer-scaled pixel-art 2.5D (world/HUD split) (5.5) |
+| Rules | Modern data, L50, physical/special, accuracy and critical hits, 3 moves, no PP or status conditions (6.3, 6.4) |
+| Balance | 4–6 turns, base stat compression k 0.65, Demo Pikachu win rate 85–93% (6.5) |
+| Tech stack | Unity 6.3 LTS, C# 9, URP 2D, uGUI + TMP, pure C# Domain, NUnit, JSON (4) |
+| Assets | PokeAPI BW animated sprites (not committed), Galmuri11, all sounds synthesized in code (7.7, 8) |
+| Integration | iframe + one-way postMessage, Unity computes owned ∩ supported (9.2) |
+| Infrastructure | No server or DB, Cloudflare Pages, no Pokepedia DB changes (9.3, 10) |
 
 ---
 
-## 1. 프로젝트 개요
+## 1. Project overview
 
-- Pokepedia에서 모은 띠부띠부씰 포켓몬으로 NPC와 싸우는 **Unity + C# 2D 턴제 배틀**. 많은 포켓몬보다 **작은 범위를 제대로 설계하고 연출하는 것**이 목표다.
-- 웹(WebGL)으로 배포하고 Pokepedia에서 iframe으로 들어온다. 단독(Demo)으로도 플레이할 수 있다.
-- 모바일 앱은 내지 않지만 **모바일 브라우저에서 완벽하게 보여야 한다.**
-- Unity를 폭넓게 쓴다(월드/UI 렌더링 분리, Light2D, 후처리, 셰이더, VFX, 카메라 연출). 이 방침은 용량·작업량보다 우선한다.
+- A **Unity + C# 2D turn-based battle** where you fight an NPC with the sticker Pokémon you collected in Pokepedia. The goal is **to design and present a small scope properly**, not to cover many Pokémon.
+- Deployed to the web (WebGL) and entered from Pokepedia through an iframe. It can also be played standalone (Demo).
+- There is no mobile app, but it **must look perfect in mobile browsers.**
+- Uses Unity broadly (separate world/UI rendering, Light2D, post-processing, shaders, VFX, camera work). This takes priority over size and effort.
 
-**완료 기준**(모두 충족): 순수 C# 규칙과 자동화 테스트 · Unity로 직접 만든 UI·애니메이션·사운드·이펙트 · 브라우저에서 플레이 가능한 완성형 미니게임 공개 · 아키텍처와 설계 의도를 설명할 수 있는 문서. 포켓몬 수는 기준이 아니다.
+**Definition of done** (all met): pure C# rules with automated tests · UI, animation, sound and effects built directly in Unity · a finished, browser-playable mini game released publicly · documentation that explains the architecture and design intent. The number of Pokémon is not a criterion.
 
 ---
 
 ## 2. Pokepedia
 
-- 사이트 https://pokepedia.dev · 저장소 https://github.com/ottuck/pokepedia · 설계 문서는 그 저장소의 `docs/system_design.md`, 머지 정책은 그 저장소의 `CLAUDE.md`.
-- Pokepedia의 게임은 **실루엣 이름 맞히기 퀴즈**다. 배틀·기술 데이터는 이 저장소가 만든다.
+- Site https://pokepedia.dev · repository https://github.com/ottuck/pokepedia · design doc is `docs/system_design.md` in that repository, merge policy is that repository's `CLAUDE.md`.
+- Pokepedia's game is a **silhouette name-guessing quiz**. Battle and move data are created by this repository.
 
-| 항목 | 내용 |
+| Item | Details |
 |---|---|
-| 스택 | Next.js 16, React 19, TypeScript, Tailwind v4, Zustand, next-intl, Supabase(Postgres·Auth·Storage), Vercel, Vitest |
-| 계정 | 게스트(익명)로 시작, Google 연결·병합 |
-| 컬렉션 | `user_sticker (user_id, pokemon_id, variant normal\|shiny, quantity)` — 본인 SELECT RLS |
-| 포켓몬 데이터 | `pokemon` 테이블(public read): 한/영/일 이름, 타입, 능력치 6종, 아트워크 경로. PokeAPI → 동기화 스크립트 → Supabase |
-| 아트워크 | Supabase Storage `pokemon-artwork/normal/{도감번호 3자리}.webp` (배틀 시작·VS 화면도 이것을 쓴다) |
-| 환경 | Supabase 프로젝트 하나를 Prod와 Preview가 공유, migration은 main 머지 때 자동 적용 |
+| Stack | Next.js 16, React 19, TypeScript, Tailwind v4, Zustand, next-intl, Supabase (Postgres, Auth, Storage), Vercel, Vitest |
+| Accounts | Start as a guest (anonymous), link and merge with Google |
+| Collection | `user_sticker (user_id, pokemon_id, variant normal\|shiny, quantity)` — RLS allows SELECT on own rows |
+| Pokémon data | `pokemon` table (public read): Korean/English/Japanese names, types, 6 stats, artwork path. PokeAPI → sync script → Supabase |
+| Artwork | Supabase Storage `pokemon-artwork/normal/{3-digit dex number}.webp` (the battle title and VS screens use this too) |
+| Environments | Prod and Preview share one Supabase project; migrations are applied automatically on merge to main |
 
 ---
 
-## 3. 게임 루프
+## 3. Game loop
 
 ```text
-Pokepedia 퀴즈 (React)
-   ↓ 피카츄 띠부씰이 없는 사용자의 새 판 첫 문제 = 피카츄 (9.7)
-띠부씰 획득 화면 → [내 피카츄로 배틀] (첫 피카츄면 금빛 단독 버튼)
+Pokepedia quiz (React)
+   ↓ For users without a Pikachu sticker, the first question of a new run = Pikachu (9.7)
+Sticker reward screen → [Battle with my Pikachu] (a lone gold button for a first Pikachu)
    ↓ /[locale]/battle (iframe)
-Unity 배틀: 보유 ∩ 플레이어 가능 → NPC와 1:1 → 승리 장면에서 끝
+Unity battle: owned ∩ playable → 1v1 against the NPC → ends on the victory scene
 ```
 
-- 배틀로 들어오는 길은 **배틀 체험(Demo)** 과 **피카츄 띠부씰**(Collection) 두 가지다. 내비게이션의 "배틀" 메뉴도 같은 페이지다.
-- 연결은 **단방향**(React → Unity). 배틀 결과로 스티커·랭킹을 바꾸지 않는다.
+- There are two ways into the battle: **Try the battle (Demo)** and **the Pikachu sticker** (Collection). The "Battle" menu in the navigation is the same page.
+- The connection is **one-way** (React → Unity). Battle results do not change stickers or rankings.
 
 ---
 
-## 4. 기술 스택
+## 4. Tech stack
 
-| 구분 | 기술 |
+| Area | Technology |
 |---|---|
-| Engine | Unity 6.3 LTS (6000.3.26f1) — 2027년 12월까지 지원 (6.0 LTS는 2026년 10월 종료) |
-| 언어 | C# 9 고정 (`Tests.Dotnet`이 최신 문법을 먼저 잡는다) |
-| 렌더 | **URP 2D**(Light2D·Sprite-Lit·Volume 후처리) |
-| UI | uGUI + TextMesh Pro (Galmuri11 Static 아틀라스, 7.7) |
-| 데이터 | JSON → `ContentLoader`(순수 C#) |
-| 테스트 | NUnit (Unity Test Framework + `dotnet test`) |
-| 웹 | Unity Web(WebGL), 사전 압축 Brotli, Cloudflare Pages |
-| 서버·DB | 없음. Unity는 인증·DB를 다루지 않는다 |
+| Engine | Unity 6.3 LTS (6000.3.26f1) — supported until December 2027 (6.0 LTS ends October 2026) |
+| Language | Pinned to C# 9 (`Tests.Dotnet` catches newer syntax first) |
+| Rendering | **URP 2D** (Light2D, Sprite-Lit, Volume post-processing) |
+| UI | uGUI + TextMesh Pro (Galmuri11 Static atlas, 7.7) |
+| Data | JSON → `ContentLoader` (pure C#) |
+| Tests | NUnit (Unity Test Framework + `dotnet test`) |
+| Web | Unity Web (WebGL), pre-compressed Brotli, Cloudflare Pages |
+| Server and DB | None. Unity does not handle auth or databases |
 
-**렌더·빌드 설정과 이유**
-- **URP 2D:** Built-in RP가 약 1.2MB 작지만 Unity 6.5부터 deprecated이고 2D Light·Sprite-Lit·Volume 후처리·2D Shader Graph를 잃는다.
-- **스플래시 로고:** 텍스처(2.7MB)는 `SplashScreen.show=false`만으로 빠지지 않고 `showUnityLogo=false`까지 꺼야 빠진다(Unity Issue UUM-63958, Won't Fix). `ProjectSetup`이 둘 다 끈다.
-- **Data Caching 끔:** Safari는 iframe 안에서 IndexedDB를 지원하지 않고, 같은 origin을 두 탭에서 동시에 로딩하면 IndexedDB 캐시가 깨질 수 있다. 재방문 캐시는 해시 파일명 + `immutable` HTTP 캐시에 맡긴다.
-- **빌드:** Brotli, 관리 코드 스트리핑 Minimal, IL2CPP 크기 우선. Release는 Runtime Speed(LTO 없음), Dev는 빌드 속도 우선. 스트리핑 High·Disk Size LTO는 빌드가 7~10분 걸리고 문제 가능성이 있어 쓰지 않는다.
-- Unity에서 `record`의 `init`을 쓰려면 `IsExternalInit`을 직접 정의해야 한다(`Assets/Scripts/Domain/IsExternalInit.cs`).
+**Rendering and build settings, and why**
+- **URP 2D:** Built-in RP is about 1.2 MB smaller, but it is deprecated from Unity 6.5 and loses 2D Light, Sprite-Lit, Volume post-processing and 2D Shader Graph.
+- **Splash logo:** The texture (2.7 MB) is not removed by `SplashScreen.show=false` alone; `showUnityLogo=false` must also be off (Unity Issue UUM-63958, Won't Fix). `ProjectSetup` turns both off.
+- **Data Caching off:** Safari does not support IndexedDB inside iframes, and loading the same origin in two tabs at once can corrupt the IndexedDB cache. Repeat-visit caching relies on hashed file names + `immutable` HTTP caching.
+- **Build:** Brotli, managed code stripping Minimal, IL2CPP optimized for size. Release uses Runtime Speed (no LTO), Dev prioritizes build speed. Stripping High and Disk Size LTO are not used because builds take 7–10 minutes and may cause problems.
+- Using `init` on a `record` in Unity requires defining `IsExternalInit` yourself (`Assets/Scripts/Domain/IsExternalInit.cs`).
 
 ---
 
-## 5. 게임 범위
+## 5. Game scope
 
-### 5.1 지원 포켓몬 로스터
+### 5.1 Supported Pokémon roster
 
-| 등급 | 포켓몬 | 상태 |
+| Tier | Pokémon | Status |
 |---|---|---|
-| Showcase | 피카츄 #025 (전기) | **공개, 유일한 플레이어** |
-| Showcase | 거북왕 #009 (물) | **공개, 상대로만** |
-| Standard | 리자몽(불꽃/비행) · 이상해꽃(풀/독) · 팬텀(고스트/독) · 뮤츠(에스퍼, 전설) | 보관: 데이터만 있고 그림은 빌드에서 뺐다(`npcWeight` 0, 10.3) |
+| Showcase | Pikachu #025 (Electric) | **Public, the only player** |
+| Showcase | Blastoise #009 (Water) | **Public, opponent only** |
+| Standard | Charizard (Fire/Flying) · Venusaur (Grass/Poison) · Gengar (Ghost/Poison) · Mewtwo (Psychic, legendary) | Parked: data only, art removed from the build (`npcWeight` 0, 10.3) |
 
-- 지원 목록과 역할은 `roster.json`이 정한다(`playable`, `npcWeight`). **엔진은 지원 포켓몬 수를 모르고, 엔진·화면 코드에 포켓몬 이름을 쓰지 않는다.**
-- 추가는 로스터 항목을 늘리는 것(데이터 + 스프라이트 + 필요하면 연출 오버라이드)이다. 18타입 상성은 모두 구현돼 있고 기술·이펙트는 로스터가 쓰는 타입만 만든다.
-- 소개 문서에는 151종 중 일부만 지원한다는 사실을 정확히 적는다.
+- `roster.json` defines the supported list and roles (`playable`, `npcWeight`). **The engine does not know how many Pokémon are supported, and engine and screen code never contain Pokémon names.**
+- Adding one means adding a roster entry (data + sprites + effect overrides if needed). The full 18-type chart is implemented; moves and effects are made only for types the roster uses.
+- Introductory docs state accurately that only some of the 151 are supported.
 
-### 5.2 품질 등급: Showcase / Standard
+### 5.2 Quality tiers: Showcase / Standard
 
-- 엔진은 하나이고 **시각적 표현만 다르다.** Showcase도 실제 엔진으로 플레이된다.
-- 별도 시스템 없이, 연출 디렉터의 기본 타임라인(접촉 / 발사 / 효과) 위에 종족·기술 단위 **오버라이드 데이터**만 얹는다: `Assets/Content/Data/animation.json` → `AnimationCatalog`.
-  - 종 프로필(`animProfile` 키): `windupSec`(준비 시간), `lungePx`(돌진), `hitShakePx`(피격 흔들림), `knockbackPx`(넉백), `mouth`(앞모습에서 입 위치, 물 기술 발사점), `moveFx`(기술 id → 전용 연출 id). 빠진 값은 `defaults`.
-  - 기술 전용 공격음 `moveSfx`(맨 위, 기술 id → 소리 id, 8.3). 없는 기술은 타입 공격음.
-  - 18타입마다 이펙트 색(primary·secondary).
-- Standard는 공통 타임라인 + 타입 색, Showcase는 전용 연출(5.5)과 타이밍에 맞춘 소리.
+- There is one engine; **only the visual presentation differs.** Showcase also plays on the real engine.
+- No separate system: species- and move-level **override data** sits on top of the effect director's default timelines (contact / projectile / effect): `Assets/Content/Data/animation.json` → `AnimationCatalog`.
+  - Species profile (`animProfile` key): `windupSec` (wind-up time), `lungePx` (lunge), `hitShakePx` (hit shake), `knockbackPx` (knockback), `mouth` (mouth position in the front view, the launch point for water moves), `moveFx` (move id → dedicated effect id). Missing values fall back to `defaults`.
+  - Move-specific attack sounds `moveSfx` (top level, move id → sound id, 8.3). Moves without one use the type attack sound.
+  - Effect colors (primary, secondary) for each of the 18 types.
+- Standard gets the shared timelines + type colors; Showcase gets dedicated effects (5.5) and sounds timed to them.
 
-### 5.3 전투 흐름과 화면 구성
+### 5.3 Battle flow and screen layout
 
-트레이너(사람)는 화면에 나오지 않는다. 야생 포켓몬과 마주친 것처럼 진행한다.
+No trainers (people) appear on screen. It plays as if you ran into a wild Pokémon.
 
 ```text
-로딩 → 시작 화면 (HTML, [▶ 배틀 시작])
-   ↓  ?host=pokepedia 면 ready → init 대기 (9.2)
-VS 장면 (HTML, 약 2초, 확인 입력으로 건너뜀)
+Loading → Title screen (HTML, [▶ START])
+   ↓  with ?host=pokepedia, ready → wait for init (9.2)
+VS scene (HTML, about 2 s, skipped with a confirm input)
    ↓
-"야생의 ○○이(가) 나타났다! 가라! ○○!"
+"A wild ○○ appeared! Go! ○○!"
    ↓
-행동: 싸우다 / 도망 ── 싸우다 → 기술 → 턴 처리 → (반복)
+Action: Fight / Run ── Fight → move → resolve turn → (repeat)
    ↓
-플레이어가 쓰러지면 [○○을(를) 응원한다 / 트레이너가 처리한다]
-상대가 쓰러지면 승리 → (상대 후보 1마리면) 승리 장면에서 끝
+If the player faints: [Cheer on ○○ / Handle it yourself]
+If the opponent faints: victory → (with a single opponent candidate) ends on the victory scene
 ```
 
-**흐름**
-- **시작 화면:** 웹 템플릿이 그린다(5.5). 상태는 로딩 / 시작 / 연결 중 / 연결 실패([다시 시도]·[데모 체험]) / 띠부씰 없음([데모 체험]). 키보드 Z·Enter·Space, 실험실은 L.
-- **도망:** 상대 후보가 여럿이면 "무사히 도망쳤다!" 후 상대가 바뀌어 새 배틀(HP 가득). 상대 후보가 1마리(Demo, 지금의 Collection)면 첫 번째는 "도망칠 수 없다!", **두 번째부터 "정말 도망칠까?" [그만둔다 / 계속 싸운다]**(기본 커서는 계속 싸운다, 판마다 다시 센다) — 갇힌 느낌을 막는다.
-- **쓰러지면 선택:** 데모·첫 Collection 전투에서 져서 다시 도전할 이유는 없으므로, 플레이어가 **쓰러질 때마다** "트레이너, 어떻게 할까?"를 고른다(취소 없음, `BattleSession.faintChoice`).
-  - **응원한다:** HP 가득으로 다시 일어나고 이후 주는 피해 ×1.5(`CheerPowerBoost`, 겹치지 않음). 엔진 `Revive`·`Revived`. 이름은 원작 인물 대신 "트레이너의 응원".
-  - **트레이너가 처리한다:** 몬스터볼이 상대 머리에 맞아 상대가 쓰러지고 **플레이어 승리**(Collection이면 `battleEnded` 승리). 엔진 `KnockOut`(방금 이긴 쪽을 쓰러뜨려 승패를 뒤집음)·`TrainerThrewBall`. 바로 끝내고 싶은 사용자를 위한 마무리다.
-  - 그래서 이 배틀들에서는 패배가 나오지 않는다. 패배([다시 도전])는 `faintChoice`가 꺼진 세션에만 있다.
-- **승리:** 상대 후보가 1마리면 결과 메뉴 없이 승리 장면("승부에서 이겼다!", 노을 하늘)에서 끝난다. 나가기는 Pokepedia 메뉴, 단독 주소에서는 새로고침. 상대 후보가 여럿이면 [다음 상대와 싸운다] / [처음으로]. 보상·점수는 없다.
-- **NPC AI(난이도 하나):** 기대 데미지(위력·명중·자속·상성) 순위를 매기고 **턴마다 섞는다**: 턴 1·3은 1순위, 2는 2순위, 4는 3순위, 이후 4턴마다 반복(난수 없음, `NpcBattleAi`). 같은 기술만 쓰면 단조로워서다.
+**Flow**
+- **Title screen:** drawn by the web template (5.5). States are loading / title / connecting / connection failed ([Retry], [Try Demo]) / no sticker ([Try Demo]). Keyboard Z, Enter, Space; L opens the lab.
+- **Run:** With several opponent candidates, "Got away safely!" and then a new battle against a different opponent (full HP). With a single candidate (Demo, and Collection today), the first attempt shows "Can't escape!", and **from the second on, "Really run away?" [Quit / Keep fighting]** (default cursor on Keep fighting, counted again each battle) — so it never feels like a trap.
+- **Choice on faint:** In the Demo and the first Collection battle there is no reason to retry after a loss, so **every time** the player faints they pick from "Trainer, what will you do?" (no cancel, `BattleSession.faintChoice`).
+  - **Cheer on:** Gets back up with full HP and deals ×1.5 damage afterwards (`CheerPowerBoost`, does not stack). Engine `Revive`, `Revived`. Named "the trainer's cheer" instead of after a character from the original games.
+  - **Handle it yourself:** A Poké Ball hits the opponent on the head, the opponent faints and **the player wins** (`battleEnded` win in Collection). Engine `KnockOut` (knocks out the side that just won, flipping the result), `TrainerThrewBall`. A finisher for users who want to end it right away.
+  - So these battles never produce a loss. A loss ([Try again]) exists only in sessions with `faintChoice` off.
+- **Victory:** With a single opponent candidate, it ends on the victory scene ("You won the battle!", sunset sky) with no result menu. Leaving is through the Pokepedia menu, or a reload at the standalone address. With several candidates: [Next opponent] / [Title screen]. No rewards or score.
+- **NPC AI (one difficulty):** Ranks moves by expected damage (power, accuracy, STAB, type effectiveness) and **mixes them per turn**: turns 1 and 3 use the 1st, turn 2 the 2nd, turn 4 the 3rd, then repeats every 4 turns (no randomness, `NpcBattleAi`). Using the same move every time is monotonous.
 
-**화면과 입력**
-- **기술 메뉴:** 큰 타입 색 버튼 3개(`MoveCards`) — 이름·위력·명중이 버튼 안에 있고, 누르면 2px 눌렸다 튀어 오르는 반응 뒤 바로 사용한다. 평소 세 버튼은 같은 모양이고 키보드 방향키로 고를 때만 지금 버튼을 띄운다. 버튼 바깥을 누르면 뒤로(휴대폰엔 X·Esc가 없다). 긴 이름은 글자 간격만 좁히고, 영어 명중은 "Acc", 일본어는 "威力·命中". PP 없음.
-- **턴 메시지:** "○○의 ○○!" → 빗나감 / 급소 / 상성 문구 → HP 바 감소 → 기절. 타자기식 출력. 상대는 "야생의 ○○"처럼 별도 키를 쓴다(원작이 구분하고, 영어는 대소문자 때문에 접두어 방식이 안 된다). 키 목록은 `BattleTextKeys`.
-- **배치:** 게임보이식(상대 오른쪽 위 앞모습, 플레이어 왼쪽 아래 뒷모습, 이름·`:L50`·HP 바·숫자, 아래 메시지 창과 메뉴).
-- **기준 해상도 240×216**(10:9, 160×144의 1.5배 — BW 스프라이트가 최대 112px라서). **정수 배율로만** 키운다(`PixelCanvasScaler`·`PixelCamera`). 문구는 Galmuri11 12px.
-- **입력:** 방향키 + Z/X, 클릭, 터치.
+**Screen and input**
+- **Move menu:** Three large type-colored buttons (`MoveCards`) — name, power and accuracy are inside the button; pressing one shows a 2px press-and-bounce reaction and then uses the move immediately. The three buttons normally look the same; only when choosing with the keyboard arrows is the current button raised. Tapping outside the buttons goes back (phones have no X or Esc). Long names only get tighter letter spacing; English accuracy is "Acc", Japanese uses "威力·命中". No PP.
+- **Turn messages:** "○○ used ○○!" → miss / critical / effectiveness text → HP bar drains → faint. Typewriter-style output. The opponent uses separate keys such as "The wild ○○" (the original games distinguish them, and in English capitalization makes a prefix approach impossible). Keys are listed in `BattleTextKeys`.
+- **Layout:** Game Boy style (opponent front view top right, player back view bottom left, name, `:L50`, HP bar and numbers, message box and menu at the bottom).
+- **Base resolution 240×216** (10:9, 1.5× of 160×144 — BW sprites are up to 112px). Scaled **only by integer factors** (`PixelCanvasScaler`, `PixelCamera`). Text is Galmuri11 12px.
+- **Input:** Arrow keys + Z/X, click, touch.
 
-### 5.4 개발 방침과 범위
+### 5.4 Development approach and scope
 
-- **Vertical Slice 우선:** 콘텐츠를 늘리기 전에 피카츄 vs 거북왕을 최종 품질로 완성한다.
-- **용량은 최하위 고려:** 화면 품질에 도움이 되면 용량을 쓴다(후처리용 `PostProcessData` 연결). 호스팅 단일 파일 25 MiB 한도(10.2)만 실제 제약이다.
-- **성능 기준:** 전송 약 13MB, 첫 로딩 데스크톱 약 3.5초, 휴대폰 4G에서 문제없음. 데스크톱 75 FPS(모니터 상한), 아이폰 Safari 50~60 FPS라 후처리·조명을 줄이지 않는다. 저사양 안드로이드는 재지 않았다.
-- **범위 밖:** 151종 지원, 포켓몬별 고유 애니메이션, 트레이너 등장·인트로 씬, 난이도 선택, 승리 보상·랭킹, 온라인 PvP, 게임 서버, 퀴즈의 Unity 재구현, PP·상태이상, 3D 모델·카메라·조명.
-- 3:3 배틀과 교체·가방 메뉴는 엔진이 파티 구조라 나중에 넣을 수 있다(7.2). 다시 꺼낼 수 있는 일은 ROADMAP "보관".
+- **Vertical Slice first:** Finish Pikachu vs Blastoise at final quality before adding content.
+- **Size is the lowest priority:** Spend size when it helps screen quality (`PostProcessData` wired up for post-processing). The only real constraint is the host's 25 MiB per-file limit (10.2).
+- **Performance baseline:** about 13 MB transferred, first load about 3.5 s on desktop, fine on 4G phones. 75 FPS on desktop (monitor cap), 50–60 FPS in iPhone Safari, so post-processing and lighting are not reduced. Low-end Android has not been measured.
+- **Out of scope:** supporting all 151, unique animations per Pokémon, trainer appearances and intro scenes, difficulty selection, victory rewards and rankings, online PvP, game servers, reimplementing the quiz in Unity, PP and status conditions, 3D models, cameras and lighting.
+- 3v3 battles and the switch/Bag menus can be added later because the engine uses a party structure (7.2). Work that can be brought back is under ROADMAP "Parked".
 
-### 5.5 화면 연출
+### 5.5 Screen presentation
 
-**두 층:** 시작·VS 화면은 **웹 템플릿(HTML)**, 전투는 **Unity 도트(2.5D)**. 시작 화면을 240×216 Unity 도트로 그리면 글자·로고가 뭉개지기 때문이다.
+**Two layers:** The title and VS screens are the **web template (HTML)**; the battle is **Unity pixel art (2.5D)**. Drawing the title screen in 240×216 Unity pixels would blur the text and logo.
 
-**HTML 시작·VS 화면** (`Assets/WebGLTemplates/Pokepedia/index.html`)
-- **Pokepedia 퀴즈 타이틀의 형제 화면:** 같은 하늘 그라데이션·네모난 구름·네 갈래 반짝이·두 겹 픽셀 테두리 로고 "Pokepedia"에 부제만 "BATTLE". 피카츄와 거북왕이 공식 아트워크 실루엣으로 마주 보고(못 받으면 뺀다) 가운데 도트 VS. 퀴즈에서 넘어와도 한 게임으로 보이게 한다.
-- **시작:** 퀴즈의 PRESS START처럼 깜박이는 "▶ START"(부제 "BATTLE"과 함께 세 언어 공통 영어).
-- **로딩:** 가운데의 얇은 진행 막대 + 오른쪽 퍼센트 + TIP(내려받기가 끝나면 100%, "준비 중" 문구 없음).
-- **연결 중·실패·띠부씰 없음:** 게임보이 글상자(두 줄 테두리) 안의 작은 안내 문구 + 메뉴. 글상자가 뜨면 가운데 VS는 감춘다.
-- **메뉴:** 고른 항목 앞에 늘 ▶ 커서(처음엔 첫 항목). 마우스·방향키로 옮기고 Z·Enter·Space로 고른다(템플릿이 처리, Unity는 시작 화면에서만 키를 받는다).
-- **글꼴: Galmuri11** (OFL, 템플릿 폴더에 같이 둔다). 로고·VS(영문)는 퀴즈 로고와 같은 Bold(`Galmuri11-Bold.woff2`), 한글은 Regular(`Galmuri11.woff`, 게임 안 TTF에서 한글·영문·기호만 fontTools로 뽑음). 일본어 가나는 DotGothic16(Google Fonts).
-  - **Bold는 '틀'의 'ㅌ' 윗줄 두 개가 붙어 "배틀"이 "배들"로 보인다(글리프 디자인).** 그래서 Regular를 도트 한 칸(1em/12)만큼 가로로만 겹쳐 굵게 한다(세로 획만 두꺼워지고 가로 틈은 남는다).
-  - 글자 크기는 12px 격자 배수로 맞춘다(CSS `round()`, 아니면 도트 줄이 뭉개진다).
-- **VS(view = vs):** 같은 하늘에서 로고·아래 영역이 사라지고, 0.62초에 흰 번쩍임과 함께 두 실루엣이 색을 되찾으며(퀴즈의 "정답 공개") VS가 계단식으로 커지며 찍힌다. 이름은 각 포켓몬 발밑에 진한 글자 + 얇은 흰 테두리. 1.75초부터 0.45초 동안 옅어지며 도트 전투가 드러난다.
-- **크기:** 모두 게임 폭 기준(cqw)이라 데스크톱·휴대폰에서 같은 짜임이다. 겹침 상자는 `overflow: clip`(hidden은 스크롤 상자라 화면이 바뀔 때 밀린다).
-- **Unity ↔ HTML:** Unity가 상태·문구(로케일 파일)·도감 번호를 보내고(`HostBridge.ShowTitle` → `window.pokeTitle.show`, view = loading|idle|connecting|failed|no_partner|vs|hidden), 버튼은 템플릿이 `SendMessage("App", "OnTitleAction", start|retry|demo)`로 돌려준다 — 클릭 처리 안에서 바로 불러 첫 소리(오디오 잠금 해제)가 막히지 않는다. VS의 소리(등장음·급소 타격음)·시간·건너뛰기(0.3초 뒤 확인 입력)는 Unity(`BattleEventPlayer.PlayHtmlVs`)가 맡는다.
-- 에디터에는 HTML이 없어 시작은 단순한 Unity 패널, VS는 도트 `VsIntro`로 대신한다.
+**HTML title and VS screens** (`Assets/WebGLTemplates/Pokepedia/index.html`)
+- **A sibling of the Pokepedia quiz title:** the same sky gradient, square clouds, four-pointed sparkles and two-layer pixel-bordered "Pokepedia" logo, with only the subtitle changed to "BATTLE". Pikachu and Blastoise face each other as official artwork silhouettes (dropped if they fail to load) with a pixel VS in the middle. Coming over from the quiz, it reads as one game.
+- **Start:** A blinking "▶ START" like the quiz's PRESS START (English in all three languages, together with the "BATTLE" subtitle).
+- **Loading:** A thin progress bar in the middle + percentage on the right + a TIP (100% when the download finishes, no "preparing" text).
+- **Connecting / failed / no sticker:** A small notice + menu inside a Game Boy text box (double border). When the text box is up, the VS in the middle is hidden.
+- **Menu:** The selected item always has a ▶ cursor in front (first item initially). Move with mouse or arrow keys and select with Z, Enter, Space (handled by the template; Unity only takes keys on the title screen).
+- **Font: Galmuri11** (OFL, kept in the template folder). The logo and VS (Latin) use the same Bold as the quiz logo (`Galmuri11-Bold.woff2`); Korean uses Regular (`Galmuri11.woff`, only Korean, Latin and symbols extracted from the in-game TTF with fontTools). Japanese kana use DotGothic16 (Google Fonts).
+  - **In Bold, the two top strokes of 'ㅌ' in '틀' merge, so "배틀" reads as "배들" (glyph design).** So Regular is overlaid horizontally by one pixel (1em/12) to embolden it (only vertical strokes thicken; horizontal gaps remain).
+  - Font sizes are multiples of the 12px grid (CSS `round()`, otherwise the pixel rows blur).
+- **VS (view = vs):** On the same sky, the logo and lower area disappear; at 0.62 s, with a white flash, both silhouettes regain color (the quiz's "answer reveal") and VS stamps in, growing in steps. Names sit under each Pokémon's feet in dark text with a thin white outline. From 1.75 s it fades over 0.45 s, revealing the pixel battle.
+- **Sizing:** Everything is relative to the game width (cqw), so the composition is the same on desktop and phone. Overlay boxes use `overflow: clip` (hidden makes a scroll container, which shifts when the screen changes).
+- **Unity ↔ HTML:** Unity sends the state, text (from locale files) and dex numbers (`HostBridge.ShowTitle` → `window.pokeTitle.show`, view = loading|idle|connecting|failed|no_partner|vs|hidden), and the template returns button presses via `SendMessage("App", "OnTitleAction", start|retry|demo)` — called directly inside the click handler so the first sound (audio unlock) is not blocked. VS sounds (entry sound, critical hit sound), timing and skipping (confirm input after 0.3 s) are handled by Unity (`BattleEventPlayer.PlayHtmlVs`).
+- The editor has no HTML, so the title is a simple Unity panel and VS falls back to the pixel `VsIntro`.
 
-**Unity 전투 화면: 2.5D + 월드/HUD 분리**
-- 포켓몬은 2D 스프라이트 그대로, 배경·그림자·카메라·조명·후처리로 입체감을 낸다. 3D는 쓰지 않는다.
-- **월드**(`BattleWorld`: `SpriteRenderer`·`PixelCamera`, Light2D·후처리·파티클)와 **HUD**(uGUI Overlay 캔버스: HP·메뉴·메시지)를 나눈다. HUD는 후처리를 받지 않아 글자가 선명하다. 화면 전체 번쩍임만 HUD 맨 위.
-- **도트를 깨뜨리지 않는다:** Point 필터 + 정수 배율. 원근은 배치·고정 크기로, 패럴랙스·이동은 정수 픽셀로. 확대는 움직이는 짧은 순간에만(멈춰 있을 땐 항상 1배), 회전은 쓰지 않는다. 정수 배율로 남는 여백은 화면 테두리 색 `#262a35`(카메라 배경·가림 막대·웹 템플릿).
-- **배경 "비 오는 저녁"**(`BattleBackdrop`, 코드로 그린 디더링 도트): 하늘·구름·산 2겹·침엽수 2줄·풀밭, 레이어별 패럴랙스. 안개 2겹, 비, 바닥 빗방울 물결, 가끔 번개 번쩍임, 비네트(스프라이트). 포켓몬 아래 디더링 타원 그림자(발판 없음).
-- **조명·후처리:** 전역 조명(차가운 푸른빛) + 타입 색 점 조명 `BattleLighting.Pulse`(더하기 블렌드라 밝은 부분만 Bloom). `BattlePostFx`: Bloom(threshold 1.0)과 약한 채도·대비. 배경·포켓몬은 Sprite-Lit, 이펙트·그림자·안개·비·비네트는 Sprite-Unlit.
-- **공격 카메라:** 준비 동작 동안 공격자 쪽으로 1.12배, 발사 순간(`ReleaseSec`, 공격음과 같은 시각) 상대 쪽으로 넘어가 1.08배, 맞는 순간 +4%(급소 +8%), 끝나면 가운데·1배. 월드의 Pan 노드를 움직이고 카메라 배율은 고정한다. 확대해도 배경 밖이 안 보이게 중심 이동을 제한한다.
-- **기술 연출**(`AnimationDirector`, `moveFx`로 배정):
+**Unity battle screen: 2.5D + world/HUD split**
+- Pokémon stay as 2D sprites; depth comes from the background, shadows, camera, lighting and post-processing. No 3D.
+- **World** (`BattleWorld`: `SpriteRenderer`, `PixelCamera`, Light2D, post-processing, particles) and **HUD** (uGUI Overlay canvas: HP, menus, messages) are separate. The HUD gets no post-processing, so text stays crisp. Only the full-screen flash sits at the top of the HUD.
+- **Never break the pixels:** Point filtering + integer scaling. Perspective comes from placement and fixed sizes; parallax and movement are in whole pixels. Zoom only for brief moments of motion (always 1× when still), no rotation. The margin left by integer scaling is the frame color `#262a35` (camera background, letterbox bars, web template).
+- **Background "Rainy Evening"** (`BattleBackdrop`, dithered pixel art drawn in code): sky, clouds, two layers of mountains, two rows of conifers, grass, with per-layer parallax. Two layers of fog, rain, raindrop ripples on the ground, occasional lightning flashes, a vignette (sprite). A dithered ellipse shadow under each Pokémon (no platforms).
+- **Lighting and post-processing:** Global light (cool blue) + type-colored point light `BattleLighting.Pulse` (additive blend, so only bright parts bloom). `BattlePostFx`: Bloom (threshold 1.0) and a slight saturation/contrast boost. Background and Pokémon are Sprite-Lit; effects, shadows, fog, rain and vignette are Sprite-Unlit.
+- **Attack camera:** 1.12× toward the attacker during the wind-up, crossing to the target at 1.08× at the release moment (`ReleaseSec`, the same moment as the attack sound), +4% on impact (+8% on a critical), then back to center at 1×. It moves the world's Pan node and keeps the camera scale fixed. Center movement is clamped so nothing outside the background shows when zoomed.
+- **Move effects** (`AnimationDirector`, assigned via `moveFx`):
 
-| id | 기술 | 모습 |
+| id | Move | Look |
 |---|---|---|
-| `thunder_arc` | 10만볼트 | 공격자 몸 바깥에서 상대 몸 **표면**까지 뻗는 번개 |
-| `hydro_beam` | 하이드로펌프 | 거북왕 **입 바로 앞**(`mouth`, 쏘는 동안 첫 프레임 고정)에서 곧게 뻗는 3겹 물줄기, 표면에서 물보라, 상대가 밀려남 |
-| `hydro_geyser` | 물의맹세 | 발밑이 울리며 거품이 끓고, 둘레에서 작은 물기둥 4개 → 발밑에서 큰 물기둥이 솟아 상대를 띄움 |
-| `contact` | 몸통박치기(공통 접촉) | 도움닫기 → 잔상과 함께 돌진 → 표면에 도트 별 타격 불꽃·파편·흙먼지 → 잠깐 멈춤 → 복귀 |
-| `lightning_strike` | 번개 | 하늘에서 떨어지는 낙뢰 |
-| (예비) `thunder_fork`, `hydro_burst` | — | 실험실에서만. 기술에 배정하면 쓸 수 있다 |
+| `thunder_arc` | Thunderbolt | Lightning reaching from outside the attacker's body to the **surface** of the target's body |
+| `hydro_beam` | Hydro Pump | A straight three-layer water jet from **just in front of** Blastoise's mouth (`mouth`, first frame held while firing), spray at the surface, the target is pushed back |
+| `hydro_geyser` | Water Pledge | The ground rumbles and bubbles boil underfoot, four small water columns around it → a big column erupts underfoot and lifts the target |
+| `contact` | Tackle (shared contact) | Run-up → lunge with afterimages → pixel star impact sparks, debris and dust at the surface → brief hitstop → return |
+| `lightning_strike` | Thunder | A lightning bolt falling from the sky |
+| (spare) `thunder_fork`, `hydro_burst` | — | Lab only. Usable if assigned to a move |
 
-  발사·효과형의 공통 타임라인은 구체(projectile)·고리(effect). 끝점은 몸 **표면**이다(가운데로 하면 몸을 뚫은 것처럼 보인다).
-- **피격:** `Pokepedia/Sprite Flash` 셰이더 번쩍임 + 흔들림 + 넉백, 급소는 화면 번쩍임·흔들림, 빗나감은 회피 모션.
-- **응원 부활:** 카메라가 다가가고 하늘에서 금빛 빛기둥(`VfxLayer.LightShaft`) → 빛 속에서 떠오르며 다시 나타남 → 금빛 화면 번쩍임 → HP가 찬다.
-- **트레이너가 처리한다:** 화면 왼쪽 아래에서 몬스터볼(코드로 그린 11×11 도트)이 돌며 포물선으로 날아가 상대 머리에 맞고 튕겨 나감 → 번쩍·움찔 → 머리 위 별이 돌며 비틀 → HP가 0으로 → 기절(`AnimationDirector.TrainerBall`).
-- **승리:** 1.4초에 비·안개·구름이 걷히고 노을 하늘 레이어가 나타나며 전역 조명이 따뜻해진다. 이긴 쪽이 빛 속에서 세 번 뛰고 카메라가 다가간다(쓰러진 쪽이 이긴 경우엔 날씨만). 다음 판에서 날씨가 돌아온다.
-- **HP UI:** 둥근 모서리 두 겹 테두리 상자, 포켓몬 쪽 받침선, 도트 "HP:" 표, 숫자 "126/ 126".
+  The shared timelines for projectile and effect types are a sphere (projectile) and a ring (effect). The end point is the body **surface** (aiming at the center looks like piercing the body).
+- **Hit:** `Pokepedia/Sprite Flash` shader flash + shake + knockback; critical hits add a screen flash and shake; misses get a dodge motion.
+- **Cheer revive:** The camera closes in and a golden light shaft comes down from the sky (`VfxLayer.LightShaft`) → the Pokémon rises in the light and reappears → golden screen flash → HP fills.
+- **Handle it yourself:** From the bottom left of the screen, a Poké Ball (11×11 pixels drawn in code) spins along a parabola, hits the opponent on the head and bounces off → flash and flinch → stars circle overhead as it staggers → HP drops to 0 → faint (`AnimationDirector.TrainerBall`).
+- **Victory:** At 1.4 s the rain, fog and clouds clear, a sunset sky layer appears and the global light warms. The winner hops three times in the light and the camera closes in (if the winner is the side that fainted, only the weather changes). The weather returns in the next battle.
+- **HP UI:** A rounded double-bordered box, a base line on the Pokémon's side, a pixel "HP:" label, numbers as "126/ 126".
 
-**연출 실험실**
-- 주소에 `?lab`(또는 시작 화면에서 L). 전용 연출(10만볼트 3종·하이드로펌프·물의맹세·몸통박치기 양쪽), 몬스터볼(Ball), 응원 부활(Revive), VS, 승리를 반복 재생하고 결과 버튼으로 명중 → 빗나감 → 급소를 돌린다.
-- 소리도 실제 배틀과 같이 난다(Tackle = 몸통박치기 전용음, WP = 물기둥 솟구침). HP는 바뀌지 않는다.
-- `?fps`는 FPS와 가장 느린 프레임을 보여 준다(`?lab&fps` 가능). 고른 결과는 `animation.json`의 `moveFx`에 적는다.
+**Effects lab**
+- Add `?lab` to the URL (or press L on the title screen). Loops the dedicated effects (three Thunderbolt variants, Hydro Pump, Water Pledge, Tackle from both sides), the Poké Ball (Ball), the cheer revive (Revive), VS and victory; the result button cycles hit → miss → critical.
+- Sounds play just as in a real battle (Tackle = the dedicated Tackle sound, WP = water column eruption). HP does not change.
+- `?fps` shows the FPS and the slowest frame (`?lab&fps` works). Record the chosen result in `moveFx` in `animation.json`.
 
 ---
 
-## 6. 전투 규칙과 데이터 설계
+## 6. Battle rules and data design
 
-### 6.1 원칙
+### 6.1 Principles
 
-- 원작 재현이 목표가 아니다. 엔진은 **하나**, 포켓몬은 **데이터**로만 표현한다(포켓몬별 클래스·스크립트 없음).
-- 데이터는 **현대 기준**(18타입, 능력치 6종, 특공/특방 분리), 규칙은 직접 정한 단순화 규칙. 게임보이 감성은 화면·소리로 낸다.
-- 기술 이름은 장식이고 규칙은 데이터(타입·위력·명중·분류)가 정한다.
+- Recreating the original games is not the goal. There is **one** engine, and Pokémon are expressed **only as data** (no per-Pokémon classes or scripts).
+- Data follows **modern standards** (18 types, 6 stats, separate Sp. Atk/Sp. Def); rules are simplified rules of our own. The Game Boy feel comes from visuals and sound.
+- Move names are decoration; data (type, power, accuracy, category) decides the rules.
 
-### 6.2 포켓몬 데이터
+### 6.2 Pokémon data
 
-- `Assets/Content/Data/species.json`, `moves.json`, `roster.json`, `animation.json`. 로더 `ContentLoader`(순수 C#, 엄격한 스키마: 누락·모르는 필드·잘못된 값은 항목 이름을 담은 `FormatException`).
-- 종족값·타입은 **PokeAPI** `/pokemon/{id}`(Pokepedia DB와 같은 출처) 값이다. 런타임 DB 조회는 없다.
-- 이름은 엔진에 없다. `nameKey`(`species.025`, `move.thunderbolt`)로 로케일(`Assets/Content/Locale/{ko,en,ja}.json`)에서 찾는다. 이름은 PokeAPI ko / en / ja-Hrkt 값.
-- `roster.json`: `id`, `tier`(showcase|standard), `npcWeight`(상대로 나올 가중치, 0이면 안 나옴), `playable`(플레이어로 쓸 수 있음).
+- `Assets/Content/Data/species.json`, `moves.json`, `roster.json`, `animation.json`. Loader `ContentLoader` (pure C#, strict schema: missing fields, unknown fields and invalid values throw a `FormatException` naming the entry).
+- Base stats and types are **PokeAPI** `/pokemon/{id}` values (the same source as the Pokepedia DB). No runtime DB lookups.
+- Names are not in the engine. They are looked up by `nameKey` (`species.025`, `move.thunderbolt`) in the locales (`Assets/Content/Locale/{ko,en,ja}.json`). Names are the PokeAPI ko / en / ja-Hrkt values.
+- `roster.json`: `id`, `tier` (showcase|standard), `npcWeight` (weight for appearing as an opponent, 0 means never), `playable` (can be used as the player).
 
 ```json
 // species.json
@@ -227,379 +227,379 @@ VS 장면 (HTML, 약 2초, 확인 입력으로 건너뜀)
   { "id": 6, "tier": "standard", "npcWeight": 0 }, ... ]
 ```
 
-### 6.3 기술 데이터
+### 6.3 Move data
 
-- 직접 정의한다(Pokepedia에 기술 데이터 없음). **노말 기본기 1개 + 로스터 타입별 대표 기술 + 단일 타입 종의 보조 기술**, 12개.
-- 각 포켓몬은 **기본기 + 속성 기술 2개 = 3개**, 타입에서 자동 배정: 기본기 → 종의 타입 순서대로 대표 기술 → (단일 타입이면) 그 타입의 보조 기술. 예: 피카츄 = 몸통박치기·10만볼트·번개, 리자몽 = 몸통박치기·화염방사·날개치기.
-- 필드: `id, type, category(physical|special), power, accuracy, nameKey, animKind(contact|projectile|effect), role(basic|signature|secondary)`. 기본기는 정확히 1개, 대표·보조는 타입마다 최대 1개.
-- 보조 기술은 대표 기술보다 기대 데미지(위력×명중)가 낮다 — "세지만 빗나가는 기술"(번개)과 "약하지만 반드시 맞는 기술"(물의맹세·염동력) 같은 선택지.
-- 수치는 원작보다 낮춰 전투를 4~6턴으로 맞춘다(6.5). 고정 피해·2턴 기술처럼 단순 위력 계산과 맞지 않는 기술은 쓰지 않는다.
+- Defined here (Pokepedia has no move data). **One Normal basic move + one signature move per roster type + a secondary move for single-type species**, 12 in total.
+- Each Pokémon has **the basic move + 2 typed moves = 3 moves**, assigned automatically from its types: basic move → signature moves in the species' type order → (if single-type) that type's secondary move. Examples: Pikachu = Tackle, Thunderbolt, Thunder; Charizard = Tackle, Flamethrower, Wing Attack.
+- Fields: `id, type, category(physical|special), power, accuracy, nameKey, animKind(contact|projectile|effect), role(basic|signature|secondary)`. Exactly one basic move; at most one signature and one secondary per type.
+- A secondary move has lower expected damage (power × accuracy) than the signature move — giving choices like "strong but may miss" (Thunder) and "weak but always hits" (Water Pledge, Confusion).
+- Values are lower than in the original games to keep battles at 4–6 turns (6.5). Moves that don't fit a simple power calculation, such as fixed-damage or two-turn moves, are not used.
 
-| id | 이름(ko) | 타입 | 분류 | 위력 | 명중 | animKind | role |
+| id | Name (en) | Type | Category | Power | Accuracy | animKind | role |
 |---|---|---|---|---|---|---|---|
-| tackle | 몸통박치기 | 노말 | 물리 | 16 | 100 | contact | basic |
-| thunderbolt | 10만볼트 | 전기 | 특수 | 35 | 100 | projectile | signature |
-| hydro_pump | 하이드로펌프 | 물 | 특수 | 45 | 85 | projectile | signature |
-| flamethrower | 화염방사 | 불꽃 | 특수 | 35 | 95 | projectile | signature |
-| wing_attack | 날개치기 | 비행 | 물리 | 35 | 95 | contact | signature |
-| razor_leaf | 잎날가르기 | 풀 | 물리 | 35 | 95 | projectile | signature |
-| sludge_bomb | 오물폭탄 | 독 | 특수 | 35 | 95 | projectile | signature |
-| shadow_ball | 섀도볼 | 고스트 | 특수 | 35 | 95 | effect | signature |
-| psychic | 사이코키네시스 | 에스퍼 | 특수 | 35 | 95 | effect | signature |
-| thunder | 번개 | 전기 | 특수 | 45 | 70 | effect | secondary |
-| water_pledge | 물의맹세 | 물 | 특수 | 30 | 100 | effect | secondary |
-| confusion | 염동력 | 에스퍼 | 특수 | 28 | 100 | effect | secondary |
+| tackle | Tackle | Normal | Physical | 16 | 100 | contact | basic |
+| thunderbolt | Thunderbolt | Electric | Special | 35 | 100 | projectile | signature |
+| hydro_pump | Hydro Pump | Water | Special | 45 | 85 | projectile | signature |
+| flamethrower | Flamethrower | Fire | Special | 35 | 95 | projectile | signature |
+| wing_attack | Wing Attack | Flying | Physical | 35 | 95 | contact | signature |
+| razor_leaf | Razor Leaf | Grass | Physical | 35 | 95 | projectile | signature |
+| sludge_bomb | Sludge Bomb | Poison | Special | 35 | 95 | projectile | signature |
+| shadow_ball | Shadow Ball | Ghost | Special | 35 | 95 | effect | signature |
+| psychic | Psychic | Psychic | Special | 35 | 95 | effect | signature |
+| thunder | Thunder | Electric | Special | 45 | 70 | effect | secondary |
+| water_pledge | Water Pledge | Water | Special | 30 | 100 | effect | secondary |
+| confusion | Confusion | Psychic | Special | 28 | 100 | effect | secondary |
 
-(타입·분류는 PokeAPI `/move/{name}`과 일치. 물의맹세의 원작 "맹세" 합체 효과는 넣지 않는다.)
+(Types and categories match PokeAPI `/move/{name}`. Water Pledge's original "Pledge" combination effect is not included.)
 
-### 6.4 전투 규칙
+### 6.4 Battle rules
 
-공식은 현대 포켓몬(능력치 3세대 이후, 데미지 6세대 이후) 기준. 출처: Pokémon Showdown 소스(`sim/battle.ts` statModify·modify, `sim/battle-actions.ts` getDamage·modifyDamage), 상성은 PokeAPI `type` damage_relations와 Pokémon Database 표(324칸 일치). 코드 주석에 URL이 있다.
+Formulas follow modern Pokémon (stats from Gen 3 on, damage from Gen 6 on). Sources: Pokémon Showdown source (`sim/battle.ts` statModify and modify, `sim/battle-actions.ts` getDamage and modifyDamage); the type chart follows PokeAPI `type` damage_relations and the Pokémon Database chart (all 324 cells match). URLs are in the code comments.
 
-- **능력치:** 레벨 50, 개체값 31, 노력치 0, 성격 보정 없음. 종족값은 먼저 압축(6.5).
-  - HP = ⌊(2×종족값+31)×레벨/100⌋ + 레벨 + 10 / 그 외 = ⌊(2×종족값+31)×레벨/100⌋ + 5
-  - 실제 값(k=0.65): 피카츄 126 / 84 / 74 / 81 / 81 / 107, 거북왕 154 / 102 / 113 / 103 / 116 / 99 (`StatCalculatorTests`).
-- **물리/특수:** 기술의 `category`. physical은 공격÷방어, special은 특공÷특방.
-- **턴 순서:** 스피드가 높은 쪽 먼저, 같으면 무작위.
-- **행동:** 명중 판정(기술 명중률, 회피·명중 단계 없음) → 빗나가면 `MoveMissed` → 급소 판정 → 데미지.
-- **급소:** 1/16, ×1.5.
-- **데미지:** 단계마다 정수 처리(`DamageCalculator`, 순서가 결과에 영향):
-  1. 기본 = ⌊⌊⌊⌊2L/5+2⌋ × 위력 × A⌋ / D⌋ / 50⌋ + 2
-  2. 급소 ⌊×1.5⌋ → 3. 난수 ⌊×R/100⌋(R 85~100) → 4. 자속 ×1.5(4096 고정소수점, 0.5는 내림) → 5. 상성 ⌊×배수⌋(이중 타입은 곱)
-  6. 상성 0이면 0, 그 외 최소 1. 응원 부활 뒤에는 상성 다음에 ×`PowerBoost`.
-- **난수 소비 순서**(테스트로 고정): 스피드 동률일 때만 `Next(2)` → 행동마다 명중률 < 100이면 `Next(100)` → 명중하면 급소 `Next(16)` → 데미지 `Next(16)`(85 + 값). 모두 `IRandom` 주입.
-- 상성 0이면 급소가 떠도 급소로 표시하지 않는다. 피해 이벤트는 실제로 깎인 HP다. HP 0이면 기절.
-- **제외:** PP, 상태이상, 우선도, 능력치 단계, 날씨.
+- **Stats:** Level 50, IVs 31, EVs 0, no nature modifier. Base stats are compressed first (6.5).
+  - HP = ⌊(2×base+31)×level/100⌋ + level + 10 / others = ⌊(2×base+31)×level/100⌋ + 5
+  - Actual values (k=0.65): Pikachu 126 / 84 / 74 / 81 / 81 / 107, Blastoise 154 / 102 / 113 / 103 / 116 / 99 (`StatCalculatorTests`).
+- **Physical/special:** The move's `category`. Physical uses Attack ÷ Defense; special uses Sp. Atk ÷ Sp. Def.
+- **Turn order:** Higher Speed goes first; ties are random.
+- **Action:** Accuracy check (move accuracy, no evasion or accuracy stages) → `MoveMissed` on a miss → critical check → damage.
+- **Critical hit:** 1/16, ×1.5.
+- **Damage:** Integer handling at each step (`DamageCalculator`; the order affects the result):
+  1. Base = ⌊⌊⌊⌊2L/5+2⌋ × power × A⌋ / D⌋ / 50⌋ + 2
+  2. Critical ⌊×1.5⌋ → 3. Random ⌊×R/100⌋ (R 85–100) → 4. STAB ×1.5 (4096 fixed point, 0.5 rounds down) → 5. Effectiveness ⌊×multiplier⌋ (multiplied for dual types)
+  6. 0 if effectiveness is 0, otherwise at least 1. After a cheer revive, ×`PowerBoost` after effectiveness.
+- **Random number consumption order** (pinned by tests): `Next(2)` only on a Speed tie → per action, `Next(100)` if accuracy < 100 → on a hit, critical `Next(16)` → damage `Next(16)` (85 + value). All via injected `IRandom`.
+- With effectiveness 0, a critical is not shown as a critical. Damage events carry the HP actually lost. HP 0 means fainted.
+- **Excluded:** PP, status conditions, priority, stat stages, weather.
 - **NPC AI:** 5.3.
 
-### 6.5 밸런스와 NPC 선택
+### 6.5 Balance and NPC selection
 
-- **전투 길이** 약 4~6턴. HP 배율 규칙 없이 **기술 위력(데이터)** 으로 맞춘다. 모든 모드가 같은 규칙·데이터를 쓴다.
-- **종족값 압축:** `stat' = 80 + (종족값 − 80) × k`, 사사오입, 최소 1, **k = 0.65**. 종족값 합 격차(피카츄 320 ~ 뮤츠 680)를 줄인다.
-- **Demo 목표:** 피카츄 승률 **85~93%**, 평균 4~6턴(`BalanceTests`, 5,000판 시드 고정, 피카츄는 가장 센 기술만 / NPC는 실제처럼 기술을 섞음). 60~70%면 한 번 빗나가면 지는 판이 너무 많다. 반대로 거북왕을 플레이어로 하면 승률은 약 11%다.
-- 지금 값의 이유: 10만볼트 명중 100·하이드로펌프 명중 85(믿음직한 기술 vs 세지만 빗나가는 기술), NPC가 약한 기술을 섞는 만큼 하이드로펌프 위력 45·물의맹세 30.
-- **수치가 민감하다:** 확정 n타가 한 단계 바뀌면 승률이 크게 뛴다. 조정할 때는 한 점이 아니라 주변까지 목표 범위가 유지되는 구간의 중심을 고른다. 조정용 표 출력(k × 위력) 코드는 커밋 `cd45839`의 `BalanceTests.cs`에 있다.
-- **상대 선택(Collection):** `npcWeight` 비례 가중 추첨(`OpponentPicker`), 플레이어와 같은 종 제외. 전설은 가중치를 낮게(다시 열 때 기준: 뮤츠 2 / 나머지 10). 상대 후보가 1마리면 도망을 끈다.
-- 중복 스티커는 능력치에 영향 없음, shiny는 외형만.
+- **Battle length** about 4–6 turns. Tuned through **move power (data)** with no HP multiplier rule. All modes use the same rules and data.
+- **Base stat compression:** `stat' = 80 + (base − 80) × k`, rounded half up, minimum 1, **k = 0.65**. Narrows the base stat total gap (Pikachu 320 to Mewtwo 680).
+- **Demo target:** Pikachu win rate **85–93%**, average 4–6 turns (`BalanceTests`, 5,000 seeded battles, Pikachu uses only its strongest move / the NPC mixes moves as in real play). At 60–70%, too many battles are lost to a single miss. Conversely, with Blastoise as the player the win rate is about 11%.
+- Why the current values: Thunderbolt accuracy 100 vs Hydro Pump accuracy 85 (a reliable move vs a strong one that can miss); Hydro Pump power 45 and Water Pledge 30 to offset the NPC mixing in weaker moves.
+- **The numbers are sensitive:** shifting a guaranteed n-hit KO by one step makes the win rate jump. When tuning, pick the center of a range where the target holds for the neighborhood too, not a single point. The tuning table output code (k × power) is in `BalanceTests.cs` at commit `cd45839`.
+- **Opponent selection (Collection):** Weighted draw proportional to `npcWeight` (`OpponentPicker`), excluding the player's species. Legendaries get a low weight (baseline when reopened: Mewtwo 2 / others 10). With a single opponent candidate, Run is disabled.
+- Duplicate stickers do not affect stats; shiny is cosmetic only.
 
 ---
 
-## 7. 아키텍처
+## 7. Architecture
 
-### 7.1 설계 원칙
+### 7.1 Design principles
 
-1. 엔진(규칙)과 콘텐츠(데이터·에셋·텍스트)를 분리한다. 엔진은 ID와 숫자만 안다.
-2. Domain·Content·Application은 `UnityEngine`을 참조하지 않는다(asmdef와 `Tests.Dotnet`이 강제).
-3. 난수는 `IRandom`으로 주입한다.
-4. 규칙을 일반화하지 않는다(`IRuleSet` 등 금지). 분리 대상은 콘텐츠다.
-5. 모든 클래스에 인터페이스를 만들지 않는다. DI 프레임워크·Repository·이벤트 버스·ECS를 쓰지 않는다.
-6. **엔진은 지원 포켓몬 수를 모른다.**
-7. 우선순위: 배틀 로직의 독립성, 테스트 용이성, 화면과 도메인의 책임 분리.
+1. Separate the engine (rules) from content (data, assets, text). The engine knows only IDs and numbers.
+2. Domain, Content and Application do not reference `UnityEngine` (enforced by asmdef and `Tests.Dotnet`).
+3. Randomness is injected through `IRandom`.
+4. Do not generalize the rules (no `IRuleSet` etc.). What gets separated is content.
+5. Do not create an interface for every class. No DI framework, Repository, event bus or ECS.
+6. **The engine does not know how many Pokémon are supported.**
+7. Priorities: independence of battle logic, testability, separation of screen and domain responsibilities.
 
-### 7.2 계층
+### 7.2 Layers
 
 ```text
-Presentation (Unity)  ← 시작 화면 연결, 배틀 화면 흐름·이벤트 재생·연출·오디오 (규칙 판단 금지)
+Presentation (Unity)  ← title screen wiring, battle screen flow, event playback, effects, audio (no rule decisions)
        ↓
-Application (C#)      ← BattleSession(흐름: NPC 행동, 다음 상대·다시 도전·도망·쓰러지면 선택), NpcBattleAi, 메시지 키, 호스트 연결
+Application (C#)      ← BattleSession (flow: NPC actions, next opponent, retry, run, choice on faint), NpcBattleAi, message keys, host connection
        ↓
 Domain (Pure C#)      ← BattleEngine, DamageCalculator, TypeChart, BattleState
-       ↑ 읽기 전용 데이터
-Content               ← species·moves·roster·animation.json, locale, 스프라이트
-Bridge (Platform)     ← IHostBridge 구현: WebGL(jslib ↔ postMessage·시작 화면) / 에디터(로그만)
+       ↑ read-only data
+Content               ← species, moves, roster, animation.json, locale, sprites
+Bridge (Platform)     ← IHostBridge implementations: WebGL (jslib ↔ postMessage, title screen) / editor (logging only)
 ```
 
-- Domain: 입력 `BattleState` + 행동, 출력 `BattleEvent` 목록. 파티(여러 마리) 구조이지만 교체는 3:3 확장 때 넣는다.
-- `Pokepedia.Application` 어셈블리의 네임스페이스는 `Pokepedia.App`이다(`UnityEngine.Application` 가림 방지).
+- Domain: input `BattleState` + actions, output a list of `BattleEvent`s. It has a party (multiple Pokémon) structure, but switching comes with the 3v3 extension.
+- The `Pokepedia.Application` assembly's namespace is `Pokepedia.App` (to avoid hiding `UnityEngine.Application`).
 
-### 7.3 엔진 ↔ 화면: 이벤트 로그와 연출 디렉터
+### 7.3 Engine ↔ screen: event log and effect director
 
-정의는 `Assets/Scripts/Domain/Battle/BattleEvents.cs`. Side 0 = 플레이어, 1 = NPC.
+Defined in `Assets/Scripts/Domain/Battle/BattleEvents.cs`. Side 0 = player, 1 = NPC.
 
 ```csharp
-PokemonSentOut(int Side, int SpeciesId, int Hp, int MaxHp)   // NPC 먼저, 다음 플레이어
+PokemonSentOut(int Side, int SpeciesId, int Hp, int MaxHp)   // NPC first, then the player
 TurnStarted(int Turn)
 MoveUsed(int Side, string MoveId)
 MoveMissed(int Side, string MoveId)
 DamageDealt(int TargetSide, int Amount, int HpAfter, double Effectiveness, bool Critical)
 Fainted(int Side)
 BattleEnded(int WinnerSide)
-Revived(int Side, int Hp, int MaxHp)        // 응원 부활
-TrainerThrewBall(int TargetSide)            // 트레이너가 처리한다 (뒤에 Fainted·BattleEnded)
+Revived(int Side, int Hp, int MaxHp)        // cheer revive
+TrainerThrewBall(int TargetSide)            // Handle it yourself (followed by Fainted, BattleEnded)
 ```
 
-엔진 API: `new BattleEngine(state, rules, random)` → `Start()` → `PlayTurn(playerAction, npcAction)`(한쪽이 쓰러지면 그 자리에서 끝), 그리고 `Revive(side, boost)`·`KnockOut(side)`. 행동은 `UseMove(moveIndex)`뿐이고 도망은 Application이 처리한다.
+Engine API: `new BattleEngine(state, rules, random)` → `Start()` → `PlayTurn(playerAction, npcAction)` (ends on the spot when one side faints), plus `Revive(side, boost)` and `KnockOut(side)`. The only action is `UseMove(moveIndex)`; running is handled by Application.
 
 ```text
 BattleEngine ← BattleSession
-     │ BattleEvent 목록
+     │ list of BattleEvents
      ▼
-BattleScreen (흐름·표시 상태) ── BattleHud (HUD·월드·메뉴) / BattleLab (실험실)
+BattleScreen (flow, view state) ── BattleHud (HUD, world, menus) / BattleLab (lab)
      ▼
-BattleEventPlayer (메시지 + 연출 재생, VS)
+BattleEventPlayer (messages + effect playback, VS)
      ▼
-AnimationDirector ── 기본 타임라인 + AnimationProfile 오버라이드 → VfxLayer, Light, Camera, Audio
+AnimationDirector ── default timelines + AnimationProfile overrides → VfxLayer, Light, Camera, Audio
 ```
 
-- `BattleScreen`은 흐름과 **표시 상태 `BattleViewState`**(`Hidden → Entering → Command → Animating → Result`, 그리고 `ConfirmQuit`·`ChooseFaint`·`Lab`)만 다룬다. 입력 처리기는 맞는 상태에서만 동작한다. 판 데이터(카탈로그·로케일·이름·세션·브리지)는 `BattleContext` 하나에 모은다.
-- 호스트 연결(`init` 대기)과 플레이어 포켓몬 정하기는 배틀 화면 전에 `TitleScreen`이 맡는다. 플레이어 후보가 2마리 이상이 되면 선택 상태를 `Entering` 앞에 더한다.
-- 연출을 바꿔도 엔진은 바뀌지 않는다. 테스트는 이벤트 목록만 단언하고, 메시지는 이벤트 → 로케일 키 → 문자열 순으로 만든다(`BattleMessages`).
+- `BattleScreen` handles only the flow and the **view state `BattleViewState`** (`Hidden → Entering → Command → Animating → Result`, plus `ConfirmQuit`, `ChooseFaint`, `Lab`). Input handlers act only in the matching state. Per-battle data (catalogs, locale, names, session, bridge) is gathered in a single `BattleContext`.
+- The host connection (waiting for `init`) and choosing the player Pokémon are handled by `TitleScreen` before the battle screen. Once there are two or more player candidates, a selection state is added before `Entering`.
+- Changing effects never changes the engine. Tests assert only on event lists, and messages are built as event → locale key → string (`BattleMessages`).
 
-### 7.4 Java 개발자를 위한 C# 대응표
+### 7.4 C# mapping for Java developers
 
 | Java | C# |
 |---|---|
 | `record` | `record` (C# 9+) |
-| `sealed interface` + 패턴 매칭 | `abstract record` + `switch` |
+| `sealed interface` + pattern matching | `abstract record` + `switch` |
 | `Optional<T>` | nullable (`T?`) |
-| 패키지 | namespace + Assembly Definition(.asmdef) |
+| package | namespace + Assembly Definition (.asmdef) |
 | JUnit | NUnit |
-| Spring Bean 주입 | 생성자 주입 직접 구현 |
-| 스레드/Future | 코루틴, `async/await` (Unity 메인 스레드 제약) |
+| Spring Bean injection | hand-written constructor injection |
+| threads/Future | coroutines, `async/await` (Unity main-thread constraint) |
 
-### 7.5 디렉터리 구조
+### 7.5 Directory structure
 
-실제 구조와 어셈블리 의존 방향은 [DEVELOPMENT.md](DEVELOPMENT.md)의 "디렉터리"가 단일 출처다. asmdef는 5개 이내로 유지한다.
+The single source of truth for the actual layout and assembly dependency direction is "Directories" in [DEVELOPMENT.md](DEVELOPMENT.md). Keep asmdefs at five or fewer.
 
-### 7.6 지원 포켓몬 목록의 출처
+### 7.6 Source of the supported Pokémon list
 
-단일 출처는 Unity `roster.json`이다. Pokepedia는 플레이어 가능 ID를 코드 상수 `BATTLE_PLAYABLE_IDS`(지금 `[25]`, `src/features/battle/host.ts`)로 두고 출처를 주석으로 적는다. Pokepedia 서버 경로에서 Unity 호스트를 런타임에 부르지 않는다. 플레이어 가능 포켓몬을 바꾸면 두 곳을 함께 고친다.
+The single source of truth is Unity's `roster.json`. Pokepedia keeps the playable IDs as the code constant `BATTLE_PLAYABLE_IDS` (currently `[25]`, `src/features/battle/host.ts`) with a comment naming its source. Pokepedia's server paths never call the Unity host at runtime. When the playable Pokémon change, update both places together.
 
-### 7.7 폰트: Galmuri11 + TMP Static
+### 7.7 Fonts: Galmuri11 + TMP Static
 
-- 게임 안 글자는 **Galmuri11**(한글·가나·JIS 한자, OFL-1.1, 고지 `Assets/Content/Fonts/Galmuri-OFL.txt`). 11 Bold는 가나·한자·♀♂가, 11 Condensed는 한자가 없어 쓰지 않는다.
-- 출력 문자열이 정해져 있으므로 **필요한 글리프만** 담은 TMP **Static** 아틀라스(12pt, `RASTER_HINTED`, 512×512)를 쓴다. Dynamic은 원본 TTF(5.4MB)가 빌드에 들어가 쓰지 않는다.
-- **로케일 문구에 새 글자가 생기면 아틀라스를 다시 굽는다:** `Pokepedia.EditorTools.FontAtlasBuilder.Build`(로케일 JSON + ASCII + 고정 기호). 빠진 글자는 □로 깨진다.
-- 시작·VS 화면(HTML)은 웹 글꼴을 쓴다(5.5).
+- In-game text uses **Galmuri11** (Korean, kana, JIS kanji, OFL-1.1, notice in `Assets/Content/Fonts/Galmuri-OFL.txt`). 11 Bold lacks kana, kanji and ♀♂, and 11 Condensed lacks kanji, so neither is used.
+- Since the output strings are fixed, a TMP **Static** atlas (12pt, `RASTER_HINTED`, 512×512) with **only the glyphs needed** is used. Dynamic is not used because it puts the original TTF (5.4 MB) in the build.
+- **When locale text gains new characters, rebake the atlas:** `Pokepedia.EditorTools.FontAtlasBuilder.Build` (locale JSON + ASCII + fixed symbols). Missing characters render as □.
+- The title and VS screens (HTML) use web fonts (5.5).
 
-### 7.8 테스트 전략
+### 7.8 Test strategy
 
-- **꼭 필요한 최소한만** 둔다: 깨지면 실제 버그가 되는 규칙·계약(데미지·상성·능력치, 전투 흐름, 데이터 검증, 연동 규약, 어셈블리 경계). 같은 규칙은 대표 사례 몇 개로 묶는다.
-- Domain 테스트는 코드로 만든 가짜 종·기술(`TestMon`, `TestMove`)만 쓴다. 실제 JSON은 `ContentDataFilesTests`·`BalanceTests`만 읽는다.
-- `IRandom` 스텁으로 결정적 테스트를 만든다.
-- 화면·연출은 자동화하지 않는다(Actions 한도). 실험실과 브라우저에서 눈으로 확인하고, 배포 전 Release 빌드로 한 판을 해 본다.
-
----
-
-## 8. 아트·에셋
-
-### 8.1 방침
-
-- 포켓몬 도트는 **PokeAPI 스프라이트**, 시작·VS 화면은 Pokepedia Storage의 공식 아트워크. 권리는 Pokepedia와 같은 수준(비공식·비영리 팬 프로젝트 고지, `LICENSE`)으로 다룬다. 다른 원작 에셋은 쓰지 않는다.
-- **저장소에 스프라이트를 커밋하지 않는다:** `Assets/Resources/Sprites/`는 `.gitignore`. `Tools/sprites`의 스크립트와 **PokeAPI sprites 커밋 SHA로 고정한 매니페스트**만 커밋하고, clone 후 스크립트로 재현한다(DEVELOPMENT.md).
-- 트레이너 그림은 쓰지 않는다. PokeAPI는 트레이너 그림을 주지 않는다(sprites 저장소에는 badges·items·pokemon·types뿐).
-
-### 8.2 스프라이트: 5세대 블랙·화이트 애니메이션
-
-- 소스: PokeAPI sprites `versions/generation-v/black-white/animated/`(앞, `back/`, `shiny/`, `back/shiny/`).
-- `Tools/sprites`가 GIF를 프레임 분해 → 시트 PNG(`--dedupe --indexed`) + 프레임 지연 JSON으로 만든다. 런타임에 이름으로 `Resources.Load` 해서 `SpriteAnimator`가 재생한다(프레임 지연이 불균일하고 프레임이 많아 Animator 클립은 쓰지 않는다). 임포트 설정(Point·무압축·밉맵 없음)은 `SpriteSheetImporter`가 강제한다.
-- 매니페스트에는 피카츄·거북왕만 있다. Standard 4종을 다시 쓰려면 `fetch_sprites.py --update-manifest --ids 25,9,6,3,94,150` 뒤 `build_sprites.py`(같은 PokeAPI 커밋).
-- 발 위치 pivot, 정수 배율, Point 필터. 다른 스타일과의 비교는 [`sprite-style-compare.html`](sprite-style-compare.html).
-
-### 8.3 사운드
-
-- **모든 소리를 이 저장소의 코드로 직접 합성한다**(외부·AI·원작 음원 없음). 목록·레시피는 `Assets/Content/Audio/manifest.md`.
-- **속성 공격음:** 기술을 쓸 때 나는 소리(전기 = 낙뢰, 물 = 물대포 등, 시드 고정). 포켓몬 울음소리가 아니다. 다른 안은 `TypeAttackSounds.Alternates`에 보관.
-- **기술 전용 공격음:** 같은 타입의 두 기술이 같은 소리를 내지 않게 `animation.json`의 `moveSfx`로 기술마다 소리를 지정한다. 쓸 수 있는 소리는 전용으로 만든 것(`TypeAttackSounds.MoveOnlyIds`)과 보관한 안(`AlternateIds`)이고, 없는 id면 굽기(`AudioBaker`)가 멈춘다.
-  - 몸통박치기: "슈욱 → 퍽·쿵 → 흙먼지"(충돌이 돌진 0.09초에 맞춤).
-  - 물의맹세: "촤아"×4 + 큰 "촤아아"(물기둥이 솟을 때마다 한 번, 연출 시간표 그대로). 물소리는 거품 공명(짧게 위로 미끄러지는 사인) + 출렁이는 대역 노이즈로 만들고 45ms 에 걸쳐 곡선으로 차오르게 한다(10ms 안팎에 터졌다 줄어드는 노이즈·쿵 저음은 총소리처럼 들린다).
-  - 하이드로펌프(물대포)·10만볼트·번개(둘 다 낙뢰)는 타입 공격음.
-- **울음소리(등장 소리)는 넣지 않는다.** PokeAPI 원본은 화면과 어울리지 않았다.
-- **배틀 BGM:** 직접 작곡한 8비트 루프 1곡(`BattleMusic`). 판마다 처음부터, 승패가 나면 줄이고 징글. WebGL은 소리를 AAC로 바꾸며 앞부분을 건드려 루프 이음새가 튈 수 있어 앞에 무음 2048 샘플 + WAV smpl 루프 구간을 둔다.
-- **WebGL에서는 실행 중 합성이 화면을 멈추므로** 에디터가 미리 굽는다(`AudioBaker` → `Assets/Resources/Audio/`, 커밋 안 함). 짧은 소리는 iOS 디코드 문제 때문에 최소 0.25초로 채운다.
-- **타이밍이 핵심:** 공격음은 발사 순간(`ReleaseSec`)보다 소리마다 정한 만큼 먼저 틀어 터지는 순간을 맞춘다. 준비가 길면 그 앞을 기 모으기 소리로 채운다.
-- 브라우저는 사용자 입력 전 오디오를 막으므로 첫 소리는 시작 버튼 처리 안에서 낸다(5.5).
+- Keep **only the essential minimum**: rules and contracts whose breakage would be a real bug (damage, type chart, stats, battle flow, data validation, integration contract, assembly boundaries). Group the same rule into a few representative cases.
+- Domain tests use only fake species and moves built in code (`TestMon`, `TestMove`). Only `ContentDataFilesTests` and `BalanceTests` read the real JSON.
+- Deterministic tests use an `IRandom` stub.
+- Screens and effects are not automated (Actions limits). Check them by eye in the lab and the browser, and play one battle on a Release build before deploying.
 
 ---
 
-## 9. Pokepedia(React) 연동
+## 8. Art and assets
 
-### 9.1 방식: iframe + postMessage
+### 8.1 Policy
 
-- 페이지 **`/[locale]/battle`** 에 iframe으로 넣는다. 쿠키·인증을 쓰지 않으므로 다른 도메인이어도 `postMessage`로 충분하다. origin 검증 필수.
+- Pokémon pixel art is **PokeAPI sprites**; the title and VS screens use official artwork from Pokepedia Storage. Rights are handled at the same level as Pokepedia (unofficial, non-commercial fan project notice, `LICENSE`). No other original assets are used.
+- **Sprites are not committed to the repository:** `Assets/Resources/Sprites/` is in `.gitignore`. Only the scripts in `Tools/sprites` and a **manifest pinned to a PokeAPI sprites commit SHA** are committed; after cloning, the script reproduces them (DEVELOPMENT.md).
+- No trainer art is used. PokeAPI does not provide trainer art (the sprites repository has only badges, items, pokemon and types).
 
-### 9.2 메시지 규약 (v1)
+### 8.2 Sprites: Gen 5 Black/White animated
 
-이 절이 Pokepedia ↔ Unity 규약의 **단일 출처**다.
+- Source: PokeAPI sprites `versions/generation-v/black-white/animated/` (front, `back/`, `shiny/`, `back/shiny/`).
+- `Tools/sprites` splits the GIFs into frames → sheet PNGs (`--dedupe --indexed`) + frame-delay JSON. At runtime they are loaded by name with `Resources.Load` and played by `SpriteAnimator` (Animator clips are not used because frame delays are uneven and there are many frames). Import settings (Point, uncompressed, no mipmaps) are enforced by `SpriteSheetImporter`.
+- The manifest contains only Pikachu and Blastoise. To use the four Standard Pokémon again, run `fetch_sprites.py --update-manifest --ids 25,9,6,3,94,150` and then `build_sprites.py` (same PokeAPI commit).
+- Pivot at the feet, integer scaling, Point filtering. Comparison with other styles: [`sprite-style-compare.html`](sprite-style-compare.html).
 
-#### 구성
+### 8.3 Sound
+
+- **Every sound is synthesized directly in this repository's code** (no external, AI-generated or original game audio). The list and recipes are in `Assets/Content/Audio/manifest.md`.
+- **Type attack sounds:** The sound when a move is used (Electric = lightning strike, Water = water cannon, etc., seeded). Not Pokémon cries. Alternatives are kept in `TypeAttackSounds.Alternates`.
+- **Move-specific attack sounds:** So two moves of the same type don't share a sound, `moveSfx` in `animation.json` assigns a sound per move. Available sounds are the dedicated ones (`TypeAttackSounds.MoveOnlyIds`) and the kept alternatives (`AlternateIds`); an unknown id stops the bake (`AudioBaker`).
+  - Tackle: "whoosh → thwack/thud → dust" (impact matched to 0.09 s into the lunge).
+  - Water Pledge: "splash" ×4 + a big "splaaash" (once per water column eruption, exactly following the effect timeline). The water sound is built from bubble resonance (a short upward-gliding sine) + sloshing band-limited noise, ramping up along a curve over 45 ms (noise that bursts and decays within about 10 ms, or a low thud, sounds like a gunshot).
+  - Hydro Pump (water cannon), Thunderbolt and Thunder (both lightning strikes) use the type attack sound.
+- **No cries (entry sounds).** The original PokeAPI cries did not fit the visuals.
+- **Battle BGM:** One self-composed 8-bit loop (`BattleMusic`). Starts from the top each battle; on win/loss it fades down and a jingle plays. WebGL converts audio to AAC and touches the beginning, which can make the loop seam pop, so 2048 samples of silence are prepended + a WAV smpl loop region is set.
+- **Synthesizing at runtime freezes the screen in WebGL,** so the editor bakes ahead of time (`AudioBaker` → `Assets/Resources/Audio/`, not committed). Short sounds are padded to at least 0.25 s because of an iOS decoding issue.
+- **Timing is key:** Each attack sound is started a per-sound amount before the release moment (`ReleaseSec`) so the burst lines up. If the wind-up is long, the gap before it is filled with a charge-up sound.
+- Browsers block audio before user input, so the first sound plays inside the start button handler (5.5).
+
+---
+
+## 9. Pokepedia (React) integration
+
+### 9.1 Approach: iframe + postMessage
+
+- Embedded as an iframe in the page **`/[locale]/battle`**. No cookies or auth are used, so `postMessage` is enough even across domains. Origin checks are mandatory.
+
+### 9.2 Message contract (v1)
+
+This section is the **single source of truth** for the Pokepedia ↔ Unity contract.
+
+#### Layout
 
 ```text
-Pokepedia 페이지 (/[locale]/battle, BattleFrame)
+Pokepedia page (/[locale]/battle, BattleFrame)
   └─ <iframe src="https://battle.pokepedia.dev/?host=pokepedia&lang=ko" allow="autoplay">
-        Unity Web 빌드 (index.html 템플릿 + HostBridge.jslib + HostBridge.cs)
+        Unity Web build (index.html template + HostBridge.jslib + HostBridge.cs)
 ```
 
-- **단방향:** React가 보유 목록을 한 번 넘기고 Unity는 결과를 저장하지 않는다.
-- 컬렉션 조회는 인증된 React(서버/RLS)가 한다. **보유 ∩ 지원 계산은 Unity가 한다**(React는 보유 전체를 보낸다 — 로스터가 늘어도 규약이 바뀌지 않는다).
-- 전달된 보유 목록은 조작될 수 있지만 보상·랭킹에 쓰이지 않아 검증하지 않는다.
+- **One-way:** React passes the owned list once and Unity does not store results.
+- The authenticated React side (server/RLS) reads the collection. **Unity computes owned ∩ supported** (React sends everything owned — the contract does not change as the roster grows).
+- The passed owned list could be tampered with, but it is not used for rewards or rankings, so it is not validated.
 
-#### 모드 판별
+#### Mode detection
 
-| iframe 주소 | 동작 |
+| iframe URL | Behavior |
 |---|---|
-| `?host=pokepedia` 없음 | 시작하면 바로 **Demo**(피카츄 vs 거북왕) |
-| `?host=pokepedia` 있음 | 시작 후 `ready`를 보내고 `init`을 **5초** 기다린다 |
+| No `?host=pokepedia` | **Demo** (Pikachu vs Blastoise) right after start |
+| `?host=pokepedia` present | After start, send `ready` and wait **5 seconds** for `init` |
 
-- 5초 안에 `init`이 없으면 "연결하지 못했습니다" + [다시 시도]([`ready` 재전송]) / [데모 체험]. **자동으로 Demo로 바꾸지 않는다.**
-- iframe 여부로는 판별하지 않는다(다른 사이트도 iframe으로 띄울 수 있다). 쿼리는 jslib로 `location.search`를 읽는다.
-- `lang`(`ko`/`en`/`ja`)은 로딩·시작 화면의 언어다. 없으면 브라우저 언어(모르면 한국어). 연결 뒤 게임 안 언어는 `init.locale`.
+- If no `init` arrives within 5 seconds: "Could not connect." + [Retry] ([resend `ready`]) / [Try Demo]. **It never switches to Demo automatically.**
+- Being inside an iframe is not used for detection (other sites can embed it too). The query is read from `location.search` via jslib.
+- `lang` (`ko`/`en`/`ja`) is the language of the loading and title screens. Without it, the browser language (Korean if unknown). After connecting, the in-game language is `init.locale`.
 
-| 모드 | 플레이어 | 상대 |
+| Mode | Player | Opponent |
 |---|---|---|
-| **Demo** | 피카츄 고정 | 거북왕 고정 |
-| **Collection** | 보유 ∩ `playable` (지금 피카츄뿐) | `npcWeight` 추첨 (지금 거북왕뿐) |
+| **Demo** | Pikachu, fixed | Blastoise, fixed |
+| **Collection** | owned ∩ `playable` (only Pikachu today) | `npcWeight` draw (only Blastoise today) |
 
-- 보유 ∩ 플레이어 가능이 **1마리면 선택 없이 바로 VS**, **0마리면** "퀴즈에서 피카츄 띠부씰을 얻으면 내 포켓몬으로 배틀할 수 있어요" + [데모 체험]. 2마리 이상의 선택 화면은 플레이어 포켓몬이 늘 때 만든다.
-- 보유한 피카츄가 shiny 스티커면 배틀에서도 shiny 도트(외형만).
-- 엔진은 같고 포켓몬 선택만 다르다.
+- If owned ∩ playable is **one, go straight to VS with no selection**; if **zero**, show "Win a Pikachu sticker in the quiz to battle with your own Pokémon" + [Try Demo]. A selection screen for two or more will be built when player Pokémon are added.
+- If the owned Pikachu is a shiny sticker, the battle also uses shiny pixel art (cosmetic only).
+- The engine is the same; only the Pokémon selection differs.
 
-#### 메시지
+#### Messages
 
-모든 메시지는 `type`과 프로토콜 버전 `v`를 가진 객체다. 요청 ID는 없다.
+Every message is an object with a `type` and a protocol version `v`. There are no request IDs.
 
-| 방향 | 메시지 | 뜻 |
+| Direction | Message | Meaning |
 |---|---|---|
-| Unity → React | `{ "type": "ready", "v": 1 }` | 로딩과 시작이 끝났다. **React는 이것을 받은 뒤에만 `init`을 보낸다.** Unity가 다시 로딩되면 또 온다 |
-| React → Unity | `{ "type": "init", "v": 1, "locale": "ko", "owned": [ { "id": 25, "shiny": false } ] }` | `locale` ko/en/ja(그 밖은 ko), `owned`는 스티커 전체. `v`가 1이 아니면 무시 |
-| Unity → React | `{ "type": "battleEnded", "v": 1, "result": "win" }` | Collection에서 승패가 날 때마다(`win`/`lose`, 도망은 안 보냄). 표시용, 저장 안 함 |
+| Unity → React | `{ "type": "ready", "v": 1 }` | Loading and start are done. **React sends `init` only after receiving this.** Sent again if Unity reloads |
+| React → Unity | `{ "type": "init", "v": 1, "locale": "ko", "owned": [ { "id": 25, "shiny": false } ] }` | `locale` ko/en/ja (anything else is ko), `owned` is every sticker. Ignored if `v` is not 1 |
+| Unity → React | `{ "type": "battleEnded", "v": 1, "result": "win" }` | Each time a Collection battle is decided (`win`/`lose`; not sent on Run). Display only, not stored |
 
-#### 보안
+#### Security
 
-| 위치 | 규칙 |
+| Where | Rule |
 |---|---|
-| 템플릿 `message` 리스너 | `event.origin`이 허용 목록(`window.pokeHost.allowedOrigins`)에 있을 때만 `init` 전달 |
-| Unity → React(jslib) | `targetOrigin`을 `'*'`로 쓰지 않고 허용 목록의 각 origin으로 보낸다 |
-| React | `event.origin`이 Unity 호스트(`BATTLE_ORIGIN`)일 때만 `ready` 처리 |
-| Unity 호스트 헤더 | `frame-ancestors`에 Pokepedia·포트폴리오 허브·Vercel Preview·`localhost:3000`만 |
+| Template `message` listener | Forwards `init` only when `event.origin` is in the allow list (`window.pokeHost.allowedOrigins`) |
+| Unity → React (jslib) | Never uses `'*'` as `targetOrigin`; sends to each origin in the allow list |
+| React | Handles `ready` only when `event.origin` is the Unity host (`BATTLE_ORIGIN`) |
+| Unity host headers | `frame-ancestors` allows only Pokepedia, the portfolio hub, Vercel Preview and `localhost:3000` |
 
-- 허용 목록(템플릿): `https://pokepedia.dev`, `https://www.pokepedia.dev`, `http://localhost:3000`(Pokepedia 개발 서버), `http://localhost:8000`(로컬 모의 페이지), 그리고 **이 계정의 Pokepedia Preview 정규식** `^https://pokepedia-[a-z0-9-]+-vison901-gmailcoms-projects\.vercel\.app$`(PR마다 주소가 바뀐다). `frame-ancestors`는 한 단계 와일드카드만 되므로 `https://*.vercel.app`을 넣는다 — 다른 Vercel 사이트도 띄울 수는 있지만 공개 게임이라 영향이 없고 `init`은 위 정규식에서만 받는다.
-- Pokepedia에는 CSP 헤더가 없어 iframe을 막지 않는다. 다른 포트(예: 3100)의 개발 서버는 `frame-ancestors`에 없어 게임이 뜨지 않는다.
+- Allow list (template): `https://pokepedia.dev`, `https://www.pokepedia.dev`, `http://localhost:3000` (Pokepedia dev server), `http://localhost:8000` (local mock page), and **this account's Pokepedia Preview regex** `^https://pokepedia-[a-z0-9-]+-vison901-gmailcoms-projects\.vercel\.app$` (the URL changes per PR). `frame-ancestors` only supports a one-level wildcard, so it contains `https://*.vercel.app` — other Vercel sites can embed it, but it is a public game so that has no impact, and `init` is accepted only from the regex above.
+- Pokepedia has no CSP header, so it does not block the iframe. A dev server on another port (e.g. 3100) is not in `frame-ancestors`, so the game will not load there.
 
-#### 입력과 크기
+#### Input and size
 
-- iframe 안에서 방향키·Space의 기본 동작(부모 스크롤)을 막고, 클릭·터치 때 캔버스에 포커스를 준다. iframe에는 `allow="autoplay"`.
-- **크기는 Pokepedia가 정한다** (`BattleFrame`, `fitBattleScreen`): 데스크톱은 빨간 도감 기기 프레임 안에서 iframe을 화면 배율(DPR)에 맞는 **정수 배율**로 딱 맞게 잡는다(최대 720 CSS px, 창 높이 안). 더 크게 키우면 240×216 그림의 글자·디더링이 깨져 보인다. 휴대폰은 가장자리까지 채운다. 피카츄·거북왕만 고해상도로 바꾸면 도트 크기가 섞이므로, 크게 보이면서 매끄러우려면 게임 해상도를 올려야 한다(ROADMAP "보관").
+- Inside the iframe, the default behavior of arrow keys and Space (scrolling the parent) is blocked, and the canvas gets focus on click or touch. The iframe has `allow="autoplay"`.
+- **Pokepedia decides the size** (`BattleFrame`, `fitBattleScreen`): on desktop, the iframe is fitted inside the red Pokédex device frame at an **integer scale** matching the display scale (DPR) (at most 720 CSS px, within the window height). Scaling larger makes the text and dithering of the 240×216 image look broken. On phones it fills edge to edge. Switching only Pikachu and Blastoise to high resolution would mix pixel sizes, so looking large and smooth requires raising the game resolution (ROADMAP "Parked").
 
-#### 로컬 테스트
+#### Local testing
 
 ```bash
 python -I Tools/web/serve.py --dir Builds/Web --port 8001 --ancestors http://localhost:8000
 python -I Tools/web/serve.py --dir Tools/web/host-test --port 8000
 ```
 
-`http://localhost:8000/`의 모의 Pokepedia 페이지에서 `ready` → `init` 왕복, 타임아웃(init 보내지 않기), 스크롤 간섭, 보유 상황(피카츄 / shiny / 없음)별 진입, `battleEnded` 수신을 확인한다.
+On the mock Pokepedia page at `http://localhost:8000/`, check the `ready` → `init` round trip, the timeout (don't send init), scroll interference, entry per ownership case (Pikachu / shiny / none), and receiving `battleEnded`.
 
-### 9.3 DB 정책
+### 9.3 DB policy
 
-**Pokepedia DB는 바꾸지 않는다.** 새 테이블·RPC·컬럼이 없다. 읽기만 한다. 꼭 필요해지면 additive만(Prod·Preview가 같은 DB, migration 자동 적용).
+**The Pokepedia DB is not changed.** No new tables, RPCs or columns. Read only. If it ever becomes necessary, additive changes only (Prod and Preview share the DB, and migrations are applied automatically).
 
-### 9.4 Pokepedia 쪽 구현 (그 저장소)
+### 9.4 Pokepedia-side implementation (in that repository)
 
-- 내비게이션 "배틀", 페이지 `/[locale]/battle`(`BattleFrame`: 메시지 처리·크기 계산), `src/features/battle/host.ts`(`BATTLE_ORIGIN`, `BATTLE_PLAYABLE_IDS`, `initFor`, `fitBattleScreen`).
-- 퀴즈·컬렉션 연동은 9.6·9.7.
-- 문구는 `messages/ko·en·ja.json` 세 곳에 모두(키 일치 테스트가 있다). 구조 변경은 그 저장소의 `docs/system_design.md`를 먼저 고치고 그 저장소 `CLAUDE.md`의 머지 정책을 따른다.
+- Navigation "Battle", page `/[locale]/battle` (`BattleFrame`: message handling and size calculation), `src/features/battle/host.ts` (`BATTLE_ORIGIN`, `BATTLE_PLAYABLE_IDS`, `initFor`, `fitBattleScreen`).
+- Quiz and collection integration: 9.6, 9.7.
+- Text goes in all three of `messages/ko·en·ja.json` (there is a key-match test). For structural changes, update that repository's `docs/system_design.md` first and follow the merge policy in that repository's `CLAUDE.md`.
 
-### 9.5 조작 가능성
+### 9.5 Tampering
 
-규칙이 클라이언트에 있어 결과를 검증할 수 없지만 **보상·랭킹에 쓰이지 않으므로** 조작은 본인 경험에만 영향을 준다. 서버 검증은 하지 않는다. 보상·공식 랭킹을 추가하면 다시 본다.
+Since the rules run on the client, results cannot be verified, but **they are not used for rewards or rankings**, so tampering only affects the player's own experience. No server-side validation. Revisit this if rewards or official rankings are added.
 
-### 9.6 컬렉션의 배틀 가능 표시
+### 9.6 Battle-ready indicator in the collection
 
-- 배틀 가능 포켓몬(피카츄) 카드는 **금색 테두리 + "배틀" 배지**로 보여 주고 배틀로 들어가는 입구가 된다. shiny 스티커의 노란(`volt`) 테두리와 구분한다.
-- `전체 | 배틀 가능` 필터는 없다(ROADMAP "보관").
+- The card of a battle-ready Pokémon (Pikachu) shows a **gold border + "Battle" badge** and serves as an entrance to the battle. It is distinct from the yellow (`volt`) border of shiny stickers.
+- There is no `All | Battle-ready` filter (ROADMAP "Parked").
 
-### 9.7 첫 퀴즈 피카츄
+### 9.7 First-quiz Pikachu
 
-- **피카츄 띠부씰이 없는 사용자**의 새 판 **첫 문제만** 피카츄 실루엣으로 낸다. 서버(`startOrResume`)가 이미 있는 `user_sticker`를 읽어 판단한다 — DB 변경이 없고 조작할 수 없고 기기가 바뀌어도 같다.
-- 피카츄인 이유: Demo(피카츄 vs 거북왕)와 그대로 맞아 매치업·밸런스·연출을 바꿀 필요가 없다. 첫 문제 하나·미보유 사용자만이라 퀴즈 반복·편중 부작용이 거의 없다.
-- 맞히면 띠부씰 획득 화면에 **[내 피카츄로 배틀]** (첫 피카츄면 금빛 단독 버튼). 진행 중인 퀴즈는 남아 돌아오면 이어서 한다.
+- For **users without a Pikachu sticker**, **only the first question** of a new run is a Pikachu silhouette. The server (`startOrResume`) decides by reading the existing `user_sticker` — no DB change, cannot be tampered with, and consistent across devices.
+- Why Pikachu: it matches the Demo (Pikachu vs Blastoise) as is, so the matchup, balance and effects need no changes. Since it is only the first question and only for users who don't own it, there are almost no side effects such as repeated or skewed quizzes.
+- Answering correctly shows **[Battle with my Pikachu]** on the sticker reward screen (a lone gold button for a first Pikachu). The quiz in progress is kept and resumes on return.
 
 ---
 
-## 10. 웹 배포 인프라
+## 10. Web deployment infrastructure
 
-### 10.1 개요
+### 10.1 Overview
 
 ```text
-브라우저
- ├─ Pokepedia (Vercel) ── iframe ──▶ Unity 정적 호스팅 (Cloudflare Pages `pokepedia-battle`, battle.pokepedia.dev)
- └─ Supabase ◀── React만 접근. Unity는 접근하지 않음 (시작·VS 화면이 Storage 아트워크를 공개 URL로 읽는 것만 예외)
+Browser
+ ├─ Pokepedia (Vercel) ── iframe ──▶ Unity static hosting (Cloudflare Pages `pokepedia-battle`, battle.pokepedia.dev)
+ └─ Supabase ◀── accessed only by React. Unity never accesses it (except the title/VS screens reading Storage artwork via public URLs)
 ```
 
-- 새 서버·DB·게임 서버는 없다. 배틀 상태는 브라우저 탭 메모리에만 있다(새로고침하면 처음부터).
+- No new server, DB or game server. Battle state lives only in the browser tab's memory (a reload starts over).
 
-### 10.2 호스팅: Cloudflare Pages
+### 10.2 Hosting: Cloudflare Pages
 
-- `pokepedia.dev` DNS는 Vercel이 관리한다(네임서버 `ns1/ns2.vercel-dns.com`, 등록 기관 Name.com). Workers 커스텀 도메인은 DNS가 Cloudflare에 있어야 하지만 **Pages는 외부 DNS에 CNAME 하나로 붙는다** — 운영 중인 DNS를 옮기지 않으려고 Pages를 쓴다. 정적 요청 무료·무제한, **파일당 25 MiB**, `_headers` 지원.
-- **주의:** wrangler 4.x의 `wrangler pages project create`는 기본으로 Worker로 바꿔 만든다. Pages로 만들려면 처음 한 번 `--force`. 이미 Pages 프로젝트가 있으면 이후 `pages deploy`는 Pages로 간다.
+- `pokepedia.dev` DNS is managed by Vercel (nameservers `ns1/ns2.vercel-dns.com`, registrar Name.com). Workers custom domains require the DNS to be on Cloudflare, but **Pages attaches with a single CNAME on external DNS** — Pages is used to avoid moving the production DNS. Static requests are free and unlimited, **25 MiB per file**, `_headers` supported.
+- **Caution:** In wrangler 4.x, `wrangler pages project create` creates a Worker by default. To create a Pages project, pass `--force` the first time. Once a Pages project exists, later `pages deploy` calls go to Pages.
 
-### 10.3 호스팅 설정
+### 10.3 Hosting configuration
 
-- `Tools/web/_headers`: `Build/*.wasm.br`·`*.js.br`·`*.data.br`에 `Content-Encoding: br`과 안쪽 확장자의 Content-Type(`.wasm`은 `application/wasm` — 스트리밍 컴파일). Cloudflare가 다시 압축하지 않는다(`Content-Length`가 원본 `.br`와 같다).
-- `Build/*`는 해시 파일명이라 `Cache-Control: public, max-age=31536000, immutable`, 나머지는 Pages 기본(매번 재검증). Pages는 같은 헤더가 여러 규칙에 걸리면 값을 쉼표로 이어 붙이므로 **한 헤더는 한 규칙에서만** 정한다. `frame-ancestors`는 `/*`에 한 번.
-- 로컬 `serve.py`가 같은 규칙을 흉내 낸다(`--mbps 9 --latency-ms 60`으로 Fast 4G 근사).
-- **용량:** 전송 약 13MB(코드 `wasm.br` 약 7.7MB + 데이터 `data.br` 약 5.2MB). 사용자 휴대폰 4G에서 문제가 없어 최적화하지 않는다. 도트 시트는 단색 면이 많아 압축이 잘 되므로 그림을 빼도 전송량은 크게 줄지 않는다(Standard 4종 그림을 빼도 전송은 0.4MB만 준다).
-- 배포 직후 1분 안쪽은 이전 파일이 보일 수 있다(전파). 해시 비교는 잠시 뒤 다시 한다.
+- `Tools/web/_headers`: for `Build/*.wasm.br`, `*.js.br`, `*.data.br`, `Content-Encoding: br` and the Content-Type of the inner extension (`.wasm` is `application/wasm` — streaming compilation). Cloudflare does not recompress (`Content-Length` equals the original `.br`).
+- `Build/*` has hashed file names, so `Cache-Control: public, max-age=31536000, immutable`; everything else uses the Pages default (revalidate every time). Pages joins values with commas when the same header matches several rules, so **each header is set by only one rule**. `frame-ancestors` is set once on `/*`.
+- The local `serve.py` mimics the same rules (`--mbps 9 --latency-ms 60` approximates Fast 4G).
+- **Size:** about 13 MB transferred (code `wasm.br` about 7.7 MB + data `data.br` about 5.2 MB). It is fine on the user's 4G phone, so it is not optimized. Pixel sheets have many flat-color areas and compress well, so removing art barely reduces transfer size (removing the four Standard Pokémon's art saves only 0.4 MB).
+- For up to about a minute after a deploy, old files may still be served (propagation). Re-run hash comparisons after a short wait.
 
-### 10.4 도메인과 환경
+### 10.4 Domain and environments
 
-- **`battle.pokepedia.dev`** → CNAME `pokepedia-battle.pages.dev` (Vercel DNS의 레코드, 루트·와일드카드 ALIAS보다 우선). CAA가 Google·Let's Encrypt를 허용한다.
-- 연결 순서(반대로 하면 522): ① Cloudflare 대시보드 Pages `pokepedia-battle` → Custom domains → `battle.pokepedia.dev` → **My DNS provider**. ② `npx vercel dns add pokepedia.dev battle CNAME pokepedia-battle.pages.dev`(Vercel MCP는 이 도메인 레코드 조회가 403이라 CLI). ③ Cloudflare가 확인·인증서 발급.
-- Pokepedia의 iframe 주소는 코드 상수 `BATTLE_ORIGIN`(`src/features/battle/host.ts`).
+- **`battle.pokepedia.dev`** → CNAME `pokepedia-battle.pages.dev` (a record in Vercel DNS, takes precedence over the root and wildcard ALIAS). CAA allows Google and Let's Encrypt.
+- Setup order (reversed gives a 522): ① Cloudflare dashboard Pages `pokepedia-battle` → Custom domains → `battle.pokepedia.dev` → **My DNS provider**. ② `npx vercel dns add pokepedia.dev battle CNAME pokepedia-battle.pages.dev` (the Vercel MCP returns 403 when reading this domain's records, so use the CLI). ③ Cloudflare verifies and issues the certificate.
+- Pokepedia's iframe URL is the code constant `BATTLE_ORIGIN` (`src/features/battle/host.ts`).
 
-### 10.5 빌드·배포·CI
+### 10.5 Build, deploy, CI
 
-- **로컬 Unity Release 빌드 → `python -I Tools/web/deploy.py`**: `Builds/Web`을 `Builds/deploy`로 복사하고 `_headers`를 넣어 `wrangler pages deploy`(`--branch`가 main이 아니면 미리보기). 배포 뒤 `Build/*.br`의 sha256을 실제 응답과 비교해 확인한다.
-- Unity 빌드·테스트는 CI에 없다(라이선스·시간). **CI는 순수 C# 테스트만**(`dotnet test Tests.Dotnet`, PR에서만, 경로 필터) — 규칙은 [CLAUDE.md](../CLAUDE.md)의 CI 절.
-- 빌드 산출물(`Builds/`)은 커밋하지 않는다. batchmode 빌드를 강제로 끊으면 `bee_backend`가 남아 다음 빌드가 실패하고 `ProjectSettings.asset`에 빌드 중 임시 값(`preloadedAssets`)이 남는다 — 프로세스를 끄고 파일을 되돌린다.
+- **Local Unity Release build → `python -I Tools/web/deploy.py`**: copies `Builds/Web` to `Builds/deploy`, adds `_headers`, then runs `wrangler pages deploy` (a preview if `--branch` is not main). After deploying, it verifies by comparing the sha256 of `Build/*.br` with the live responses.
+- Unity build and tests are not in CI (license, time). **CI runs only the pure C# tests** (`dotnet test Tests.Dotnet`, on PRs only, path filters) — rules are in the CI section of [CLAUDE.md](../CLAUDE.md).
+- Build output (`Builds/`) is not committed. Force-killing a batchmode build leaves `bee_backend` running, making the next build fail, and leaves temporary build values (`preloadedAssets`) in `ProjectSettings.asset` — kill the process and revert the file.
 
-### 10.6 모니터링·보안·비용
+### 10.6 Monitoring, security, cost
 
-Cloudflare Web Analytics 정도면 충분하다. 비밀값은 없고 `init`의 origin 대조와 `frame-ancestors`로 임베드를 제한한다. 비용은 사실상 0원.
+Cloudflare Web Analytics is enough. There are no secrets; embedding is restricted by the `init` origin check and `frame-ancestors`. Cost is effectively zero.
 
-### 10.7 서버가 필요해지는 시점
+### 10.7 When a server becomes necessary
 
-승리 보상, 공식 랭킹, 클라우드 세이브, 온라인 PvP를 넣을 때. 그때도 새 게임 서버보다 기존 Pokepedia 백엔드를 확장하는 것을 기본으로 한다.
+When adding victory rewards, official rankings, cloud saves or online PvP. Even then, the default is to extend the existing Pokepedia backend rather than build a new game server.
 
-### 10.8 Pokepedia 호스팅
+### 10.8 Pokepedia hosting
 
-Unity가 Cloudflare에 있다고 Pokepedia를 옮길 필요는 없다(별도 origin + postMessage). 이 프로젝트의 범위가 아니다.
+Unity being on Cloudflare is no reason to move Pokepedia (separate origin + postMessage). Out of scope for this project.
 
 ---
 
-## 11. 저장소
+## 11. Repositories
 
 ```text
-ottuck/pokepedia          # Pokepedia(Next.js). 연동에 필요한 최소 변경만, 그 저장소 PR·정책으로
-ottuck/pokepedia-unity    # 이 저장소
+ottuck/pokepedia          # Pokepedia (Next.js). Only the minimum changes needed for integration, via that repository's PRs and policies
+ottuck/pokepedia-unity    # this repository
 ```
 
-- 분리 이유: 구조·도구·CI·배포가 전혀 다르고, 합치면 Pokepedia CI가 Unity 변경에 영향을 받는다.
-- 접점은 iframe 주소, `postMessage` 규약(9.2), 플레이어 가능 ID(7.6)뿐이다. 규약은 이 문서가 단일 출처다.
+- Why separate: structure, tooling, CI and deployment are completely different, and merging them would let Unity changes affect Pokepedia's CI.
+- The only touch points are the iframe URL, the `postMessage` contract (9.2) and the playable IDs (7.6). This document is the single source of truth for the contract.
 
 ---
 
-## 12. 개발 지침
+## 12. Development guidelines
 
-C#과 Unity를 이해하며 만드는 것이 이 프로젝트의 방식이다. 에이전트 작업 규칙(브랜치·PR·CI·에디터 점유)은 [CLAUDE.md](../CLAUDE.md).
+This project is built while understanding C# and Unity. Agent work rules (branches, PRs, CI, editor locking) are in [CLAUDE.md](../CLAUDE.md).
 
-1. 주요 기술 선택에는 이유를 간단히 적는다. 새 C#/Unity 개념은 Java와 비교한다(7.4).
-2. Unity 생명주기와 순수 C# 도메인 로직을 구분한다. 규칙은 **테스트를 먼저** 쓴다.
-3. 불필요한 프레임워크·인프라·추상화를 더하지 않는다. 웹 빌드 가능성을 늘 유지한다.
-4. **Pokepedia 코드·DB는 함부로 고치지 않는다.** 고치기 전에 해당 소스, `docs/system_design.md`, 그 저장소 `CLAUDE.md`를 확인한다.
-5. 엔진 코드에 포켓몬 이름·스프라이트·문자열을 넣지 않는다. 포켓몬별 코드를 만들지 않는다. **엔진은 로스터 크기를 모른다.**
-6. Showcase도 실제 엔진을 쓴다. 가짜 전투나 미리 만든 연출만 재생하지 않는다.
-7. **사실을 추측으로 채우지 않는다.** Pokepedia·PokeAPI·Unity는 코드·문서·API로 확인하고, 외부 제안(GPT 등)의 기술 이름·규칙·라이선스는 그대로 믿지 않는다. 버전·한도·가격 같은 사실은 웹에서 확인해 출처와 미확인 부분을 함께 적는다.
-8. 사용자는 포켓몬 도메인 지식이 약하므로 규칙·용어를 먼저 설명하고 추천안과 이유를 제시한 뒤 정한다.
-9. 사운드·에셋은 출처와 라이선스를 매니페스트에 기록한다.
-10. 범위를 넓히는 일(ROADMAP "보관": 새 포켓몬 공개, 3:3, 울음소리, 해상도 등)은 사용자가 정한다. 꺼낼 때 추천안과 이유를 제시한다.
+1. Briefly note the reason for major technology choices. Compare new C#/Unity concepts with Java (7.4).
+2. Keep the Unity lifecycle separate from pure C# domain logic. Write **tests first** for rules.
+3. Do not add unnecessary frameworks, infrastructure or abstractions. Always keep the web build viable.
+4. **Do not modify Pokepedia code or DB casually.** Before changing anything, check the relevant source, `docs/system_design.md` and that repository's `CLAUDE.md`.
+5. Do not put Pokémon names, sprites or strings in engine code. Do not write per-Pokémon code. **The engine does not know the roster size.**
+6. Showcase also uses the real engine. Never play back fake battles or prebuilt effects only.
+7. **Do not fill in facts by guessing.** Verify Pokepedia, PokeAPI and Unity through code, docs and APIs, and do not take technology names, rules or licenses from external suggestions (GPT, etc.) at face value. Check facts such as versions, limits and prices on the web, and record the source along with anything unverified.
+8. The user has limited Pokémon domain knowledge, so explain rules and terms first, then present a recommendation with reasons before deciding.
+9. Record the source and license of sounds and assets in the manifest.
+10. Scope-expanding work (ROADMAP "Parked": releasing new Pokémon, 3v3, cries, resolution, etc.) is the user's decision. When bringing it up, present a recommendation with reasons.
 
-### Unity CLI·에이전트 연동
+### Unity CLI and agent integration
 
-출처: [Unity CLI as the replacement for the in-Editor MCP server](https://docs.unity.com/en-us/unity-cli/replace-mcp-server-unity-cli).
+Source: [Unity CLI as the replacement for the in-Editor MCP server](https://docs.unity.com/en-us/unity-cli/replace-mcp-server-unity-cli).
 
-- 에디터 안 AI Assistant의 MCP 서버는 deprecated이고 Unity CLI의 `unity mcp`가 대체한다. 셸을 쓸 수 있으면 **MCP보다 `unity command`·`unity eval` 직접 호출**이 빠르고 토큰도 적다(공식 안내) → 이 저장소의 기본.
-- 에디터 없이 헤드리스 빌드·테스트도 된다(`unity test . --mode EditMode`, 배치 빌드는 DEVELOPMENT.md). 로컬 CLI `1.0.0-beta.13`. `unity pipeline install`은 하지 않았다(하면 패키지가 추가되므로 PR로 확인).
-- 확인하지 못한 것: `winget install Unity.CLI` 패키지명, `unity skill install`의 에이전트 이름, `unity command`·`unity eval`이 실행 중인 에디터를 꼭 필요로 하는지.
-- `unity eval`은 에디터에서 임의 C#을 실행한다. 권한 허용 목록에는 필요한 명령만 넣는다. 에디터 단일 점유와 병렬 작업 규칙은 [CLAUDE.md](../CLAUDE.md).
+- The in-Editor AI Assistant's MCP server is deprecated and replaced by the Unity CLI's `unity mcp`. When a shell is available, **calling `unity command` and `unity eval` directly instead of MCP** is faster and uses fewer tokens (official guidance) → the default for this repository.
+- Headless builds and tests also work without the editor (`unity test . --mode EditMode`; batch builds in DEVELOPMENT.md). Local CLI `1.0.0-beta.13`. `unity pipeline install` has not been run (it adds packages, so verify it in a PR).
+- Unverified: the `winget install Unity.CLI` package name, the agent names for `unity skill install`, and whether `unity command` and `unity eval` require a running editor.
+- `unity eval` runs arbitrary C# in the editor. Put only the needed commands in the permission allow list. Single-editor locking and parallel work rules are in [CLAUDE.md](../CLAUDE.md).
