@@ -17,24 +17,7 @@ A Game Boy–style 1:1 Pokémon turn-based battle. It's the last step of [Pokepe
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph web["pokepedia.dev · Next.js / Vercel"]
-        direction TB
-        quiz["Quiz"] --> sticker["Sticker collection"] --> page["Battle page"]
-    end
-
-    db[("Supabase")]
-
-    subgraph game["battle.pokepedia.dev · Cloudflare Pages"]
-        direction TB
-        shell["Web template<br/>loading · title · VS screens"] --- unity["Unity WebGL<br/>battle"]
-    end
-
-    sticker <--> db
-    page -- "iframe<br/>postMessage" --> shell
-    shell -. "official artwork (public URL)" .-> db
-```
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.svg"><img src="docs/architecture.svg" alt="Architecture: Pokepedia (Next.js on Vercel) embeds the Unity WebGL battle (Cloudflare Pages) in an iframe and talks to it with postMessage; stickers and artwork live in Supabase."></picture>
 
 - No game server or database. Pokepedia embeds the game in an iframe and hands over the player's owned Pokémon once via `postMessage` (`ready` → `init`, then `battleEnded`). Both sides check the origin — see the protocol in [PROJECT.md 9.2](docs/PROJECT.md).
 - Without `?host=pokepedia` in the URL, the game starts straight into demo mode.
